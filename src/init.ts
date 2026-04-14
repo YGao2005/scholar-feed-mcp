@@ -3,9 +3,9 @@
  *
  * Usage: npx scholar-feed-mcp init
  *
- * Prompts for API key and MCP client, then configures the appropriate
- * config file or runs the setup command. No external dependencies —
- * uses Node.js built-ins only.
+ * Prompts for API key (optional) and MCP client, then configures the
+ * appropriate config file or runs the setup command. No external
+ * dependencies — uses Node.js built-ins only.
  */
 
 import { createInterface } from "readline";
@@ -22,8 +22,8 @@ function ask(question: string): Promise<string> {
   });
 }
 
-function printStep(step: number, msg: string): void {
-  console.error(`\n[${step}/3] ${msg}`);
+function printStep(step: number, total: number, msg: string): void {
+  console.error(`\n[${step}/${total}] ${msg}`);
 }
 
 async function verifyKey(apiKey: string): Promise<boolean> {
@@ -31,12 +31,18 @@ async function verifyKey(apiKey: string): Promise<boolean> {
     process.env.SF_API_BASE_URL ??
     "https://api.scholarfeed.org/api/v1";
   try {
-    const res = await fetch(`${baseUrl}/public/health`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
+    const headers: Record<string, string> = {};
+    if (apiKey) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+    const res = await fetch(`${baseUrl}/public/health`, { headers });
     if (res.ok) {
       const data = (await res.json()) as Record<string, unknown>;
-      console.error(`  Connected! Plan: ${data.plan}, Key: ${data.key_name ?? "(unnamed)"}`);
+      if (apiKey) {
+        console.error(`  Connected! Plan: ${data.plan}, Key: ${data.key_name ?? "(unnamed)"}`);
+      } else {
+        console.error(`  Connected! Running in anonymous mode (100 calls/day).`);
+      }
       return true;
     }
     console.error(`  API returned ${res.status} — check your key.`);
@@ -70,47 +76,57 @@ function mergeJsonConfig(filePath: string, serverConfig: Record<string, unknown>
 
 export async function runInit(): Promise<void> {
   console.error("Scholar Feed MCP — Setup Wizard\n");
-  console.error("Get your API key at: https://www.scholarfeed.org/settings\n");
 
-  // Step 1: API key
-  printStep(1, "Enter your API key");
+  // Step 1: API key (optional)
+  printStep(1, 3, "Enter your API key (optional — press Enter to skip)");
+  console.error("  Get a free key at: https://www.scholarfeed.org/settings");
+  console.error("  Without a key, you get 100 calls/day. With a key, 500/day.");
   const apiKey = await ask("  API key (sf_...): ");
 
-  if (!apiKey.startsWith("sf_")) {
+  if (apiKey && !apiKey.startsWith("sf_")) {
     console.error("  Error: API key must start with 'sf_'. Get one at https://www.scholarfeed.org/settings");
     rl.close();
     process.exit(1);
   }
 
   // Step 2: Choose client
-  printStep(2, "Choose your MCP client");
+  printStep(2, 3, "Choose your MCP client");
   console.error("  1) Claude Code");
   console.error("  2) Cursor");
   console.error("  3) Claude Desktop");
   const choice = await ask("  Choice (1/2/3): ");
 
   // Step 3: Configure
-  printStep(3, "Configuring...");
+  printStep(3, 3, "Configuring...");
 
-  const serverBlock = {
+  const env: Record<string, string> = {};
+  if (apiKey) {
+    env.SF_API_KEY = apiKey;
+  }
+
+  const serverBlock: Record<string, unknown> = {
     command: "npx",
     args: ["-y", "scholar-feed-mcp"],
-    env: { SF_API_KEY: apiKey },
   };
+  if (Object.keys(env).length > 0) {
+    serverBlock.env = env;
+  }
 
   switch (choice) {
     case "1": {
       // Claude Code — use CLI
       try {
+        const envFlag = apiKey ? ` -e SF_API_KEY=${apiKey}` : "";
         execSync(
-          `claude mcp add scholar-feed -e SF_API_KEY=${apiKey} -- npx -y scholar-feed-mcp`,
+          `claude mcp add scholar-feed${envFlag} -- npx -y scholar-feed-mcp`,
           { stdio: "inherit" }
         );
         console.error("  Added to Claude Code. Use 'check_connection' tool to verify.");
       } catch {
         console.error("  'claude' CLI not found. Install Claude Code first: https://docs.anthropic.com/claude-code");
+        const envFlag = apiKey ? ` -e SF_API_KEY=${apiKey}` : "";
         console.error("  Or run manually:");
-        console.error(`  claude mcp add scholar-feed -e SF_API_KEY=${apiKey} -- npx -y scholar-feed-mcp`);
+        console.error(`  claude mcp add scholar-feed${envFlag} -- npx -y scholar-feed-mcp`);
       }
       break;
     }

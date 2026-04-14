@@ -92,8 +92,13 @@ describe("client module", () => {
     assert.ok(content.includes('process.env.SF_API_BASE_URL'));
   });
 
-  it("uses Bearer auth header", () => {
-    assert.ok(content.includes('Authorization: `Bearer'));
+  it("uses Bearer auth header when key is present", () => {
+    assert.ok(content.includes('Bearer'));
+  });
+
+  it("makes API key optional", () => {
+    assert.ok(content.includes('?? null'), "API key should default to null when not set");
+    assert.ok(!content.includes('process.exit(1)'), "Should not exit when API key is missing");
   });
 
   it("does not use console.log in code", () => {

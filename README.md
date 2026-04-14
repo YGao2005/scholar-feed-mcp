@@ -11,11 +11,13 @@ npx scholar-feed-mcp init
 ```
 
 This interactive wizard will:
-1. Ask for your API key (get one at [scholarfeed.org/settings](https://www.scholarfeed.org/settings))
+1. Optionally ask for an API key (or skip for anonymous access)
 2. Detect your MCP client (Claude Code, Cursor, or Claude Desktop)
 3. Write the config and verify the connection
 
-**That's it.** Try asking: *"Search for recent papers on test-time compute scaling"*
+**No API key required.** Anonymous access gives you 100 calls/day — enough for a typical research session. For higher limits (500/day), get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
+
+Try asking: *"Search for recent papers on test-time compute scaling"*
 
 ## What You Can Do
 
@@ -36,6 +38,10 @@ This interactive wizard will:
 ### Claude Code
 
 ```bash
+# Without API key (anonymous, 100 calls/day)
+claude mcp add scholar-feed -- npx -y scholar-feed-mcp
+
+# With API key (500 calls/day)
 claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-feed-mcp
 ```
 
@@ -46,12 +52,13 @@ claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-fee
   "mcpServers": {
     "scholar-feed": {
       "command": "npx",
-      "args": ["-y", "scholar-feed-mcp"],
-      "env": { "SF_API_KEY": "sf_your_key_here" }
+      "args": ["-y", "scholar-feed-mcp"]
     }
   }
 }
 ```
+
+To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the config.
 
 ### Claude Desktop (claude_desktop_config.json)
 
@@ -60,8 +67,7 @@ claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-fee
   "mcpServers": {
     "scholar-feed": {
       "command": "npx",
-      "args": ["-y", "scholar-feed-mcp"],
-      "env": { "SF_API_KEY": "sf_your_key_here" }
+      "args": ["-y", "scholar-feed-mcp"]
     }
   }
 }
@@ -230,7 +236,7 @@ After setup, ask your AI assistant to run `check_connection`. You should see:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `SF_API_KEY` | Yes | — | Your Scholar Feed API key (starts with `sf_`) |
+| `SF_API_KEY` | No | — | Your Scholar Feed API key (starts with `sf_`). Without it, runs in anonymous mode (100 calls/day). |
 | `SF_API_BASE_URL` | No | Production URL | Override API base URL |
 
 ## Development
@@ -249,11 +255,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Troubleshooting
 
-**"SF_API_KEY environment variable is required"**
-Your MCP client isn't passing the env var. Double-check the `env` block in your config matches the examples above.
-
 **"Authentication failed: your SF_API_KEY is invalid"**
-The key may have been revoked. Generate a new one at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
+The key may have been revoked. Generate a new one at [scholarfeed.org/settings](https://www.scholarfeed.org/settings). Or remove the key to use anonymous mode.
+
+**"Rate limit exceeded" or "Anonymous daily limit exceeded"**
+Anonymous mode allows 100 calls/day. Get a free API key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings) for 500 calls/day.
 
 **Tool calls time out or fail silently**
 Ensure Node.js 18+ is installed (`node --version`). Older versions lack the native `fetch` API.

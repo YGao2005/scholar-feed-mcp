@@ -1,21 +1,21 @@
 /**
- * ScholarFeedClient — wraps fetch calls to the Scholar Feed Heroku API.
+ * ScholarFeedClient — wraps fetch calls to the Scholar Feed API.
  *
- * Reads SF_API_KEY from process.env at module load. If missing, logs error
- * to stderr and exits(1).
+ * SF_API_KEY is optional. Without it, requests are anonymous with lower
+ * rate limits (100 calls/day). With a key, limits are 500 calls/day.
  *
  * CRITICAL: All logging uses console.error() — never console.log().
  * console.log() on stdout would corrupt the JSON-RPC stdio transport.
  */
 
-const apiKey = process.env.SF_API_KEY;
+const apiKey = process.env.SF_API_KEY ?? null;
+
 if (!apiKey) {
   console.error(
-    "Error: SF_API_KEY environment variable is required.\n" +
-    "Set it in your MCP config:\n" +
-    '  "env": { "SF_API_KEY": "sf_your_key_here" }'
+    "Scholar Feed MCP: running without API key (anonymous mode, 100 calls/day).\n" +
+    "For higher limits, set SF_API_KEY in your MCP config.\n" +
+    "Get a free key at https://www.scholarfeed.org/settings"
   );
-  process.exit(1);
 }
 
 const baseUrl =
@@ -23,16 +23,23 @@ const baseUrl =
   "https://api.scholarfeed.org/api/v1";
 
 class ScholarFeedClient {
-  private readonly apiKey: string;
+  private readonly apiKey: string | null;
   private readonly baseUrl: string;
 
-  constructor(apiKey: string, baseUrl: string) {
+  constructor(apiKey: string | null, baseUrl: string) {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
   }
 
+  private get authHeaders(): Record<string, string> {
+    if (this.apiKey) {
+      return { Authorization: `Bearer ${this.apiKey}` };
+    }
+    return {};
+  }
+
   /**
-   * Make an authenticated GET request to the Scholar Feed API.
+   * Make a GET request to the Scholar Feed API.
    * Throws Error on non-2xx response.
    */
   async get<T>(path: string, params?: Record<string, string>): Promise<T> {
@@ -45,7 +52,7 @@ class ScholarFeedClient {
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        ...this.authHeaders,
         Accept: "application/json",
       },
     });
@@ -58,14 +65,14 @@ class ScholarFeedClient {
   }
 
   /**
-   * Make an authenticated POST request to the Scholar Feed API.
+   * Make a POST request to the Scholar Feed API.
    * Throws Error on non-2xx response.
    */
   async post<T>(path: string, body: unknown): Promise<T> {
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        ...this.authHeaders,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -79,7 +86,7 @@ class ScholarFeedClient {
   }
 
   /**
-   * Make an authenticated POST request that returns the raw Response for
+   * Make a POST request that returns the raw Response for
    * SSE streaming.
    *
    * Sets Accept: text/event-stream header.
@@ -88,7 +95,7 @@ class ScholarFeedClient {
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        ...this.authHeaders,
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       },
@@ -121,7 +128,8 @@ class ScholarFeedClient {
         throw new Error("Access denied. You may need a valid API key for this endpoint.");
       case 429:
         throw new Error(
-          "Rate limit exceeded. Wait a moment and try again, or upgrade to Pro for higher limits."
+          "Rate limit exceeded. Add an API key for higher limits — " +
+          "get one free at https://www.scholarfeed.org/settings"
         );
       default:
         // Truncate body to avoid leaking internal details to LLM
