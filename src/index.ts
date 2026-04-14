@@ -15,10 +15,17 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerAllTools } from "./tools/index.js";
 
-// Handle `npx scholar-feed-mcp init` before starting the MCP server
+// Handle subcommands before starting the MCP server
 if (process.argv[2] === "init") {
   const { runInit } = await import("./init.js");
   await runInit();
+  process.exit(0);
+}
+
+if (process.argv[2] === "--version" || process.argv[2] === "-v") {
+  const require = createRequire(import.meta.url);
+  const { version: v } = require("../package.json") as { version: string };
+  console.log(`scholar-feed-mcp v${v}`);
   process.exit(0);
 }
 
