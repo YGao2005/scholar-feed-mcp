@@ -5,7 +5,7 @@ Thanks for your interest in contributing! This guide covers the basics.
 ## Setup
 
 ```bash
-git clone https://github.com/yang-aiyara/scholar-feed-mcp.git
+git clone https://github.com/YGao2005/scholar-feed-mcp.git
 cd scholar-feed-mcp
 npm install
 npm run build
