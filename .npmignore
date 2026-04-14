@@ -1,0 +1,10 @@
+src/
+dist/
+.github/
+tsconfig.json
+tsup.config.ts
+node_modules/
+.DS_Store
+*.tsbuildinfo
+CONTRIBUTING.md
+CHANGELOG.md
