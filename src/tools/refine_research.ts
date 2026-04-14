@@ -71,7 +71,8 @@ export function register(server: McpServer): void {
         "Ask a follow-up question on a completed deep_research report. " +
         "Finds new papers not seen in the original report and synthesizes " +
         "a focused follow-up analysis. Requires the report_id from a " +
-        "previous deep_research call. Takes 20-60 seconds.",
+        "previous deep_research call. Takes 20-60 seconds. " +
+        "Requires an API key (free at scholarfeed.org/settings).",
       inputSchema: {
         report_id: z
           .string()
@@ -186,6 +187,17 @@ export function register(server: McpServer): void {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error("[refine_research] Error:", message);
+
+        if (message.includes("Authentication failed") || message.includes("401")) {
+          return {
+            content: [{
+              type: "text" as const,
+              text: "Error: Research refinement requires an API key. Get one free at https://www.scholarfeed.org/settings and add it as SF_API_KEY in your MCP config.",
+            }],
+            isError: true,
+          };
+        }
+
         return {
           content: [{ type: "text" as const, text: `Error: ${message}` }],
           isError: true,

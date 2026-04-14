@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0] - 2026-04-13
+
+### Changed
+- **API key is now optional** — works without signup, anonymous access gets 100 calls/day
+- `deep_research` and `refine_research` show clear guidance when called without an API key
+- Tool descriptions for research tools mention the API key requirement
+- Updated all install examples to show no-key setup first
+
 ## [1.2.1] - 2026-03-21
 
 ### Added

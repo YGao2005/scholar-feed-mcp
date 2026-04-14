@@ -142,10 +142,11 @@ export function register(server: McpServer): void {
     "deep_research",
     {
       description:
-        "Run a deep research session on a topic. Searches 512k+ CS/AI papers, " +
+        "Run a deep research session on a topic. Searches 560k+ CS/AI papers, " +
         "synthesizes findings with an LLM into a structured report with clusters, " +
         "gap analysis, and evidence chains. Takes 60-300 seconds depending on depth. " +
-        "Note: may take 60-300s. The 'quick' depth (~60s) is most reliable. " +
+        "The 'quick' depth (~60s) is most reliable. " +
+        "Requires an API key (free at scholarfeed.org/settings). " +
         "Returns the full structured report as JSON.",
       inputSchema: {
         topic: z.string().min(1).describe("Research topic or question"),
@@ -192,6 +193,18 @@ export function register(server: McpServer): void {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         console.error("[deep_research] Error:", message);
+
+        // Provide actionable guidance for auth errors
+        if (message.includes("Authentication failed") || message.includes("401")) {
+          return {
+            content: [{
+              type: "text" as const,
+              text: "Error: Deep research requires an API key. Get one free at https://www.scholarfeed.org/settings and add it as SF_API_KEY in your MCP config.",
+            }],
+            isError: true,
+          };
+        }
+
         return {
           content: [{ type: "text" as const, text: `Error: ${message}` }],
           isError: true,
