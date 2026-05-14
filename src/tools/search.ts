@@ -13,7 +13,7 @@ export function register(server: McpServer): void {
     "search_papers",
     {
       description:
-        "Search Scholar Feed's 560k+ CS/AI/ML paper corpus by keyword. Returns papers with LLM-generated summaries, novelty scores, and structured extraction data (method, task, contribution type). Supports filtering by category, novelty, recency, method, task, dataset, contribution type, and whether papers have benchmark results.",
+        "Search Scholar Feed's 560k+ CS/AI/ML paper corpus. Defaults to semantic (embedding) search — finds conceptually related papers even when the user's wording doesn't match the paper's title/abstract. Pass mode='keyword' for exact-string full-text search. Returns papers with LLM-generated summaries, novelty scores, and structured extraction data (method, task, contribution type). Supports filtering by category, novelty, recency, method, task, dataset, contribution type, and whether papers have benchmark results.",
       inputSchema: {
         q: z.string().min(1).describe("Search query keywords"),
         category: z
@@ -91,7 +91,7 @@ export function register(server: McpServer): void {
           .enum(["keyword", "semantic"])
           .optional()
           .describe(
-            "Search mode: 'keyword' (default, full-text match) or 'semantic' (embedding similarity — finds conceptually related papers even without exact keyword matches, slower)"
+            "Search mode. 'semantic' (default) uses embedding similarity — finds conceptually related papers even without exact keyword matches. 'keyword' uses Postgres full-text search — faster but only matches exact terms."
           ),
         cursor: z
           .string()
@@ -155,7 +155,9 @@ export function register(server: McpServer): void {
           params.task_category = task_category;
         if (has_results !== undefined)
           params.has_results = String(has_results);
-        if (mode !== undefined) params.mode = mode;
+        // Default to semantic search — keyword sorts by rank_score (not relevance),
+        // which is wrong for natural-language queries (audit 2026-05-14).
+        params.mode = mode ?? "semantic";
         if (cursor !== undefined) params.cursor = cursor;
         params.page = String(page);
         params.limit = String(limit);
