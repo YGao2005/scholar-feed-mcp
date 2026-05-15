@@ -13,7 +13,7 @@ export function register(server: McpServer): void {
     "search_papers",
     {
       description:
-        "Search Scholar Feed's 560k+ CS/AI/ML paper corpus. Defaults to semantic (embedding) search — finds conceptually related papers even when the user's wording doesn't match the paper's title/abstract. Pass mode='keyword' for exact-string full-text search. Returns papers with LLM-generated summaries, novelty scores, and structured extraction data (method, task, contribution type). Supports filtering by category, novelty, recency, method, task, dataset, contribution type, and whether papers have benchmark results.",
+        "Search Scholar Feed's 560k+ CS/AI/ML paper corpus. Defaults to semantic (embedding) search — finds conceptually related papers even when the user's wording doesn't match the paper's title/abstract. Pass mode='keyword' for exact-string full-text search. Returns papers with LLM-generated summaries, novelty scores, and structured extraction data. Default response is a lean 12-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score) — pass verbose=true or fields=... for the full 28-field shape with method/task/dataset extraction. Supports filtering by category, novelty, recency, method, task, dataset, contribution type, and whether papers have benchmark results.",
       inputSchema: {
         q: z.string().min(1).describe("Search query keywords"),
         category: z
@@ -117,7 +117,13 @@ export function register(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,llm_novelty_score'). Default: all fields."
+            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,llm_novelty_score'). If omitted, returns the lean 12-field default unless verbose=true."
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            "If true, returns the full 28-field paper shape (method/task/dataset extraction, application_domain, baselines, etc.). Default false returns the lean 12-field set. Ignored when `fields` is provided."
           ),
         exclude_ids: z
           .array(z.string())
@@ -144,6 +150,7 @@ export function register(server: McpServer): void {
       page,
       limit,
       fields,
+      verbose,
       exclude_ids,
     }) => {
       try {
@@ -170,6 +177,7 @@ export function register(server: McpServer): void {
         params.page = String(page);
         params.limit = String(limit);
         if (fields !== undefined) params.fields = fields;
+        if (verbose === true) params.verbose = "true";
         if (exclude_ids !== undefined && exclude_ids.length > 0)
           params.exclude_ids = exclude_ids.join(",");
 

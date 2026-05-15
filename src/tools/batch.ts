@@ -13,7 +13,7 @@ export function register(server: McpServer): void {
     "batch_lookup",
     {
       description:
-        "Look up multiple papers at once by arXiv ID. Returns details for found papers and lists not-found IDs.",
+        "Look up multiple papers at once by arXiv ID. Returns details for found papers and lists not-found IDs. Default response is a lean 12-field shape per paper — pass verbose=true for the full 28-field shape.",
       inputSchema: {
         arxiv_ids: z
           .array(z.string().min(1))
@@ -24,14 +24,21 @@ export function register(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary'). Default: all fields."
+            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary'). If omitted, returns the lean 12-field default unless verbose=true."
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            "If true, returns the full 28-field paper shape. Default false returns the lean 12-field set. Ignored when `fields` is provided."
           ),
       },
     },
-    async ({ arxiv_ids, fields }) => {
+    async ({ arxiv_ids, fields, verbose }) => {
       try {
         const body: Record<string, unknown> = { arxiv_ids };
         if (fields !== undefined) body.fields = fields;
+        if (verbose === true) body.verbose = true;
 
         const result = await client.post<unknown>("/public/papers/batch", body);
         return {

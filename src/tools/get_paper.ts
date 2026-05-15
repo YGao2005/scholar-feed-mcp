@@ -13,7 +13,7 @@ export function register(server: McpServer): void {
     "get_paper",
     {
       description:
-        "Get full details for a single paper by arXiv ID. Returns title, authors, year, LLM summary, novelty score, citation count, institution tags, repo URL, venue, structured extraction (method_name, contribution_type, task_category, datasets, baselines), and inline benchmark results from paper_results (set include_results=false to skip). Use fields='abstract' to include the abstract, or fetch_fulltext with sections='all' for the full paper.",
+        "Get full details for a single paper by arXiv ID. Default returns a lean 12-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score) plus inline benchmark results from paper_results. Pass verbose=true for the full 28-field shape with structured extraction (method_name, contribution_type, task_category, datasets, baselines) and institution_tags. Use fields='abstract' to include the abstract, or fetch_fulltext with sections='all' for the full paper.",
       inputSchema: {
         arxiv_id: z
           .string()
@@ -23,7 +23,13 @@ export function register(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,abstract'). Default: all fields."
+            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,abstract'). If omitted, returns the lean 12-field default unless verbose=true."
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            "If true, returns the full 28-field paper shape (method/task/dataset extraction, application_domain, baselines, etc.). Default false returns the lean 12-field set. Ignored when `fields` is provided."
           ),
         include_results: z
           .boolean()
@@ -34,10 +40,11 @@ export function register(server: McpServer): void {
           ),
       },
     },
-    async ({ arxiv_id, fields, include_results }) => {
+    async ({ arxiv_id, fields, verbose, include_results }) => {
       try {
         const params: Record<string, string> = {};
         if (fields !== undefined) params.fields = fields;
+        if (verbose === true) params.verbose = "true";
         if (include_results === false) params.include_results = "false";
 
         const result = await client.get<unknown>(

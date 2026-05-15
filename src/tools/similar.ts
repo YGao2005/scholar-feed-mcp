@@ -13,7 +13,7 @@ export function register(server: McpServer): void {
     "find_similar",
     {
       description:
-        "Find papers similar to a given paper. Uses precomputed bibliographic coupling + embedding similarity (updated daily).",
+        "Find papers similar to a given paper. Uses precomputed bibliographic coupling + embedding similarity (updated daily). Default response is a lean 12-field shape per paper — pass verbose=true for the full 28-field shape.",
       inputSchema: {
         arxiv_id: z.string().min(1).describe("arXiv ID of the source paper"),
         limit: z
@@ -34,7 +34,13 @@ export function register(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,llm_novelty_score'). Default: all fields."
+            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,llm_novelty_score'). If omitted, returns the lean 12-field default unless verbose=true."
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            "If true, returns the full 28-field paper shape. Default false returns the lean 12-field set. Ignored when `fields` is provided."
           ),
         exclude_ids: z
           .array(z.string())
@@ -44,11 +50,12 @@ export function register(server: McpServer): void {
           ),
       },
     },
-    async ({ arxiv_id, limit, days, fields, exclude_ids }) => {
+    async ({ arxiv_id, limit, days, fields, verbose, exclude_ids }) => {
       try {
         const params: Record<string, string> = { limit: String(limit) };
         if (days !== undefined) params.days = String(days);
         if (fields !== undefined) params.fields = fields;
+        if (verbose === true) params.verbose = "true";
         if (exclude_ids !== undefined && exclude_ids.length > 0)
           params.exclude_ids = exclude_ids.join(",");
 

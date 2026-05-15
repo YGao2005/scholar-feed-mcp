@@ -13,7 +13,7 @@ export function register(server: McpServer): void {
     "whats_trending",
     {
       description:
-        "Get today's trending CS/AI papers ranked by a composite score of recency, citation velocity, and institutional reputation. Papers from the last 7 days.",
+        "Get today's trending CS/AI papers ranked by a composite score of paper_quality, novelty, and citation_velocity. Each paper response includes trending_score plus its paper_quality and citation_velocity components so you can see why a paper was ranked highly. Papers from the last month. Default response is a lean 12-field shape per paper — pass verbose=true for the full 28-field shape.",
       inputSchema: {
         category: z
           .string()
@@ -30,7 +30,13 @@ export function register(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,llm_novelty_score'). Default: all fields."
+            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,llm_novelty_score'). If omitted, returns the lean 12-field default unless verbose=true."
+          ),
+        verbose: z
+          .boolean()
+          .optional()
+          .describe(
+            "If true, returns the full 28-field paper shape. Default false returns the lean 12-field set. Ignored when `fields` is provided."
           ),
         exclude_ids: z
           .array(z.string())
@@ -40,11 +46,12 @@ export function register(server: McpServer): void {
           ),
       },
     },
-    async ({ category, limit, fields, exclude_ids }) => {
+    async ({ category, limit, fields, verbose, exclude_ids }) => {
       try {
         const params: Record<string, string> = { limit: String(limit) };
         if (category !== undefined) params.category = category;
         if (fields !== undefined) params.fields = fields;
+        if (verbose === true) params.verbose = "true";
         if (exclude_ids !== undefined && exclude_ids.length > 0)
           params.exclude_ids = exclude_ids.join(",");
 

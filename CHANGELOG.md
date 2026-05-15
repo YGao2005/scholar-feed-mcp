@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.7.0] - 2026-05-15
+
+### Changed
+- **Lean default response shape** for the 6 paper-listing tools (`search_papers`, `get_paper`, `find_similar`, `get_citations`, `whats_trending`, `batch_lookup`). Default now returns 12 high-signal fields per paper (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score) — ~60% smaller than the prior 28-field shape.
+- Pass `verbose: true` on any of those tools to restore the full 28-field shape (method/task/dataset extraction, application_domain, baselines, etc.). Explicit `fields=...` continues to override both.
+- `whats_trending` now returns `trending_score`, `paper_quality`, and `citation_velocity` on each paper so an agent can see *why* a paper is ranked highly, not just that it appears in the list.
+- `field_guide` response now caps the `papers` array at 10 entries × 5 fields (was up to 34 × 11). The curated structure in `report_body` already references papers by arxiv_id; the `papers` array is now a thin lookup table providing enrichment.
+
+### Fixed
+- `get_citations` now orders results by `rank_score DESC, published_date DESC` — high-impact citing papers first. Previously results came back in DB-natural order (effectively random).
+- `discover_authors` no longer emits a hardcoded `relevance_score: 1.0` for name-search results. The score is now omitted when there's no semantic distance to report.
+- `institution_tags` are now populated on all paper-listing endpoints (previously only `get_paper` actually fetched them; others emitted `[]`).
+- Search keyword-mode responses now emit `"mode": "keyword"` correctly (was missing the field).
+
 ## [1.3.0] - 2026-04-13
 
 ### Changed
