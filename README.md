@@ -27,8 +27,6 @@ Try asking: *"Search for recent papers on test-time compute scaling"*
 
 **Trend monitoring** — "What's trending in cs.CV this week? Summarize the top 3."
 
-**Deep dives** — "Run a deep research session on 'reasoning in large language models'"
-
 **Benchmark tracking** — "Show me the MMLU leaderboard and compare GPT-4 vs LLaMA-3"
 
 **Author discovery** — "Who are the top researchers working on efficient LLM inference?"
@@ -89,7 +87,7 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 
 **Windows note:** Use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "scholar-feed-mcp"]`.
 
-## Available Tools (23)
+## Available Tools (21)
 
 ### Core Search & Discovery
 
@@ -135,8 +133,6 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `get_research_landscape` | Aggregated landscape stats for a topic | `q`, `limit` |
-| `deep_research` | Multi-round research synthesis (30-120s) | `topic`, `depth` |
-| `refine_research` | Follow-up question on a completed research report | `report_id`, `question`, `date_from`, `date_to` |
 
 ### Utility
 
@@ -171,8 +167,6 @@ Use `novelty_min: 0.5` in `search_papers` to filter for genuinely novel work.
 | `batch_lookup` | 20/min |
 | `fetch_repo` | 10/min |
 | `export_bibtex` | 20/min |
-| `deep_research` | 5/min |
-| `refine_research` | 5/min |
 | `search_benchmarks` | 30/min |
 | `get_leaderboard` | 30/min |
 | `get_benchmark_stats` | 30/min |
