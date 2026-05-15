@@ -13,7 +13,7 @@ export function register(server: McpServer): void {
     "get_leaderboard",
     {
       description:
-        "Get the SOTA leaderboard for a dataset/benchmark (e.g. ImageNet, MMLU, GSM8K, SWE-bench). Returns top methods/models ranked by score. Only includes papers with absolute numeric results. Powered by 59k+ extracted benchmark results across 20k+ datasets.",
+        "Get the SOTA leaderboard for a dataset/benchmark (e.g. ImageNet, MMLU, GSM8K, SWE-bench). Returns top methods/models ranked by score across 59k+ extracted benchmark results in 20k+ datasets. Optional include_summary returns per-metric distribution stats (min/max/median/p25/p75). Optional include_history returns the most recent N chronological results per metric.",
       inputSchema: {
         dataset: z
           .string()
@@ -34,15 +34,36 @@ export function register(server: McpServer): void {
           .max(50)
           .default(20)
           .describe("Max entries per metric (default 20)"),
+        include_summary: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "Include per-metric distribution summary (count, min, max, median, p25, p75)."
+          ),
+        include_history: z
+          .number()
+          .int()
+          .min(0)
+          .max(50)
+          .optional()
+          .default(0)
+          .describe(
+            "Include up to N most recent chronological results per metric (0 = no history). Replaces the dropped get_benchmark_timeline tool."
+          ),
       },
     },
-    async ({ dataset, metric, limit }) => {
+    async ({ dataset, metric, limit, include_summary, include_history }) => {
       try {
         const params: Record<string, string> = {
           dataset,
           limit: String(limit),
         };
         if (metric !== undefined) params.metric = metric;
+        if (include_summary) params.include_summary = "true";
+        if (include_history && include_history > 0) {
+          params.include_history = String(include_history);
+        }
 
         const result = await client.get<unknown>(
           "/public/benchmarks/leaderboard",

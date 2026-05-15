@@ -13,7 +13,7 @@ export function register(server: McpServer): void {
     "get_author",
     {
       description:
-        "Get detailed author profile by ID (from discover_authors results). Returns h-index, total citations, global rank, research topics, novelty scores, and their top 10 papers by rank score.",
+        "Get detailed author profile by ID (from discover_authors results). Returns h-index, total citations, global rank, primary field, novelty score distribution, research topics, code/venue scores, years active, and their top 10 papers by rank score (with llm_summary, novelty, citation count). Top 10 papers replaces the dropped get_author_papers tool for most use cases.",
       inputSchema: {
         author_id: z
           .coerce.number()

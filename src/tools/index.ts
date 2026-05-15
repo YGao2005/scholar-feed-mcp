@@ -1,7 +1,7 @@
 /**
  * Tool registration barrel.
  *
- * Imports all 22 tool modules and exports registerAllTools(),
+ * Imports all 15 tool modules and exports registerAllTools(),
  * which registers each tool on the given McpServer instance.
  */
 
@@ -17,17 +17,10 @@ import { register as registerFulltext } from "./fulltext.js";
 import { register as registerBatch } from "./batch.js";
 import { register as registerRepo } from "./repo.js";
 import { register as registerBibtex } from "./bibtex.js";
-import { register as registerGetPaperResults } from "./get_paper_results.js";
 import { register as registerGetLeaderboard } from "./get_leaderboard.js";
-import { register as registerSearchBenchmarks } from "./search_benchmarks.js";
-import { register as registerSearchByMethod } from "./search_by_method.js";
 import { register as registerCompareMethods } from "./compare_methods.js";
 import { register as registerDiscoverAuthors } from "./discover_authors.js";
 import { register as registerGetAuthor } from "./get_author.js";
-import { register as registerGetAuthorPapers } from "./get_author_papers.js";
-import { register as registerGetBenchmarkTimeline } from "./get_benchmark_timeline.js";
-import { register as registerGetBenchmarkStats } from "./get_benchmark_stats.js";
-import { register as registerGetResearchLandscape } from "./get_research_landscape.js";
 import { register as registerFieldGuide } from "./field_guide.js";
 
 /**
@@ -44,16 +37,9 @@ export function registerAllTools(server: McpServer): void {
   registerBatch(server);
   registerRepo(server);
   registerBibtex(server);
-  registerGetPaperResults(server);
   registerGetLeaderboard(server);
-  registerSearchBenchmarks(server);
-  registerSearchByMethod(server);
   registerCompareMethods(server);
   registerDiscoverAuthors(server);
   registerGetAuthor(server);
-  registerGetAuthorPapers(server);
-  registerGetBenchmarkTimeline(server);
-  registerGetBenchmarkStats(server);
-  registerGetResearchLandscape(server);
   registerFieldGuide(server);
 }

@@ -13,7 +13,7 @@ export function register(server: McpServer): void {
     "get_paper",
     {
       description:
-        "Get full details for a single paper by arXiv ID. Returns title, authors, year, LLM summary, novelty score, links, and structured extraction data (method_name, contribution_type, task_category, datasets, baselines). Use fields='abstract' to include the abstract. Use get_paper_results for benchmark scores, or fetch_fulltext with sections='all' for the full paper content.",
+        "Get full details for a single paper by arXiv ID. Returns title, authors, year, LLM summary, novelty score, citation count, institution tags, repo URL, venue, structured extraction (method_name, contribution_type, task_category, datasets, baselines), and inline benchmark results from paper_results (set include_results=false to skip). Use fields='abstract' to include the abstract, or fetch_fulltext with sections='all' for the full paper.",
       inputSchema: {
         arxiv_id: z
           .string()
@@ -25,12 +25,20 @@ export function register(server: McpServer): void {
           .describe(
             "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,abstract'). Default: all fields."
           ),
+        include_results: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe(
+            "Include inline benchmark results from paper_results. Default true. Set false if you only need metadata."
+          ),
       },
     },
-    async ({ arxiv_id, fields }) => {
+    async ({ arxiv_id, fields, include_results }) => {
       try {
         const params: Record<string, string> = {};
         if (fields !== undefined) params.fields = fields;
+        if (include_results === false) params.include_results = "false";
 
         const result = await client.get<unknown>(
           `/public/papers/${encodeURIComponent(arxiv_id)}`,

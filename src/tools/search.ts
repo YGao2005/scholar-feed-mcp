@@ -39,6 +39,12 @@ export function register(server: McpServer): void {
           .describe(
             "Filter by method category e.g. 'reinforcement learning', 'transformer'"
           ),
+        method_name: z
+          .string()
+          .optional()
+          .describe(
+            "Filter to papers introducing/using a specific named method e.g. 'LoRA', 'YOLO', 'DPO'. Case-insensitive substring match on the extracted method_name field. Replaces the dropped search_by_method tool."
+          ),
         task: z
           .string()
           .optional()
@@ -127,6 +133,7 @@ export function register(server: McpServer): void {
       novelty_min,
       days,
       method_category,
+      method_name,
       task,
       dataset,
       contribution_type,
@@ -147,6 +154,7 @@ export function register(server: McpServer): void {
         if (days !== undefined) params.days = String(days);
         if (method_category !== undefined)
           params.method_category = method_category;
+        if (method_name !== undefined) params.method_name = method_name;
         if (task !== undefined) params.task = task;
         if (dataset !== undefined) params.dataset = dataset;
         if (contribution_type !== undefined)
