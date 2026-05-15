@@ -51,8 +51,8 @@ describe("tool files", () => {
     toolModules.push(match[1]);
   }
 
-  it("has 23 tool modules registered", () => {
-    assert.strictEqual(toolModules.length, 23);
+  it("has 22 tool modules registered", () => {
+    assert.strictEqual(toolModules.length, 22);
   });
 
   it("each tool file exists and exports a register function", async () => {

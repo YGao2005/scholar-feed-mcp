@@ -1,7 +1,7 @@
 /**
  * Tool registration barrel.
  *
- * Imports all 21 tool modules and exports registerAllTools(),
+ * Imports all 22 tool modules and exports registerAllTools(),
  * which registers each tool on the given McpServer instance.
  */
 
@@ -28,6 +28,7 @@ import { register as registerGetAuthorPapers } from "./get_author_papers.js";
 import { register as registerGetBenchmarkTimeline } from "./get_benchmark_timeline.js";
 import { register as registerGetBenchmarkStats } from "./get_benchmark_stats.js";
 import { register as registerGetResearchLandscape } from "./get_research_landscape.js";
+import { register as registerFieldGuide } from "./field_guide.js";
 
 /**
  * Register all Scholar Feed MCP tools on the provided server instance.
@@ -54,4 +55,5 @@ export function registerAllTools(server: McpServer): void {
   registerGetBenchmarkTimeline(server);
   registerGetBenchmarkStats(server);
   registerGetResearchLandscape(server);
+  registerFieldGuide(server);
 }
