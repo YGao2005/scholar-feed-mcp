@@ -87,7 +87,7 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 
 **Windows note:** Use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "scholar-feed-mcp"]`.
 
-## Available Tools (21)
+## Available Tools (16)
 
 ### Core Search & Discovery
 
@@ -97,6 +97,7 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 | `get_paper` | Get full paper details by arXiv ID | `arxiv_id`, `fields` |
 | `find_similar` | Find similar papers via embedding + bibliographic coupling | `arxiv_id`, `limit`, `days` |
 | `get_citations` | Citation graph (outgoing refs or incoming citations) | `arxiv_id`, `direction`, `limit`, `fields` |
+| `find_citations_about` | Citation graph filtered semantically by a topic query (e.g. "citations of AIAYN about protein folding") | `arxiv_id`, `query`, `direction`, `limit`, `fields` |
 | `whats_trending` | Today's trending papers by composite score | `category`, `limit`, `fields`, `exclude_ids` |
 | `batch_lookup` | Look up multiple papers at once | `arxiv_ids` (max 50), `fields` |
 
@@ -107,17 +108,12 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 | `fetch_fulltext` | Extract results/experiments from LaTeX source | `arxiv_id` |
 | `fetch_repo` | Get GitHub repo README + file tree | `arxiv_id` |
 | `export_bibtex` | Export BibTeX for papers | `arxiv_ids` (max 50) |
-| `get_paper_results` | Structured benchmark results from a paper | `arxiv_id` |
 
 ### Benchmarks & Methods
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `search_benchmarks` | Find datasets/benchmarks by name | `q`, `limit` |
 | `get_leaderboard` | SOTA leaderboard for a dataset | `dataset`, `metric`, `limit` |
-| `get_benchmark_stats` | Score distribution stats (min, max, median, etc.) | `dataset`, `metric` |
-| `get_benchmark_timeline` | Raw score data points over time | `dataset`, `metric` |
-| `search_by_method` | Search by technique name (LoRA, YOLO, DPO, etc.) | `q`, `contribution_type`, `task_category`, `limit` |
 | `compare_methods` | Side-by-side model comparison across benchmarks | `models` (2-10), `dataset`, `metric` |
 
 ### Authors
@@ -126,13 +122,12 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 |------|-------------|----------------|
 | `discover_authors` | Find researchers by topic or name | `q`, `field`, `limit` |
 | `get_author` | Detailed author profile (h-index, topics, top papers) | `author_id` |
-| `get_author_papers` | All papers by an author (paginated) | `author_id`, `limit`, `page` |
 
 ### Research
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `get_research_landscape` | Aggregated landscape stats for a topic | `q`, `limit` |
+| `field_guide` | Curated orientation report for a research area — foundational papers, competing approaches, open problems, reading order, subfield map (Pro: 20/month; Free: 1/month) | `topic` |
 
 ### Utility
 
@@ -162,22 +157,17 @@ Use `novelty_min: 0.5` in `search_papers` to filter for genuinely novel work.
 | `get_paper` | 60/min |
 | `find_similar` | 20/min |
 | `get_citations` | 30/min |
+| `find_citations_about` | 20/min |
 | `whats_trending` | 30/min |
 | `fetch_fulltext` | 10/min |
 | `batch_lookup` | 20/min |
 | `fetch_repo` | 10/min |
 | `export_bibtex` | 20/min |
-| `search_benchmarks` | 30/min |
 | `get_leaderboard` | 30/min |
-| `get_benchmark_stats` | 30/min |
-| `get_benchmark_timeline` | 30/min |
-| `search_by_method` | 30/min |
 | `compare_methods` | 20/min |
 | `discover_authors` | 20/min |
 | `get_author` | 60/min |
-| `get_author_papers` | 30/min |
-| `get_research_landscape` | 10/min |
-| `get_paper_results` | 30/min |
+| `field_guide` | 5/min |
 
 Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
 

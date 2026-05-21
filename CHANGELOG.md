@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.8.0] - 2026-05-20
+
+### Added
+- `find_citations_about` tool — semantic filter over a paper's citation graph. Answers questions like "find papers citing X that talk about Y" (e.g. "citations of AIAYN about protein folding"). Takes the top 2000 citation neighbours by rank_score, then re-ranks them by cosine similarity to a query embedding. Each result includes a `similarity_score` (typically 0.5–0.75 for relevant matches). Endpoint: `GET /public/papers/{arxiv_id}/citations/about`.
+
 ## [1.7.0] - 2026-05-15
 
 ### Changed
