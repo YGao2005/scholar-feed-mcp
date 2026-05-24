@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.0] - 2026-05-23
+
+### Removed (breaking)
+- `get_leaderboard` tool — unregistered from the MCP tool surface. The underlying `paper_results` data had two extraction problems: (1) results from 2024 and earlier were never extracted, and (2) extracted rows mixed legitimate benchmark scores with non-score values (efficiency deltas, pruning budgets, qualitative claims) because the LLM prompt didn't enforce a `result_kind` discriminator. Canonical-metric filtering then surfaced only the frozen 2022 PwC archive, which made leaderboards silently 4 years stale. Source file preserved at `src/tools/get_leaderboard.ts` for potential revival after extraction quality is fixed.
+- Tool count: 16 → 15.
+
+### Migration
+- Use `search_papers(q="<benchmark name>", contribution_type="method", days=365)` and read `llm_summary` for headline numbers. For exact scores, follow up with `fetch_fulltext(arxiv_id, sections="results")` on the top candidates.
+
 ## [1.8.0] - 2026-05-20
 
 ### Added

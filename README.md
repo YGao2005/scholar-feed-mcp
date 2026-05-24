@@ -113,7 +113,6 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `get_leaderboard` | SOTA leaderboard for a dataset | `dataset`, `metric`, `limit` |
 | `compare_methods` | Side-by-side model comparison across benchmarks | `models` (2-10), `dataset`, `metric` |
 
 ### Authors
@@ -163,7 +162,6 @@ Use `novelty_min: 0.5` in `search_papers` to filter for genuinely novel work.
 | `batch_lookup` | 20/min |
 | `fetch_repo` | 10/min |
 | `export_bibtex` | 20/min |
-| `get_leaderboard` | 30/min |
 | `compare_methods` | 20/min |
 | `discover_authors` | 20/min |
 | `get_author` | 60/min |

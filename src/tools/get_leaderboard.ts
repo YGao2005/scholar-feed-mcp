@@ -1,6 +1,12 @@
 /**
  * get_leaderboard tool — SOTA leaderboard for a dataset/benchmark.
  *
+ * DEPRECATED 2026-05-23 (v2.0.0): unregistered from tool surface due to
+ * paper_results extraction noise — leaderboards returned stale 2022 PwC
+ * data because canonical metric labels filtered out noisy LLM-extracted
+ * rows. File preserved in case extraction quality improves and we want
+ * to revive. To revive: re-add to ./index.ts imports + registerAllTools().
+ *
  * Endpoint: GET /public/benchmarks/leaderboard
  */
 

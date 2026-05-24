@@ -1,7 +1,7 @@
 /**
  * Tool registration barrel.
  *
- * Imports all 16 tool modules and exports registerAllTools(),
+ * Imports all 15 tool modules and exports registerAllTools(),
  * which registers each tool on the given McpServer instance.
  */
 
@@ -18,7 +18,6 @@ import { register as registerFulltext } from "./fulltext.js";
 import { register as registerBatch } from "./batch.js";
 import { register as registerRepo } from "./repo.js";
 import { register as registerBibtex } from "./bibtex.js";
-import { register as registerGetLeaderboard } from "./get_leaderboard.js";
 import { register as registerCompareMethods } from "./compare_methods.js";
 import { register as registerDiscoverAuthors } from "./discover_authors.js";
 import { register as registerGetAuthor } from "./get_author.js";
@@ -39,7 +38,6 @@ export function registerAllTools(server: McpServer): void {
   registerBatch(server);
   registerRepo(server);
   registerBibtex(server);
-  registerGetLeaderboard(server);
   registerCompareMethods(server);
   registerDiscoverAuthors(server);
   registerGetAuthor(server);
