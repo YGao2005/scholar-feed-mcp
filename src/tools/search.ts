@@ -1,6 +1,10 @@
 /**
  * search_papers tool — full-text search across Scholar Feed's 560k+ paper corpus.
  *
+ * v3: absorbs find_similar (anchor_paper_id), find_citations_about
+ * (scope_to_citations_of), and whats_trending (sort='trending') in addition
+ * to the original search-by-query behaviour.
+ *
  * Endpoint: GET /public/papers/search
  */
 
@@ -13,9 +17,27 @@ export function register(server: McpServer): void {
     "search_papers",
     {
       description:
-        "Search Scholar Feed's 560k+ CS/AI/ML paper corpus. Defaults to semantic (embedding) search — finds conceptually related papers even when the user's wording doesn't match the paper's title/abstract. Pass mode='keyword' for exact-string full-text search. Returns papers with LLM-generated summaries, novelty scores, and structured extraction data. Default response is a lean 12-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score) — pass verbose=true or fields=... for the full 28-field shape with method/task/dataset extraction. Supports filtering by category, novelty, recency, method, task, dataset, contribution type, and whether papers have benchmark results.",
+        "Search Scholar Feed's 560k+ CS/AI/ML paper corpus. Defaults to semantic (embedding) search — finds conceptually related papers even when the user's wording doesn't match the paper's title/abstract. Pass mode='keyword' for exact-string full-text search. CAVEAT: semantic search often misses old high-citation CANONICAL papers (e.g. foundational anchors like H2O for KV eviction, GRIT for unified embedding+generation) because the ranker prefers recent stylistically-matched papers. If you're hunting the canonical anchor for an area, parse the top-5 result abstracts for baseline mentions ('we compare against X, Y, Z'), then look the most-mentioned name up directly. Returns papers with LLM-generated summaries, novelty scores, and structured extraction data. Default response is a lean 12-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score) — pass verbose=true or fields=... for the full 28-field shape with method/task/dataset extraction. Supports filtering by category, novelty, recency, method, task, dataset, contribution type, and whether papers have benchmark results. v3 ABSORPTIONS: pass sort='trending' to replicate whats_trending; pass anchor_paper_id to replicate find_similar (q is ignored in anchor mode, results carry similarity_score); pass scope_to_citations_of to restrict search to a paper's citation graph (replaces find_citations_about).",
       inputSchema: {
-        q: z.string().min(1).describe("Search query keywords"),
+        q: z.string().min(1).optional().describe("Search query keywords. Optional when anchor_paper_id is set (anchor mode ignores q and returns papers similar to the anchor)."),
+        sort: z
+          .enum(["relevance", "trending", "recent"])
+          .optional()
+          .describe(
+            "Sort order. 'relevance' (default) ranks by semantic/keyword match. 'trending' ranks by daily quality+recency score — replaces the removed whats_trending tool. 'recent' returns newest papers first."
+          ),
+        anchor_paper_id: z
+          .string()
+          .optional()
+          .describe(
+            "Return papers similar to this arXiv paper ID (replaces the removed find_similar tool). When set, q is ignored and results carry similarity_score. Example: '2407.15831'."
+          ),
+        scope_to_citations_of: z
+          .string()
+          .optional()
+          .describe(
+            "Restrict search to this paper's citation graph, ranked by relevance to q (replaces the removed find_citations_about tool). Pass the arXiv ID of the paper whose citations you want to search within."
+          ),
         category: z
           .string()
           .optional()
@@ -135,6 +157,9 @@ export function register(server: McpServer): void {
     },
     async ({
       q,
+      sort,
+      anchor_paper_id,
+      scope_to_citations_of,
       category,
       novelty_min,
       days,
@@ -154,7 +179,13 @@ export function register(server: McpServer): void {
       exclude_ids,
     }) => {
       try {
-        const params: Record<string, string> = { q };
+        const params: Record<string, string> = {};
+        if (q !== undefined) params.q = q;
+        if (sort !== undefined) params.sort = sort;
+        if (anchor_paper_id !== undefined)
+          params.anchor_paper_id = anchor_paper_id;
+        if (scope_to_citations_of !== undefined)
+          params.scope_to_citations_of = scope_to_citations_of;
         if (category !== undefined) params.category = category;
         if (novelty_min !== undefined)
           params.novelty_min = String(novelty_min);
