@@ -1,4 +1,14 @@
 /**
+ * check_connection tool — DEPRECATED v3.0.0 (KILLED per FND-03 audit).
+ *
+ * Errors from any real call signal connectivity; the tool adds no value over
+ * observing a failed call. 4 calls in the 7-hour audit window, single caller,
+ * classic boilerplate-then-search pattern. Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * check_connection tool — verify API key and show plan/usage info.
  *
  * Endpoint: GET /public/health

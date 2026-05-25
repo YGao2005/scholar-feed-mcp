@@ -1,4 +1,13 @@
 /**
+ * field_guide tool — DEPRECATED v3.0.0 (demoted to skill).
+ *
+ * Demoted to the /field-guide skill; cheap retrieval moved to get_field_orientation tool.
+ * Backend POST /field-guide/start + GET /field-guide/{id} retained for skill use. Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * field_guide tool — generate a curated orientation report on a research area.
  *
  * Endpoints:

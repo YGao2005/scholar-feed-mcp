@@ -1,4 +1,13 @@
 /**
+ * compare_methods tool — DEPRECATED v3.0.0 (demoted to skill).
+ *
+ * Demoted to the /compare-methods skill. Backend POST /public/methods/compare retained.
+ * Agents compose from search_papers + get_paper + fetch_fulltext instead. Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * compare_methods tool — compare models/methods across shared benchmarks.
  *
  * Endpoint: POST /public/methods/compare

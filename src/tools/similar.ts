@@ -1,4 +1,12 @@
 /**
+ * find_similar tool — DEPRECATED v3.0.0.
+ *
+ * Absorbed into search_papers(anchor_paper_id=). Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * find_similar tool — find papers similar to a given paper.
  *
  * Endpoint: GET /public/papers/{arxiv_id}/similar

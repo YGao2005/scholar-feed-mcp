@@ -1,4 +1,12 @@
 /**
+ * discover_authors tool — DEPRECATED v3.0.0.
+ *
+ * Merged into find_author(q=...). Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * discover_authors tool — find researchers by topic or name.
  *
  * Endpoint: GET /public/authors/discover

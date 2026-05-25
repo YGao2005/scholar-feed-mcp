@@ -1,4 +1,12 @@
 /**
+ * export_bibtex tool — DEPRECATED v3.0.0.
+ *
+ * Absorbed into get_paper(format='bibtex'). Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * export_bibtex tool — generate BibTeX entries for arXiv papers.
  *
  * Endpoint: POST /public/papers/bibtex

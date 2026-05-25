@@ -1,4 +1,12 @@
 /**
+ * get_author tool — DEPRECATED v3.0.0.
+ *
+ * Merged into find_author(id=...). Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * get_author tool — get author profile with stats and top papers.
  *
  * Endpoint: GET /public/authors/{author_id}

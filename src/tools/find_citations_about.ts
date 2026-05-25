@@ -1,4 +1,12 @@
 /**
+ * find_citations_about tool — DEPRECATED v3.0.0.
+ *
+ * Absorbed into search_papers(scope_to_citations_of=). Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * find_citations_about tool — citation graph filtered by topic query.
  *
  * Endpoint: GET /public/papers/{arxiv_id}/citations/about
@@ -13,7 +21,7 @@ export function register(server: McpServer): void {
     "find_citations_about",
     {
       description:
-        "Find papers in the citation graph of a given paper that talk about a topic. Answers questions like 'find papers citing X that apply Y' — e.g. 'citations of AIAYN that apply attention to protein folding'. Returns papers re-ranked by semantic similarity to the query within the top 2000 citation neighbours (by rank_score). Each paper includes a `similarity_score` (cosine, typically 0.5–0.75 for relevant matches). Default response is a lean 12-field shape per paper — pass verbose=true for the full 28-field shape.",
+        "Find papers in the citation graph of a given paper that talk about a topic. Answers questions like 'find papers citing X that apply Y' — e.g. 'citations of AIAYN that apply attention to protein folding'. Returns papers re-ranked by semantic similarity to the query within the top 2000 citation neighbours (by rank_score). Each paper includes a `similarity_score` (cosine, typically 0.5–0.75 for relevant matches). HIGH-LEVERAGE PATTERN for 'improve algorithm X' / 'extend method Y' intents: fan out 3-4 calls on a single anchor paper with different intent angles (e.g. 'limitations and failure modes', 'hierarchical extensions', 'recompute vs cache tradeoffs') — each returns a coherent neighborhood and the combined set covers the design space far better than naive semantic search. Note: the citation graph does NOT bridge fields — use plain search_papers for cross-domain analog hunting. Default response is a lean 12-field shape per paper — pass verbose=true for the full 28-field shape.",
       inputSchema: {
         arxiv_id: z
           .string()

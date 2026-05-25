@@ -1,4 +1,13 @@
 /**
+ * batch_lookup tool — DEPRECATED v3.0.0.
+ *
+ * Absorbed into get_paper(arxiv_ids=[...]). POST /papers/batch also RETIRED.
+ * Use GET /papers?arxiv_ids[]=... (Branch A) via get_paper. Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * batch_lookup tool — look up multiple papers at once by arXiv ID.
  *
  * Endpoint: POST /public/papers/batch

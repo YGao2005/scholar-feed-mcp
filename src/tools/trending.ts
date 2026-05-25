@@ -1,4 +1,12 @@
 /**
+ * whats_trending tool — DEPRECATED v3.0.0.
+ *
+ * Absorbed into search_papers(sort='trending'). Deregistered from index.ts.
+ * Revival = re-add the register() call in index.ts.
+ * See docs/architecture/mcp-v3-surface.md deprecation table.
+ */
+
+/**
  * whats_trending tool — get today's trending CS/AI papers.
  *
  * Endpoint: GET /public/trending
