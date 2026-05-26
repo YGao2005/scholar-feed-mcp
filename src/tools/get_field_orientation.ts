@@ -30,7 +30,7 @@ export function register(server: McpServer): void {
           .min(5)
           .max(300)
           .describe(
-            "Research area to orient on. Be specific for better results. Examples: 'diffusion models for protein structure prediction', 'efficient attention mechanisms for long-context LLMs', 'graph neural networks for molecular property prediction'."
+            "Research area to orient on. Be specific for better results. Examples: 'diffusion models for protein structure prediction', 'efficient attention mechanisms for long-context LLMs', 'graph neural networks for molecular property prediction'.",
           ),
         limit: z
           .number()
@@ -49,7 +49,7 @@ export function register(server: McpServer): void {
         };
         const result = await client.get<unknown>(
           "/public/field-orientation",
-          params
+          params,
         );
         return {
           content: [
@@ -63,6 +63,6 @@ export function register(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

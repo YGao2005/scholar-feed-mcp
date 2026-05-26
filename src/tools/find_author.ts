@@ -24,7 +24,7 @@ export function register(server: McpServer): void {
           .min(2)
           .optional()
           .describe(
-            "Topic or researcher name to search (q-mode). Returns a list of matching authors. Examples: 'efficient transformer training', 'Geoffrey Hinton'."
+            "Topic or researcher name to search (q-mode). Returns a list of matching authors. Examples: 'efficient transformer training', 'Geoffrey Hinton'.",
           ),
         id: z
           .number()
@@ -32,13 +32,13 @@ export function register(server: McpServer): void {
           .positive()
           .optional()
           .describe(
-            "Author ID for direct profile lookup (id-mode). Returns the single author profile with top 10 papers. Get IDs from q-mode results or co_author_graph."
+            "Author ID for direct profile lookup (id-mode). Returns the single author profile with top 10 papers. Get IDs from q-mode results or co_author_graph.",
           ),
         field: z
           .string()
           .optional()
           .describe(
-            "(q-mode only) Filter by primary research field e.g. 'cs.LG', 'cs.CV', 'cs.CL'."
+            "(q-mode only) Filter by primary research field e.g. 'cs.LG', 'cs.CV', 'cs.CL'.",
           ),
         limit: z
           .number()
@@ -57,7 +57,8 @@ export function register(server: McpServer): void {
             content: [
               {
                 type: "text" as const,
-                text: "Error: Provide exactly one of q (search) or id (lookup). Got " +
+                text:
+                  "Error: Provide exactly one of q (search) or id (lookup). Got " +
                   (q !== undefined && id !== undefined
                     ? "both q and id."
                     : "neither q nor id."),
@@ -77,7 +78,7 @@ export function register(server: McpServer): void {
 
           const result = await client.get<unknown>(
             "/public/authors/discover",
-            params
+            params,
           );
           return {
             content: [
@@ -87,7 +88,7 @@ export function register(server: McpServer): void {
         } else {
           // id-mode: direct profile lookup
           const result = await client.get<unknown>(
-            `/public/authors/${encodeURIComponent(String(id))}`
+            `/public/authors/${encodeURIComponent(String(id))}`,
           );
           return {
             content: [
@@ -102,6 +103,6 @@ export function register(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

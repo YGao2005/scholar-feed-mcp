@@ -30,7 +30,7 @@ const TEST_BASE = "https://example.test/api/v1";
 async function withStub(
   opts: Parameters<typeof stubFetch>[0],
   env: Record<string, string | undefined>,
-  fn: (calls: CapturedRequest[]) => Promise<void>
+  fn: (calls: CapturedRequest[]) => Promise<void>,
 ): Promise<void> {
   const snap = snapshotEnv();
   for (const k of ENV_KEYS) delete process.env[k];
@@ -51,7 +51,10 @@ describe("client auth headers", () => {
   it("attaches a Bearer header when SF_API_KEY is set", async () => {
     await withStub({}, { SF_API_KEY: "sf_test_key" }, async (calls) => {
       await client.get("/public/health");
-      assert.strictEqual(headerOf(calls[0], "Authorization"), "Bearer sf_test_key");
+      assert.strictEqual(
+        headerOf(calls[0], "Authorization"),
+        "Bearer sf_test_key",
+      );
     });
   });
 
@@ -68,7 +71,10 @@ describe("client URL building", () => {
     await withStub({}, {}, async (calls) => {
       await client.get("/public/papers/search", { q: "rag", limit: "5" });
       const url = new URL(calls[0].url);
-      assert.strictEqual(url.origin + url.pathname, `${TEST_BASE}/public/papers/search`);
+      assert.strictEqual(
+        url.origin + url.pathname,
+        `${TEST_BASE}/public/papers/search`,
+      );
       assert.strictEqual(url.searchParams.get("q"), "rag");
       assert.strictEqual(url.searchParams.get("limit"), "5");
     });
@@ -82,7 +88,10 @@ describe("client URL building", () => {
       search.set("verbose", "true");
       await client.getWithParams("/public/papers", search);
       const url = new URL(calls[0].url);
-      assert.deepStrictEqual(url.searchParams.getAll("arxiv_ids[]"), ["A", "B"]);
+      assert.deepStrictEqual(url.searchParams.getAll("arxiv_ids[]"), [
+        "A",
+        "B",
+      ]);
       assert.strictEqual(url.searchParams.get("verbose"), "true");
     });
   });
@@ -102,14 +111,18 @@ describe("client error mapping", () => {
   });
 
   it("hides the response body on other errors (no internal leak)", async () => {
-    await withStub({ status: 500, body: "SECRET_INTERNAL_TRACE" }, {}, async () => {
-      await assert.rejects(client.get("/x"), (err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        assert.match(msg, /HTTP 500/);
-        assert.doesNotMatch(msg, /SECRET_INTERNAL_TRACE/);
-        return true;
-      });
-    });
+    await withStub(
+      { status: 500, body: "SECRET_INTERNAL_TRACE" },
+      {},
+      async () => {
+        await assert.rejects(client.get("/x"), (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          assert.match(msg, /HTTP 500/);
+          assert.doesNotMatch(msg, /SECRET_INTERNAL_TRACE/);
+          return true;
+        });
+      },
+    );
   });
 });
 

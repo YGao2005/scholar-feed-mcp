@@ -44,7 +44,7 @@ async function main(): Promise<void> {
     console.error(
       "Scholar Feed MCP: running without API key (anonymous mode, 100 calls/day).\n" +
         "For higher limits (1,000/day per account), set SF_API_KEY in your MCP config.\n" +
-        "Get a free key at https://www.scholarfeed.org/settings"
+        "Get a free key at https://www.scholarfeed.org/settings",
     );
   }
   const transport = new StdioServerTransport();

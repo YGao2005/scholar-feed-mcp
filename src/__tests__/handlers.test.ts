@@ -17,10 +17,16 @@ import {
 const TEST_BASE = "https://example.test/api/v1";
 const ENV_KEYS = ["SF_API_KEY", "SF_API_BASE_URL", "SF_API_TIMEOUT_MS"];
 
-function buildTools(): Map<string, { inputSchema: Record<string, unknown>; handler: ToolHandler }> {
+function buildTools(): Map<
+  string,
+  { inputSchema: Record<string, unknown>; handler: ToolHandler }
+> {
   const { server, tools } = makeFakeServer();
   registerAllTools(server);
-  const map = new Map<string, { inputSchema: Record<string, unknown>; handler: ToolHandler }>();
+  const map = new Map<
+    string,
+    { inputSchema: Record<string, unknown>; handler: ToolHandler }
+  >();
   for (const [name, def] of tools) {
     map.set(name, { inputSchema: def.inputSchema, handler: def.handler });
   }
@@ -45,8 +51,12 @@ function schemaFor(name: string): Record<string, unknown> {
 async function invoke(
   name: string,
   args: Record<string, unknown>,
-  opts?: Parameters<typeof stubFetch>[0]
-): Promise<{ calls: CapturedRequest[]; url: URL | undefined; result: Awaited<ReturnType<ToolHandler>> }> {
+  opts?: Parameters<typeof stubFetch>[0],
+): Promise<{
+  calls: CapturedRequest[];
+  url: URL | undefined;
+  result: Awaited<ReturnType<ToolHandler>>;
+}> {
   const snap: Record<string, string | undefined> = {};
   for (const k of ENV_KEYS) {
     snap[k] = process.env[k];
@@ -70,7 +80,11 @@ async function invoke(
 
 describe("search_papers handler", () => {
   it("defaults mode to semantic", async () => {
-    const { url } = await invoke("search_papers", { q: "test", page: 1, limit: 20 });
+    const { url } = await invoke("search_papers", {
+      q: "test",
+      page: 1,
+      limit: 20,
+    });
     assert.ok(url);
     assert.ok(url.pathname.endsWith("/public/papers/search"));
     assert.strictEqual(url.searchParams.get("mode"), "semantic");
@@ -78,12 +92,21 @@ describe("search_papers handler", () => {
   });
 
   it("passes sort=trending through", async () => {
-    const { url } = await invoke("search_papers", { q: "x", sort: "trending", page: 1, limit: 20 });
+    const { url } = await invoke("search_papers", {
+      q: "x",
+      sort: "trending",
+      page: 1,
+      limit: 20,
+    });
     assert.strictEqual(url?.searchParams.get("sort"), "trending");
   });
 
   it("anchor mode forwards anchor_paper_id", async () => {
-    const { url } = await invoke("search_papers", { anchor_paper_id: "2407.15831", page: 1, limit: 20 });
+    const { url } = await invoke("search_papers", {
+      anchor_paper_id: "2407.15831",
+      page: 1,
+      limit: 20,
+    });
     assert.strictEqual(url?.searchParams.get("anchor_paper_id"), "2407.15831");
   });
 
@@ -102,18 +125,27 @@ describe("get_paper handler", () => {
   });
 
   it("forwards verbose and fields (previously inert)", async () => {
-    const verbose = await invoke("get_paper", { arxiv_ids: ["A"], verbose: true });
+    const verbose = await invoke("get_paper", {
+      arxiv_ids: ["A"],
+      verbose: true,
+    });
     assert.strictEqual(verbose.url?.searchParams.get("verbose"), "true");
 
-    const fields = await invoke("get_paper", { arxiv_ids: ["A"], fields: "arxiv_id,title" });
-    assert.strictEqual(fields.url?.searchParams.get("fields"), "arxiv_id,title");
+    const fields = await invoke("get_paper", {
+      arxiv_ids: ["A"],
+      fields: "arxiv_id,title",
+    });
+    assert.strictEqual(
+      fields.url?.searchParams.get("fields"),
+      "arxiv_id,title",
+    );
   });
 
   it("bibtex mode hits the single-paper route and returns the bib string", async () => {
     const { url, result } = await invoke(
       "get_paper",
       { arxiv_ids: ["A", "B"], format: "bibtex" },
-      { json: { bibtex: "@article{x}", count: 1, not_found: [] } }
+      { json: { bibtex: "@article{x}", count: 1, not_found: [] } },
     );
     assert.ok(url?.pathname.endsWith("/public/papers/A"));
     assert.strictEqual(url?.searchParams.get("format"), "bibtex");
@@ -140,7 +172,10 @@ describe("find_author handler", () => {
   });
 
   it("q-mode hits /authors/discover", async () => {
-    const { url } = await invoke("find_author", { q: "efficient transformers", limit: 20 });
+    const { url } = await invoke("find_author", {
+      q: "efficient transformers",
+      limit: 20,
+    });
     assert.ok(url?.pathname.endsWith("/public/authors/discover"));
     assert.strictEqual(url?.searchParams.get("q"), "efficient transformers");
   });

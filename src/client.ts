@@ -108,7 +108,7 @@ class ScholarFeedClient {
    */
   private async fetchWithTimeout(
     url: string,
-    init: RequestInit
+    init: RequestInit,
   ): Promise<Response> {
     const timeoutMs = getTimeoutMs();
     try {
@@ -124,7 +124,7 @@ class ScholarFeedClient {
       ) {
         throw new Error(
           `Request timed out after ${Math.round(timeoutMs / 1000)}s — the Scholar Feed API did not respond. ` +
-            "Raise the limit with SF_API_TIMEOUT_MS if needed."
+            "Raise the limit with SF_API_TIMEOUT_MS if needed.",
         );
       }
       throw err;
@@ -143,14 +143,16 @@ class ScholarFeedClient {
       case 401:
         throw new Error(
           "Authentication failed: your SF_API_KEY is invalid or has been revoked. " +
-            "Check your key at https://www.scholarfeed.org/settings"
+            "Check your key at https://www.scholarfeed.org/settings",
         );
       case 403:
-        throw new Error("Access denied. You may need a valid API key for this endpoint.");
+        throw new Error(
+          "Access denied. You may need a valid API key for this endpoint.",
+        );
       case 429:
         throw new Error(
           "Rate limit exceeded. Add an API key for higher limits — " +
-            "get one free at https://www.scholarfeed.org/settings"
+            "get one free at https://www.scholarfeed.org/settings",
         );
       default:
         // Truncate body to avoid leaking internal details to LLM

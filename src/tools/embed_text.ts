@@ -21,14 +21,14 @@ export function register(server: McpServer): void {
           .min(1)
           .max(8000)
           .describe(
-            "Text to embed (1-8000 chars). For HyDE flows this is your hypothetical answer/abstract."
+            "Text to embed (1-8000 chars). For HyDE flows this is your hypothetical answer/abstract.",
           ),
         task_type: z
           .enum(["RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"])
           .optional()
           .default("RETRIEVAL_DOCUMENT")
           .describe(
-            "RETRIEVAL_DOCUMENT (default) matches paper-side embeddings — use for HyDE. RETRIEVAL_QUERY matches query-side semantic search."
+            "RETRIEVAL_DOCUMENT (default) matches paper-side embeddings — use for HyDE. RETRIEVAL_QUERY matches query-side semantic search.",
           ),
       },
     },
@@ -50,6 +50,6 @@ export function register(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

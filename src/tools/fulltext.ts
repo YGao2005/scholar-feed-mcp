@@ -20,7 +20,7 @@ export function register(server: McpServer): void {
           .enum(["results", "all"])
           .optional()
           .describe(
-            "'results' (default): lean results section only. 'all': full paper — abstract, intro, method, results, conclusion, related work."
+            "'results' (default): lean results section only. 'all': full paper — abstract, intro, method, results, conclusion, related work.",
           ),
       },
     },
@@ -31,7 +31,7 @@ export function register(server: McpServer): void {
 
         const result = await client.get<unknown>(
           `/public/papers/${encodeURIComponent(arxiv_id)}/fulltext`,
-          Object.keys(params).length > 0 ? params : undefined
+          Object.keys(params).length > 0 ? params : undefined,
         );
         return {
           content: [
@@ -45,6 +45,6 @@ export function register(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }
