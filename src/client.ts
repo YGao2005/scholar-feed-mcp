@@ -15,6 +15,12 @@
 const DEFAULT_BASE_URL = "https://api.scholarfeed.org/api/v1";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+// SF_API_BASE_URL is a self-hosting / testing override. It is the fetch target
+// AND receives the `Authorization: Bearer` key, so whoever sets this env var is
+// trusted with the key — the same trust already implied by controlling the
+// process environment. Intentionally not constrained to an allowlist: that
+// would break self-hosting and the test suite (which points this at
+// example.test). The trust boundary is documented in SECURITY.md.
 function getBaseUrl(): string {
   return process.env.SF_API_BASE_URL ?? DEFAULT_BASE_URL;
 }

@@ -9,7 +9,7 @@
  */
 
 import { createInterface } from "readline";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir, platform } from "os";
@@ -114,13 +114,22 @@ export async function runInit(): Promise<void> {
 
   switch (choice) {
     case "1": {
-      // Claude Code — use CLI
+      // Claude Code — use the CLI. execFileSync (not execSync) passes the
+      // user-typed API key as a discrete argv element, so it can never be
+      // interpolated into a shell command line — no shell is spawned. (If the
+      // 'claude' CLI isn't on PATH, the catch block prints the manual command.)
+      const addArgs = [
+        "mcp",
+        "add",
+        "scholar-feed",
+        ...(apiKey ? ["-e", `SF_API_KEY=${apiKey}`] : []),
+        "--",
+        "npx",
+        "-y",
+        "scholar-feed-mcp",
+      ];
       try {
-        const envFlag = apiKey ? ` -e SF_API_KEY=${apiKey}` : "";
-        execSync(
-          `claude mcp add scholar-feed${envFlag} -- npx -y scholar-feed-mcp`,
-          { stdio: "inherit" }
-        );
+        execFileSync("claude", addArgs, { stdio: "inherit" });
         console.error("  Added to Claude Code. Restart it, then ask it to search for papers to verify.");
       } catch {
         console.error("  'claude' CLI not found. Install Claude Code first: https://docs.anthropic.com/claude-code");
