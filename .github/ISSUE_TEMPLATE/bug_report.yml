@@ -1,0 +1,36 @@
+name: Bug report
+description: Report a problem with the Scholar Feed MCP server
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please do not include your API key or other secrets.
+  - type: input
+    id: mcp-client
+    attributes:
+      label: MCP client
+      placeholder: Claude Code / Cursor / Claude Desktop / other
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: scholar-feed-mcp version and `node --version`
+      placeholder: scholar-feed-mcp 3.0.2, node v20.x
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: The tool call you made, what you expected, and what you got (include the error message).
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: false
