@@ -4,7 +4,7 @@
 
 ### Removed (breaking)
 
-Hard cutover from v1.8.0 — no deprecation window. Tool count: 15 → 8.
+Hard cutover from v1.x — no deprecation window. Tool count: 15 → 8.
 
 **Absorbed into `search_papers`:**
 - `find_similar` — use `search_papers(anchor_paper_id=<id>)` for embedding-based similarity.
@@ -43,7 +43,7 @@ Hard cutover from v1.8.0 — no deprecation window. Tool count: 15 → 8.
 
 See the [README migration table](README.md#migrating-from-v1x-to-v300) for the full removed-tool → v3 replacement mapping.
 
-Note: the local v2.1.0 build (which added `co_author_graph` and `embed_text`) was never published to npm. External users jump directly from v1.8.0 to v3.0.0.
+Note: the local v2.0.0 and v2.1.0 builds (the latter added `co_author_graph` and `embed_text`) were never published to npm — the last published release was v1.3.2. External `npx` users jump directly from v1.x to v3.0.0.
 
 ## [2.0.0] - 2026-05-23
 

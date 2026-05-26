@@ -21,11 +21,11 @@ Try asking: *"Search for recent papers on test-time compute scaling"*
 
 ## Migrating from v1.x to v3.0.0
 
-v3.0.0 is a **hard cutover** — there is no deprecation window. The tool surface collapsed from 15 tools (v1.8.0) to 8 focused tools. Existing agents using removed tools will need to update their calls before upgrading.
+v3.0.0 is a **hard cutover** — there is no deprecation window. The previous v1.x tool surface was consolidated down to 8 focused tools. Existing agents using removed tools will need to update their calls before upgrading.
 
 ### Breaking changes — full replacement table
 
-| Removed tool (v1.8.0) | v3 replacement |
+| Removed tool (v1.x) | v3 replacement |
 |---|---|
 | `find_similar(arxiv_id=id)` | `search_papers(anchor_paper_id=id)` |
 | `find_citations_about(arxiv_id=X, query=Q)` | `search_papers(scope_to_citations_of=X, q=Q)` |
