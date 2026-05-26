@@ -1,5 +1,44 @@
 # Changelog
 
+## [3.0.2] - 2026-05-26
+
+### Removed
+
+- `search_papers` `has_results` filter and `get_paper` `include_results` parameter. These exposed the
+  `paper_results` benchmark-extraction table, which is abstract-only (~10% corpus coverage) and not
+  reliable enough to surface. The structured-extraction filters (`dataset`, `method_name`,
+  `method_category`, `task`, `task_category`, `contribution_type`) and `verbose` are unaffected — they
+  read columns on the papers table, not `paper_results`. Server-side data is left dormant (reversible).
+
+### Fixed
+
+- `get_paper` now actually forwards `fields` and `verbose` to the API — field selection / the verbose
+  28-field shape were previously declared but silently ignored on the default JSON path.
+- `get_paper` `arxiv_ids` is now capped at 50 in the schema (matches the documented batch limit).
+- `init` wizard uses `path.dirname` instead of manual `/`-slicing, fixing config-dir creation on Windows.
+
+### Added
+
+- Request timeout on all API calls (default 30s, override with `SF_API_TIMEOUT_MS`). A stalled backend
+  now returns a clear "timed out" error instead of hanging the tool call indefinitely.
+
+### Changed
+
+- Corpus size corrected to **600,000+** across the README, package description, and tool descriptions
+  (was inconsistently 512k / 560k).
+- Rate-limit table corrected: `get_paper` 60→**30/min** (the default batch path), `get_field_orientation`
+  5→**20/min**. README parameter tables fixed for `get_paper`, `co_author_graph`, and `get_field_orientation`.
+- Removed stale references to retired tools (`discover_authors`, `search_by_method`, and the post-install
+  `check_connection` hint).
+
+### Internal
+
+- Replaced the string-grep "tests" with a real behavioral suite (tool registry, HTTP client, and tool
+  handlers exercised with a mocked `fetch`). Test runner switched to `tsx` so it runs on Node 18/20/22
+  (the previous `--experimental-strip-types` flag is 22.6+ only, which had left CI red).
+- Bumped `@modelcontextprotocol/sdk` to `^1.29`; `npm audit` is clean. Added a `prepublishOnly` guard
+  (`build && test`) and a `bugs` URL.
+
 ## [3.0.1] - 2026-05-26
 
 ### Changed

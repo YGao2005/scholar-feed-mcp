@@ -21,7 +21,7 @@ export function register(server: McpServer): void {
           .min(1)
           .max(25)
           .describe(
-            "Author IDs to query (1-25). Get author IDs via the discover_authors / find_author tool."
+            "Author IDs to query (1-25). Get author IDs via the find_author tool."
           ),
         window_years: z
           .number()

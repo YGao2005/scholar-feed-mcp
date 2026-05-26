@@ -87,7 +87,7 @@ export function register(server: McpServer): void {
         } else {
           // id-mode: direct profile lookup
           const result = await client.get<unknown>(
-            `/public/authors/${id}`
+            `/public/authors/${encodeURIComponent(String(id))}`
           );
           return {
             content: [

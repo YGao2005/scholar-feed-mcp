@@ -1,6 +1,6 @@
 # Scholar Feed MCP Server
 
-Search 560,000+ CS/AI/ML research papers with LLM-powered novelty analysis from Claude Code, Cursor, or any MCP client.
+Search 600,000+ CS/AI/ML research papers with LLM-powered novelty analysis from Claude Code, Cursor, or any MCP client.
 
 [Scholar Feed](https://www.scholarfeed.org) indexes arXiv papers daily and ranks them using a multi-signal scoring system (recency, citation velocity, institutional reputation, code availability). Each paper has an LLM-generated summary and novelty score.
 
@@ -131,8 +131,8 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `search_papers` | Semantic + keyword search with filters. Also does similar-paper discovery, citation-scoped search, and trending. | `q`, `category`, `novelty_min`, `days`, `sort`, `anchor_paper_id`, `scope_to_citations_of`, `mode`, `method_category`, `task`, `dataset`, `contribution_type`, `task_category`, `has_results`, `cursor`, `limit` |
-| `get_paper` | Get full paper details by arXiv ID. Also handles batch lookup and BibTeX export. | `arxiv_id`, `arxiv_ids`, `format`, `fields` |
+| `search_papers` | Semantic + keyword search with filters. Also does similar-paper discovery, citation-scoped search, and trending. | `q`, `category`, `novelty_min`, `days`, `sort`, `anchor_paper_id`, `scope_to_citations_of`, `mode`, `method_category`, `task`, `dataset`, `contribution_type`, `task_category`, `cursor`, `limit` |
+| `get_paper` | Get full paper details by arXiv ID. Also handles batch lookup and BibTeX export. | `arxiv_ids`, `format`, `fields`, `verbose` |
 | `get_citations` | Citation graph (outgoing refs or incoming citations) | `arxiv_id`, `direction`, `limit`, `fields` |
 | `fetch_fulltext` | Extract results/experiments from LaTeX source | `arxiv_id` |
 
@@ -141,7 +141,7 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `find_author` | Find researchers by topic/name query, or retrieve a profile by ID. | `q`, `id`, `field`, `limit` |
-| `co_author_graph` | Co-authorship neighborhood for an author | `author_id`, `limit` |
+| `co_author_graph` | Co-authorship neighborhood for an author | `author_ids`, `window_years` |
 
 ### Embeddings
 
@@ -153,7 +153,7 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `get_field_orientation` | Cheap retrieval orientation for a research area — top papers, subfields, open problems. No Pro quota. | `topic` |
+| `get_field_orientation` | Cheap retrieval orientation for a research area — top papers, subfields, open problems. No Pro quota. | `topic`, `limit` |
 
 ## Novelty Score
 
@@ -173,13 +173,13 @@ Use `novelty_min: 0.5` in `search_papers` to filter for genuinely novel work.
 | Endpoint | Limit |
 |----------|-------|
 | `search_papers` | 30/min |
-| `get_paper` | 60/min |
+| `get_paper` | 30/min |
 | `get_citations` | 30/min |
 | `fetch_fulltext` | 10/min |
 | `find_author` | 20/min |
 | `co_author_graph` | 20/min |
 | `embed_text` | 30/min |
-| `get_field_orientation` | 5/min |
+| `get_field_orientation` | 20/min |
 
 Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
 
