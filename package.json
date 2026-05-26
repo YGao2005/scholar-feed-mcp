@@ -1,7 +1,7 @@
 {
   "name": "scholar-feed-mcp",
-  "version": "3.0.1",
-  "description": "MCP server for Scholar Feed — search 512k+ CS/AI papers with LLM-powered analysis",
+  "version": "3.0.2",
+  "description": "MCP server for Scholar Feed — search 600,000+ CS/AI/ML papers with LLM-powered analysis",
   "type": "module",
   "license": "MIT",
   "author": "Scholar Feed <hello@scholarfeed.org>",
@@ -9,6 +9,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/YGao2005/scholar-feed-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/YGao2005/scholar-feed-mcp/issues"
   },
   "keywords": [
     "mcp",
@@ -30,15 +33,17 @@
     "build": "tsup src/index.ts --format esm --dts --clean --out-dir build",
     "dev": "tsup src/index.ts --format esm --watch --out-dir build",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --experimental-strip-types src/__tests__/tools.test.ts"
+    "test": "node --import tsx --test src/__tests__/*.test.ts",
+    "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "tsup": "^8.0.0",
+    "tsx": "^4.22.3",
     "typescript": "^5.5.0"
   },
   "engines": {

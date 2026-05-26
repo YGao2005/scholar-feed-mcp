@@ -1,5 +1,5 @@
 /**
- * search_papers tool — full-text search across Scholar Feed's 560k+ paper corpus.
+ * search_papers tool — full-text search across Scholar Feed's 600k+ paper corpus.
  *
  * v3: absorbs find_similar (anchor_paper_id), find_citations_about
  * (scope_to_citations_of), and whats_trending (sort='trending') in addition
@@ -17,7 +17,7 @@ export function register(server: McpServer): void {
     "search_papers",
     {
       description:
-        "Search Scholar Feed's 560k+ CS/AI/ML paper corpus. Defaults to semantic (embedding) search — finds conceptually related papers even when the user's wording doesn't match the paper's title/abstract. Pass mode='keyword' for exact-string full-text search. CAVEAT: semantic search often misses old high-citation CANONICAL papers (e.g. foundational anchors like H2O for KV eviction, GRIT for unified embedding+generation) because the ranker prefers recent stylistically-matched papers. If you're hunting the canonical anchor for an area, parse the top-5 result abstracts for baseline mentions ('we compare against X, Y, Z'), then look the most-mentioned name up directly. Returns papers with LLM-generated summaries, novelty scores, and structured extraction data. Default response is a lean 12-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score) — pass verbose=true or fields=... for the full 28-field shape with method/task/dataset extraction. Supports filtering by category, novelty, recency, method, task, dataset, contribution type, and whether papers have benchmark results. v3 ABSORPTIONS: pass sort='trending' to replicate whats_trending; pass anchor_paper_id to replicate find_similar (q is ignored in anchor mode, results carry similarity_score); pass scope_to_citations_of to restrict search to a paper's citation graph (replaces find_citations_about).",
+        "Search Scholar Feed's 600k+ CS/AI/ML paper corpus. Defaults to semantic (embedding) search — finds conceptually related papers even when the user's wording doesn't match the paper's title/abstract. Pass mode='keyword' for exact-string full-text search. CAVEAT: semantic search often misses old high-citation CANONICAL papers (e.g. foundational anchors like H2O for KV eviction, GRIT for unified embedding+generation) because the ranker prefers recent stylistically-matched papers. If you're hunting the canonical anchor for an area, parse the top-5 result abstracts for baseline mentions ('we compare against X, Y, Z'), then look the most-mentioned name up directly. Returns papers with LLM-generated summaries, novelty scores, and structured extraction data. Default response is a lean 12-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score) — pass verbose=true or fields=... for the full 28-field shape with method/task/dataset extraction. Supports filtering by category, novelty, recency, method, task, dataset, and contribution type. v3 ABSORPTIONS: pass sort='trending' to replicate whats_trending; pass anchor_paper_id to replicate find_similar (q is ignored in anchor mode, results carry similarity_score); pass scope_to_citations_of to restrict search to a paper's citation graph (replaces find_citations_about).",
       inputSchema: {
         q: z.string().min(1).optional().describe("Search query keywords. Optional when anchor_paper_id is set (anchor mode ignores q and returns papers similar to the anchor)."),
         sort: z
@@ -65,7 +65,7 @@ export function register(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "Filter to papers introducing/using a specific named method e.g. 'LoRA', 'YOLO', 'DPO'. Case-insensitive substring match on the extracted method_name field. Replaces the dropped search_by_method tool."
+            "Filter to papers introducing/using a specific named method e.g. 'LoRA', 'YOLO', 'DPO'. Case-insensitive substring match on the extracted method_name field."
           ),
         task: z
           .string()
@@ -109,12 +109,6 @@ export function register(server: McpServer): void {
           ])
           .optional()
           .describe("Filter by broad research area"),
-        has_results: z
-          .boolean()
-          .optional()
-          .describe(
-            "If true, only return papers with quantitative benchmark results in paper_results"
-          ),
         mode: z
           .enum(["keyword", "semantic"])
           .optional()
@@ -169,7 +163,6 @@ export function register(server: McpServer): void {
       dataset,
       contribution_type,
       task_category,
-      has_results,
       mode,
       cursor,
       page,
@@ -199,8 +192,6 @@ export function register(server: McpServer): void {
           params.contribution_type = contribution_type;
         if (task_category !== undefined)
           params.task_category = task_category;
-        if (has_results !== undefined)
-          params.has_results = String(has_results);
         // Default to semantic search — keyword sorts by rank_score (not relevance),
         // which is wrong for natural-language queries (audit 2026-05-14).
         params.mode = mode ?? "semantic";

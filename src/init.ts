@@ -11,7 +11,7 @@
 import { createInterface } from "readline";
 import { execSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
 import { homedir, platform } from "os";
 
 const rl = createInterface({ input: process.stdin, output: process.stderr });
@@ -67,7 +67,7 @@ function mergeJsonConfig(filePath: string, serverConfig: Record<string, unknown>
   servers["scholar-feed"] = serverConfig;
   existing.mcpServers = servers;
 
-  const dir = filePath.substring(0, filePath.lastIndexOf("/"));
+  const dir = dirname(filePath);
   if (dir && !existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
@@ -121,7 +121,7 @@ export async function runInit(): Promise<void> {
           `claude mcp add scholar-feed${envFlag} -- npx -y scholar-feed-mcp`,
           { stdio: "inherit" }
         );
-        console.error("  Added to Claude Code. Use 'check_connection' tool to verify.");
+        console.error("  Added to Claude Code. Restart it, then ask it to search for papers to verify.");
       } catch {
         console.error("  'claude' CLI not found. Install Claude Code first: https://docs.anthropic.com/claude-code");
         const envFlag = apiKey ? ` -e SF_API_KEY=${apiKey}` : "";
