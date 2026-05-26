@@ -2,7 +2,7 @@
  * ScholarFeedClient — wraps fetch calls to the Scholar Feed API.
  *
  * SF_API_KEY is optional. Without it, requests are anonymous with lower
- * rate limits (100 calls/day). With a key, limits are 500 calls/day.
+ * rate limits (100 calls/day). With a key, limits are 1,000 calls/day per account.
  *
  * CRITICAL: All logging uses console.error() — never console.log().
  * console.log() on stdout would corrupt the JSON-RPC stdio transport.

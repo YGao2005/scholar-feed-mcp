@@ -80,7 +80,7 @@ export async function runInit(): Promise<void> {
   // Step 1: API key (optional)
   printStep(1, 3, "Enter your API key (optional — press Enter to skip)");
   console.error("  Get a free key at: https://www.scholarfeed.org/settings");
-  console.error("  Without a key, you get 100 calls/day. With a key, 500/day.");
+  console.error("  Without a key, you get 100 calls/day. With a key, 1,000/day per account.");
   const apiKey = await ask("  API key (sf_...): ");
 
   if (apiKey && !apiKey.startsWith("sf_")) {

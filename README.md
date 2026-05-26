@@ -15,7 +15,7 @@ This interactive wizard will:
 2. Detect your MCP client (Claude Code, Cursor, or Claude Desktop)
 3. Write the config and verify the connection
 
-**No API key required.** Anonymous access gives you 100 calls/day — enough for a typical research session. For higher limits (500/day), get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
+**No API key required.** Anonymous access gives you 100 calls/day — enough for a typical research session. For higher limits (1,000/day per account), get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
 
 Try asking: *"Search for recent papers on test-time compute scaling"*
 
@@ -77,7 +77,7 @@ v3.0.0 is a **hard cutover** — there is no deprecation window. The previous v1
 # Without API key (anonymous, 100 calls/day)
 claude mcp add scholar-feed -- npx -y scholar-feed-mcp
 
-# With API key (500 calls/day)
+# With API key (1,000 calls/day per account)
 claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-feed-mcp
 ```
 
@@ -242,7 +242,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 The key may have been revoked. Generate a new one at [scholarfeed.org/settings](https://www.scholarfeed.org/settings). Or remove the key to use anonymous mode.
 
 **"Rate limit exceeded" or "Anonymous daily limit exceeded"**
-Anonymous mode allows 100 calls/day. Get a free API key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings) for 500 calls/day.
+Anonymous mode allows 100 calls/day. Get a free API key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings) for 1,000 calls/day per account.
 
 **Tool calls time out or fail silently**
 Ensure Node.js 18+ is installed (`node --version`). Older versions lack the native `fetch` API.

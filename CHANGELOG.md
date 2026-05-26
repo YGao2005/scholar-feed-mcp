@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.1] - 2026-05-26
+
+### Changed
+
+- docs: free-tier copy corrected 500→1,000/day per account to match enforced backend limit (Phase 116). README, src/client.ts, src/init.ts updated. No API surface change.
+
 ## [3.0.0] - 2026-05-25
 
 ### Removed (breaking)
