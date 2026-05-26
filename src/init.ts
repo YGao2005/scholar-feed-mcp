@@ -149,10 +149,12 @@ export async function runInit(): Promise<void> {
         console.error(
           "  'claude' CLI not found. Install Claude Code first: https://docs.anthropic.com/claude-code",
         );
-        const envFlag = apiKey ? ` -e SF_API_KEY=${apiKey}` : "";
         console.error("  Or run manually:");
+        // Print a placeholder, never the real key — stderr ends up in
+        // scrollback, screen-shares, and bug reports.
+        const keyHint = apiKey ? " -e SF_API_KEY=<your-key>" : "";
         console.error(
-          `  claude mcp add scholar-feed${envFlag} -- npx -y scholar-feed-mcp`,
+          `  claude mcp add scholar-feed${keyHint} -- npx -y scholar-feed-mcp`,
         );
       }
       break;
