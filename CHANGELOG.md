@@ -1,5 +1,50 @@
 # Changelog
 
+## [3.0.0] - 2026-05-25
+
+### Removed (breaking)
+
+Hard cutover from v1.8.0 — no deprecation window. Tool count: 15 → 8.
+
+**Absorbed into `search_papers`:**
+- `find_similar` — use `search_papers(anchor_paper_id=<id>)` for embedding-based similarity.
+- `find_citations_about` — use `search_papers(scope_to_citations_of=<arxiv_id>, q=<query>)`.
+- `whats_trending` — use `search_papers(sort='trending', category=<cat>)`.
+
+**Absorbed into `get_paper`:**
+- `batch_lookup` — use `get_paper(arxiv_ids=[...])` (GET /public/papers?arxiv_ids[]=... endpoint, cap N=50).
+- `export_bibtex` — use `get_paper(arxiv_ids=[...], format='bibtex')`.
+
+**Merged into `find_author`:**
+- `discover_authors` — use `find_author(q=<query>)` for name/topic search.
+- `get_author` — use `find_author(id=<author_id>)` for profile lookup.
+
+**Demoted to skills (no MCP tool):**
+- `compare_methods` — use the `/compare-methods` skill; backend POST /public/methods/compare endpoint retained for skill use.
+- `field_guide` — cheap retrieval half migrated to the new `get_field_orientation` tool; full orientation via the `/field-guide` skill; backend route retained for skill use.
+
+**Killed (no replacement):**
+- `check_connection` — 4 observed calls from 1 caller (boilerplate pattern, no response-payload branching). Errors signal connectivity. Remove any health-check calls.
+- `fetch_repo` — 0 observed calls in production. Backend route preserved for skill use.
+
+### Added
+
+- `find_author` — merged `discover_authors` + `get_author` into a single tool. Exactly-one-of semantics: pass `q` for name/topic search or `id` for profile lookup.
+- `get_field_orientation` — cheap retrieval orientation for a research area (0.6 × norm_citation + 0.4 × cosine reranking). No DeepSeek, no Pro quota. Pairs with the `/field-guide` skill for deeper orientation.
+- `co_author_graph` — co-authorship neighborhood for an author (edges derived live from paper_authors join; 500-edge cap). First public npm release; shipped locally in the unpublished v2.1.0 build.
+- `embed_text` — 768-dim Gemini Flash embedding for text (RETRIEVAL_DOCUMENT default; RETRIEVAL_QUERY opt-in via `task_type`). Useful for HyDE composition. First public npm release; shipped locally in the unpublished v2.1.0 build.
+
+### Changed
+
+- `search_papers`: gains `sort` (`'relevance'|'recent'|'trending'`), `anchor_paper_id` (similar-paper discovery), `scope_to_citations_of` (citation-scoped search), and `mode` (`'semantic'|'keyword'`) parameters. `q` is now optional when `anchor_paper_id` is provided.
+- `get_paper`: gains `arxiv_ids` (batch lookup, up to 50 IDs via GET query params) and `format` (`'json'|'bibtex'`). Single-ID `arxiv_id` remains supported.
+
+### Migration
+
+See the [README migration table](README.md#migrating-from-v1x-to-v300) for the full removed-tool → v3 replacement mapping.
+
+Note: the local v2.1.0 build (which added `co_author_graph` and `embed_text`) was never published to npm. External users jump directly from v1.8.0 to v3.0.0.
+
 ## [2.0.0] - 2026-05-23
 
 ### Removed (breaking)
