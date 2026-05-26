@@ -9,7 +9,7 @@
  */
 
 import { createInterface } from "readline";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir, platform } from "os";
@@ -28,8 +28,7 @@ function printStep(step: number, total: number, msg: string): void {
 
 async function verifyKey(apiKey: string): Promise<boolean> {
   const baseUrl =
-    process.env.SF_API_BASE_URL ??
-    "https://api.scholarfeed.org/api/v1";
+    process.env.SF_API_BASE_URL ?? "https://api.scholarfeed.org/api/v1";
   try {
     const headers: Record<string, string> = {};
     if (apiKey) {
@@ -39,21 +38,30 @@ async function verifyKey(apiKey: string): Promise<boolean> {
     if (res.ok) {
       const data = (await res.json()) as Record<string, unknown>;
       if (apiKey) {
-        console.error(`  Connected! Plan: ${data.plan}, Key: ${data.key_name ?? "(unnamed)"}`);
+        console.error(
+          `  Connected! Plan: ${data.plan}, Key: ${data.key_name ?? "(unnamed)"}`,
+        );
       } else {
-        console.error(`  Connected! Running in anonymous mode (100 calls/day).`);
+        console.error(
+          `  Connected! Running in anonymous mode (100 calls/day).`,
+        );
       }
       return true;
     }
     console.error(`  API returned ${res.status} — check your key.`);
     return false;
   } catch (e) {
-    console.error(`  Could not reach API: ${e instanceof Error ? e.message : e}`);
+    console.error(
+      `  Could not reach API: ${e instanceof Error ? e.message : e}`,
+    );
     return false;
   }
 }
 
-function mergeJsonConfig(filePath: string, serverConfig: Record<string, unknown>): void {
+function mergeJsonConfig(
+  filePath: string,
+  serverConfig: Record<string, unknown>,
+): void {
   let existing: Record<string, unknown> = {};
   if (existsSync(filePath)) {
     try {
@@ -80,11 +88,15 @@ export async function runInit(): Promise<void> {
   // Step 1: API key (optional)
   printStep(1, 3, "Enter your API key (optional — press Enter to skip)");
   console.error("  Get a free key at: https://www.scholarfeed.org/settings");
-  console.error("  Without a key, you get 100 calls/day. With a key, 1,000/day per account.");
+  console.error(
+    "  Without a key, you get 100 calls/day. With a key, 1,000/day per account.",
+  );
   const apiKey = await ask("  API key (sf_...): ");
 
   if (apiKey && !apiKey.startsWith("sf_")) {
-    console.error("  Error: API key must start with 'sf_'. Get one at https://www.scholarfeed.org/settings");
+    console.error(
+      "  Error: API key must start with 'sf_'. Get one at https://www.scholarfeed.org/settings",
+    );
     rl.close();
     process.exit(1);
   }
@@ -114,19 +126,36 @@ export async function runInit(): Promise<void> {
 
   switch (choice) {
     case "1": {
-      // Claude Code — use CLI
+      // Claude Code — use the CLI. execFileSync (not execSync) passes the
+      // user-typed API key as a discrete argv element, so it can never be
+      // interpolated into a shell command line — no shell is spawned. (If the
+      // 'claude' CLI isn't on PATH, the catch block prints the manual command.)
+      const addArgs = [
+        "mcp",
+        "add",
+        "scholar-feed",
+        ...(apiKey ? ["-e", `SF_API_KEY=${apiKey}`] : []),
+        "--",
+        "npx",
+        "-y",
+        "scholar-feed-mcp",
+      ];
       try {
-        const envFlag = apiKey ? ` -e SF_API_KEY=${apiKey}` : "";
-        execSync(
-          `claude mcp add scholar-feed${envFlag} -- npx -y scholar-feed-mcp`,
-          { stdio: "inherit" }
+        execFileSync("claude", addArgs, { stdio: "inherit" });
+        console.error(
+          "  Added to Claude Code. Restart it, then ask it to search for papers to verify.",
         );
-        console.error("  Added to Claude Code. Restart it, then ask it to search for papers to verify.");
       } catch {
-        console.error("  'claude' CLI not found. Install Claude Code first: https://docs.anthropic.com/claude-code");
-        const envFlag = apiKey ? ` -e SF_API_KEY=${apiKey}` : "";
+        console.error(
+          "  'claude' CLI not found. Install Claude Code first: https://docs.anthropic.com/claude-code",
+        );
         console.error("  Or run manually:");
-        console.error(`  claude mcp add scholar-feed${envFlag} -- npx -y scholar-feed-mcp`);
+        // Print a placeholder, never the real key — stderr ends up in
+        // scrollback, screen-shares, and bug reports.
+        const keyHint = apiKey ? " -e SF_API_KEY=<your-key>" : "";
+        console.error(
+          `  claude mcp add scholar-feed${keyHint} -- npx -y scholar-feed-mcp`,
+        );
       }
       break;
     }
@@ -143,11 +172,26 @@ export async function runInit(): Promise<void> {
       const p = platform();
       let configPath: string;
       if (p === "darwin") {
-        configPath = join(homedir(), "Library", "Application Support", "Claude", "claude_desktop_config.json");
+        configPath = join(
+          homedir(),
+          "Library",
+          "Application Support",
+          "Claude",
+          "claude_desktop_config.json",
+        );
       } else if (p === "win32") {
-        configPath = join(process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"), "Claude", "claude_desktop_config.json");
+        configPath = join(
+          process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"),
+          "Claude",
+          "claude_desktop_config.json",
+        );
       } else {
-        configPath = join(homedir(), ".config", "claude", "claude_desktop_config.json");
+        configPath = join(
+          homedir(),
+          ".config",
+          "claude",
+          "claude_desktop_config.json",
+        );
       }
       mergeJsonConfig(configPath, serverBlock);
       console.error(`  Written to ${configPath}`);
@@ -166,5 +210,7 @@ export async function runInit(): Promise<void> {
   await verifyKey(apiKey);
 
   rl.close();
-  console.error("\nDone! Try asking: \"Search for papers on test-time compute scaling\"");
+  console.error(
+    '\nDone! Try asking: "Search for papers on test-time compute scaling"',
+  );
 }

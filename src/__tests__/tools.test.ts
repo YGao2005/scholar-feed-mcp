@@ -77,7 +77,7 @@ describe("tool registry", () => {
     registerAllTools(server);
     assert.deepStrictEqual(
       [...tools.keys()].sort(),
-      [...EXPECTED_TOOLS].sort()
+      [...EXPECTED_TOOLS].sort(),
     );
   });
 
@@ -89,7 +89,7 @@ describe("tool registry", () => {
       assert.strictEqual(
         typeof def.inputSchema,
         "object",
-        `${name} must have an inputSchema`
+        `${name} must have an inputSchema`,
       );
     }
   });
@@ -105,7 +105,7 @@ describe("stdio hygiene", () => {
       const content = readFileSync(resolve(toolDir, `${mod}.ts`), "utf-8");
       assert.ok(
         !callPattern.test(content),
-        `${mod}.ts must not use console.log (corrupts JSON-RPC stdio)`
+        `${mod}.ts must not use console.log (corrupts JSON-RPC stdio)`,
       );
     });
   }

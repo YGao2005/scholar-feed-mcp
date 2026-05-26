@@ -11,7 +11,9 @@ export type ToolResult = {
   isError?: boolean;
 };
 
-export type ToolHandler = (args: Record<string, unknown>) => Promise<ToolResult>;
+export type ToolHandler = (
+  args: Record<string, unknown>,
+) => Promise<ToolResult>;
 
 export interface CapturedTool {
   description: string;
@@ -33,7 +35,7 @@ export function makeFakeServer(): {
     registerTool(
       name: string,
       def: { description: string; inputSchema: Record<string, unknown> },
-      handler: ToolHandler
+      handler: ToolHandler,
     ): void {
       tools.set(name, {
         description: def.description,
@@ -67,7 +69,7 @@ export function stubFetch(opts?: {
 
   globalThis.fetch = (async (
     input: string | URL | Request,
-    init?: RequestInit
+    init?: RequestInit,
   ): Promise<Response> => {
     calls.push({ url: String(input), init });
     if (opts?.throwError) throw opts.throwError;
@@ -86,7 +88,10 @@ export function stubFetch(opts?: {
 }
 
 /** Read a header value off a captured request's plain-object headers. */
-export function headerOf(req: CapturedRequest, name: string): string | undefined {
+export function headerOf(
+  req: CapturedRequest,
+  name: string,
+): string | undefined {
   const headers = (req.init?.headers ?? {}) as Record<string, string>;
   return headers[name];
 }

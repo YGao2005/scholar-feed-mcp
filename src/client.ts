@@ -15,6 +15,12 @@
 const DEFAULT_BASE_URL = "https://api.scholarfeed.org/api/v1";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+// SF_API_BASE_URL is a self-hosting / testing override. It is the fetch target
+// AND receives the `Authorization: Bearer` key, so whoever sets this env var is
+// trusted with the key — the same trust already implied by controlling the
+// process environment. Intentionally not constrained to an allowlist: that
+// would break self-hosting and the test suite (which points this at
+// example.test). The trust boundary is documented in SECURITY.md.
 function getBaseUrl(): string {
   return process.env.SF_API_BASE_URL ?? DEFAULT_BASE_URL;
 }
@@ -102,7 +108,7 @@ class ScholarFeedClient {
    */
   private async fetchWithTimeout(
     url: string,
-    init: RequestInit
+    init: RequestInit,
   ): Promise<Response> {
     const timeoutMs = getTimeoutMs();
     try {
@@ -118,7 +124,7 @@ class ScholarFeedClient {
       ) {
         throw new Error(
           `Request timed out after ${Math.round(timeoutMs / 1000)}s — the Scholar Feed API did not respond. ` +
-            "Raise the limit with SF_API_TIMEOUT_MS if needed."
+            "Raise the limit with SF_API_TIMEOUT_MS if needed.",
         );
       }
       throw err;
@@ -137,14 +143,16 @@ class ScholarFeedClient {
       case 401:
         throw new Error(
           "Authentication failed: your SF_API_KEY is invalid or has been revoked. " +
-            "Check your key at https://www.scholarfeed.org/settings"
+            "Check your key at https://www.scholarfeed.org/settings",
         );
       case 403:
-        throw new Error("Access denied. You may need a valid API key for this endpoint.");
+        throw new Error(
+          "Access denied. You may need a valid API key for this endpoint.",
+        );
       case 429:
         throw new Error(
           "Rate limit exceeded. Add an API key for higher limits — " +
-            "get one free at https://www.scholarfeed.org/settings"
+            "get one free at https://www.scholarfeed.org/settings",
         );
       default:
         // Truncate body to avoid leaking internal details to LLM

@@ -20,7 +20,7 @@ export function register(server: McpServer): void {
           .enum(["citing", "cited_by"])
           .default("cited_by")
           .describe(
-            "'citing' = outgoing references this paper cites; 'cited_by' = incoming citations from other papers"
+            "'citing' = outgoing references this paper cites; 'cited_by' = incoming citations from other papers",
           ),
         limit: z
           .number()
@@ -33,19 +33,19 @@ export function register(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,llm_novelty_score'). If omitted, returns the lean 12-field default unless verbose=true."
+            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,llm_novelty_score'). If omitted, returns the lean 12-field default unless verbose=true.",
           ),
         verbose: z
           .boolean()
           .optional()
           .describe(
-            "If true, returns the full 28-field paper shape. Default false returns the lean 12-field set. Ignored when `fields` is provided."
+            "If true, returns the full 28-field paper shape. Default false returns the lean 12-field set. Ignored when `fields` is provided.",
           ),
         exclude_ids: z
           .array(z.string())
           .optional()
           .describe(
-            "arXiv IDs to exclude from results (for deduplication across chained calls)"
+            "arXiv IDs to exclude from results (for deduplication across chained calls)",
           ),
       },
     },
@@ -62,7 +62,7 @@ export function register(server: McpServer): void {
 
         const result = await client.get<unknown>(
           `/public/papers/${encodeURIComponent(arxiv_id)}/citations`,
-          params
+          params,
         );
         return {
           content: [
@@ -76,6 +76,6 @@ export function register(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

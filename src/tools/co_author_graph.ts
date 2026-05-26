@@ -21,7 +21,7 @@ export function register(server: McpServer): void {
           .min(1)
           .max(25)
           .describe(
-            "Author IDs to query (1-25). Get author IDs via the find_author tool."
+            "Author IDs to query (1-25). Get author IDs via the find_author tool.",
           ),
         window_years: z
           .number()
@@ -30,7 +30,7 @@ export function register(server: McpServer): void {
           .max(30)
           .default(10)
           .describe(
-            "Only count co-authorships from the last N years (default 10, max 30)."
+            "Only count co-authorships from the last N years (default 10, max 30).",
           ),
       },
     },
@@ -42,7 +42,7 @@ export function register(server: McpServer): void {
         };
         const result = await client.get<unknown>(
           "/public/authors/co-author-graph",
-          params
+          params,
         );
         return {
           content: [
@@ -56,6 +56,6 @@ export function register(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

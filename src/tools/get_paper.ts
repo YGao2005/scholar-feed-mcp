@@ -28,25 +28,25 @@ export function register(server: McpServer): void {
           .min(1)
           .max(50)
           .describe(
-            "One or more arXiv IDs. Single-paper lookup uses [id]; batch lookup passes multiple IDs (max 50). Replaces the removed batch_lookup tool. Example: ['2407.15831'] or ['2407.15831', '2402.09906']."
+            "One or more arXiv IDs. Single-paper lookup uses [id]; batch lookup passes multiple IDs (max 50). Replaces the removed batch_lookup tool. Example: ['2407.15831'] or ['2407.15831', '2402.09906'].",
           ),
         format: z
           .enum(["json", "bibtex"])
           .optional()
           .describe(
-            "Response format. 'json' (default) returns structured paper data. 'bibtex' returns a .bib citation entry — replaces the removed export_bibtex tool. Bibtex mode uses the first ID in arxiv_ids."
+            "Response format. 'json' (default) returns structured paper data. 'bibtex' returns a .bib citation entry — replaces the removed export_bibtex tool. Bibtex mode uses the first ID in arxiv_ids.",
           ),
         fields: z
           .string()
           .optional()
           .describe(
-            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,abstract'). If omitted, returns the lean 12-field default unless verbose=true."
+            "Comma-separated list of fields to return (e.g. 'arxiv_id,title,llm_summary,abstract'). If omitted, returns the lean 12-field default unless verbose=true.",
           ),
         verbose: z
           .boolean()
           .optional()
           .describe(
-            "If true, returns the full 28-field paper shape (method/task/dataset extraction, application_domain, baselines, etc.). Default false returns the lean 12-field set. Ignored when `fields` is provided."
+            "If true, returns the full 28-field paper shape (method/task/dataset extraction, application_domain, baselines, etc.). Default false returns the lean 12-field set. Ignored when `fields` is provided.",
           ),
       },
     },
@@ -78,7 +78,7 @@ export function register(server: McpServer): void {
 
         const result = await client.getWithParams<unknown>(
           "/public/papers",
-          search
+          search,
         );
 
         return {
@@ -93,6 +93,6 @@ export function register(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

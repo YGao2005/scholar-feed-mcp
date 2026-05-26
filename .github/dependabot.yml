@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # npm dependencies — would have flagged the transitive advisories noted in the
+  # v3.0.2 audit the moment a fix shipped.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      # Roll routine devDependency bumps into one PR to cut noise.
+      dev-dependencies:
+        dependency-type: "development"
+
+  # Keep the GitHub Actions in CI / CodeQL / publish workflows current.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

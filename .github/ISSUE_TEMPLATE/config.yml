@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Scholar Feed website & API docs
+    url: https://www.scholarfeed.org/developers
+    about: API keys, endpoints, and account questions.
+  - name: Report a security issue
+    url: https://github.com/YGao2005/scholar-feed-mcp/security/policy
+    about: Please report vulnerabilities privately — see SECURITY.md.

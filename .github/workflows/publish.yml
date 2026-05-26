@@ -1,0 +1,39 @@
+name: Publish
+
+# Tag-triggered npm publish with build provenance (OIDC). Cut a release by
+# bumping package.json, committing, then pushing a matching tag:
+#   npm version <patch|minor|major> && git push --follow-tags
+#
+# Requires an automation NPM_TOKEN in the repo's Actions secrets
+# (Settings → Secrets and variables → Actions). Provenance is attested via
+# the id-token permission below — no extra secret needed for that.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for npm publish --provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+      - run: npm ci
+      - name: Verify tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match package.json ($PKG_VERSION)"
+            exit 1
+          fi
+      # npm publish runs prepublishOnly (lint + build + test) first.
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

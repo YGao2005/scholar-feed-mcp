@@ -1,5 +1,10 @@
 # Scholar Feed MCP Server
 
+[![CI](https://github.com/YGao2005/scholar-feed-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/YGao2005/scholar-feed-mcp/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/scholar-feed-mcp.svg)](https://www.npmjs.com/package/scholar-feed-mcp)
+[![Node](https://img.shields.io/node/v/scholar-feed-mcp.svg)](https://nodejs.org)
+[![License: MIT](https://img.shields.io/npm/l/scholar-feed-mcp.svg)](./LICENSE)
+
 Search 600,000+ CS/AI/ML research papers with LLM-powered novelty analysis from Claude Code, Cursor, or any MCP client.
 
 [Scholar Feed](https://www.scholarfeed.org) indexes arXiv papers daily and ranks them using a multi-signal scoring system (recency, citation velocity, institutional reputation, code availability). Each paper has an LLM-generated summary and novelty score.
