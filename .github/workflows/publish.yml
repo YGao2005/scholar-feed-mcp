@@ -1,12 +1,13 @@
 name: Publish
 
-# Tag-triggered npm publish with build provenance (OIDC). Cut a release by
-# bumping package.json, committing, then pushing a matching tag:
+# Tag-triggered npm publish using OIDC trusted publishing — no stored token.
+# Cut a release by bumping package.json, committing, then pushing a matching tag:
 #   npm version <patch|minor|major> && git push --follow-tags
 #
-# Requires an automation NPM_TOKEN in the repo's Actions secrets
-# (Settings → Secrets and variables → Actions). Provenance is attested via
-# the id-token permission below — no extra secret needed for that.
+# One-time setup on npmjs.com (package → Settings → Trusted Publisher):
+#   provider GitHub Actions, organization/user "YGao2005",
+#   repository "scholar-feed-mcp", workflow filename "publish.yml".
+# Auth is then minted per-run via the id-token permission below — no secret.
 on:
   push:
     tags:
@@ -17,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # required for npm publish --provenance
+      id-token: write # mints the short-lived OIDC token npm authenticates with
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,6 +26,8 @@ jobs:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
           cache: npm
+      # Trusted publishing requires npm >= 11.5.1; Node 20 ships npm 10.
+      - run: npm install -g npm@latest
       - run: npm ci
       - name: Verify tag matches package.json version
         run: |
@@ -34,6 +37,5 @@ jobs:
             exit 1
           fi
       # npm publish runs prepublishOnly (lint + build + test) first.
+      # Keep --provenance explicit — don't rely on the auto-provenance default.
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
