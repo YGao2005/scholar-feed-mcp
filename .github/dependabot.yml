@@ -11,6 +11,17 @@ updates:
       # Roll routine devDependency bumps into one PR to cut noise.
       dev-dependencies:
         dependency-type: "development"
+    ignore:
+      # The package targets Node 18 (ESLint 10 drops it); TypeScript 6 and these
+      # majors need a deliberate upgrade, not an automated group bump.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # Keep the GitHub Actions in CI / CodeQL / publish workflows current.
   - package-ecosystem: "github-actions"
