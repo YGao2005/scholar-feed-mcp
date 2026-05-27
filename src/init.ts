@@ -10,7 +10,7 @@
 
 import { createInterface } from "readline";
 import { execFileSync } from "child_process";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir, platform } from "os";
 
@@ -63,22 +63,21 @@ function mergeJsonConfig(
   serverConfig: Record<string, unknown>,
 ): void {
   let existing: Record<string, unknown> = {};
-  if (existsSync(filePath)) {
-    try {
-      existing = JSON.parse(readFileSync(filePath, "utf-8"));
-    } catch {
-      // If the file is malformed, overwrite it
-    }
+  try {
+    existing = JSON.parse(readFileSync(filePath, "utf-8"));
+  } catch {
+    // Missing or malformed — start from an empty config. Reading directly
+    // (rather than existsSync-then-read) avoids a check-then-use file race.
   }
 
   const servers = (existing.mcpServers ?? {}) as Record<string, unknown>;
   servers["scholar-feed"] = serverConfig;
   existing.mcpServers = servers;
 
+  // mkdirSync({ recursive: true }) is a no-op when the dir already exists, so no
+  // existsSync guard is needed — and adding one back would re-introduce the race.
   const dir = dirname(filePath);
-  if (dir && !existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
+  if (dir) mkdirSync(dir, { recursive: true });
   writeFileSync(filePath, JSON.stringify(existing, null, 2) + "\n");
 }
 
