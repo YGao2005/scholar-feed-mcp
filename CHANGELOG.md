@@ -16,6 +16,10 @@
   28-field shape were previously declared but silently ignored on the default JSON path.
 - `get_paper` `arxiv_ids` is now capped at 50 in the schema (matches the documented batch limit).
 - `init` wizard uses `path.dirname` instead of manual `/`-slicing, fixing config-dir creation on Windows.
+- `init` wizard runs the Claude Code setup via `execFileSync` with an argument array instead of a shell
+  command string, so the API key can't be shell-interpolated.
+- `init` wizard no longer echoes your API key in the "run manually" fallback hint — it shows a
+  `<your-key>` placeholder, so the key is never logged to stderr (flagged by CodeQL `js/clear-text-logging`).
 
 ### Added
 
@@ -37,7 +41,10 @@
   handlers exercised with a mocked `fetch`). Test runner switched to `tsx` so it runs on Node 18/20/22
   (the previous `--experimental-strip-types` flag is 22.6+ only, which had left CI red).
 - Bumped `@modelcontextprotocol/sdk` to `^1.29`; `npm audit` is clean. Added a `prepublishOnly` guard
-  (`build && test`) and a `bugs` URL.
+  (`lint && build && test`) and a `bugs` URL.
+- Added ESLint (flat config) + Prettier enforced in CI, CodeQL static analysis, and Dependabot; the
+  publish workflow uses OIDC trusted publishing with provenance. Removed 12 deprecated, never-shipped
+  tool source files. Added `SECURITY.md`, a code of conduct, and issue/PR templates.
 
 ## [3.0.1] - 2026-05-26
 
