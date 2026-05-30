@@ -44,7 +44,7 @@ v3.0.0 is a **hard cutover** — there is no deprecation window. The previous v1
 | `check_connection` | Removed — errors signal connectivity. No action needed; remove any health-check calls. |
 | `fetch_repo(arxiv_id=id)` | Removed — 0 observed calls in production. Backend route preserved for skill use. |
 
-### The 8 v3 tools
+### The 9 v3 tools
 
 | Tool | Description |
 |---|---|
@@ -56,6 +56,10 @@ v3.0.0 is a **hard cutover** — there is no deprecation window. The previous v1
 | `co_author_graph` | Co-authorship neighborhood for an author — edges derived live from the citation graph. |
 | `embed_text` | Get a 768-dim Gemini embedding for a text string (useful for HyDE and custom similarity). |
 | `get_field_orientation` | Cheap retrieval orientation for a research area — top papers, subfields, open problems. No Pro quota. |
+| `get_foundational_lineage` | The foundational work for a *paper's niche* via the citation graph — niche_roots → field_level → discipline (collapsed landmarks), with `cited_by_in_niche` evidence. Surfaces canonical anchors semantic search misses. No Pro quota. |
+
+**New in v3.1.0:**
+- `get_foundational_lineage` — paper-anchored citation-graph lineage (consensus-then-lift). Answers the *relative* question: what is foundational for THIS paper's specific niche, not the obvious global landmarks. Complements `get_field_orientation` (topic-anchored, retrieval-only).
 
 **New in v3.0.0** (reaching npm for the first time):
 - `find_author` — merged `discover_authors` + `get_author` into a single tool with exactly-one-of (`q` or `id`) semantics.
@@ -130,7 +134,7 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 
 **Windows note:** Use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "scholar-feed-mcp"]`.
 
-## Available Tools (8)
+## Available Tools (9)
 
 ### Core Search & Discovery
 
@@ -159,6 +163,7 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `get_field_orientation` | Cheap retrieval orientation for a research area — top papers, subfields, open problems. No Pro quota. | `topic`, `limit` |
+| `get_foundational_lineage` | Foundational work for a *paper's niche* via the citation graph (consensus-then-lift): niche_roots → field_level → discipline, with `cited_by_in_niche` evidence. Surfaces canonical anchors semantic search misses. No Pro quota. | `anchor_paper_id`, `scope`, `generality_ceiling`, `limit` |
 
 ## Novelty Score
 
@@ -185,6 +190,7 @@ Use `novelty_min: 0.5` in `search_papers` to filter for genuinely novel work.
 | `co_author_graph` | 20/min |
 | `embed_text` | 30/min |
 | `get_field_orientation` | 20/min |
+| `get_foundational_lineage` | 20/min |
 
 Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
 

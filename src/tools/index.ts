@@ -1,12 +1,13 @@
 /**
  * Tool registration barrel.
  *
- * Imports the 8 v3 tool modules and exports registerAllTools(),
+ * Imports the v3 tool modules and exports registerAllTools(),
  * which registers each tool on the given McpServer instance.
  *
- * v3.0.0 surface (8 tools):
+ * v3.1.0 surface (9 tools):
  *   search_papers, get_paper, get_citations, fetch_fulltext,
- *   find_author, co_author_graph, embed_text, get_field_orientation
+ *   find_author, co_author_graph, embed_text, get_field_orientation,
+ *   get_foundational_lineage
  *
  * Removed from registry (11 tools deregistered, files preserved with deprecation headers):
  *   KILLED (FND-03 audit — thin 7-hour window, but v3 spec locked the removal):
@@ -32,10 +33,11 @@ import { register as registerFindAuthor } from "./find_author.js";
 import { register as registerCoAuthorGraph } from "./co_author_graph.js";
 import { register as registerEmbedText } from "./embed_text.js";
 import { register as registerGetFieldOrientation } from "./get_field_orientation.js";
+import { register as registerGetFoundationalLineage } from "./get_foundational_lineage.js";
 
 /**
  * Register all Scholar Feed MCP tools on the provided server instance.
- * v3 surface: exactly 8 tools.
+ * v3.1 surface: exactly 9 tools.
  */
 export function registerAllTools(server: McpServer): void {
   registerSearch(server);
@@ -46,4 +48,5 @@ export function registerAllTools(server: McpServer): void {
   registerCoAuthorGraph(server);
   registerEmbedText(server);
   registerGetFieldOrientation(server);
+  registerGetFoundationalLineage(server);
 }

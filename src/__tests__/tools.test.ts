@@ -27,6 +27,7 @@ const EXPECTED_TOOLS = [
   "co_author_graph",
   "embed_text",
   "get_field_orientation",
+  "get_foundational_lineage",
 ];
 
 /** Active tool source files that must never use console.log (corrupts stdio). */
@@ -39,6 +40,7 @@ const ACTIVE_TOOL_FILES = [
   "co_author_graph",
   "embed_text",
   "get_field_orientation",
+  "get_foundational_lineage",
 ];
 
 describe("package.json", () => {
@@ -72,7 +74,7 @@ describe("package.json", () => {
 });
 
 describe("tool registry", () => {
-  it("registers exactly the 8 v3 tools", () => {
+  it("registers exactly the 9 v3 tools", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     assert.deepStrictEqual(
