@@ -46,7 +46,8 @@ re-derive from these rather than guessing.
 | Collections | — | **1** | unlimited |
 | Watches / standing alerts | — | **1** | several _(calibrate)_ |
 | Digest cadence | — | monthly (+ weekly for first 30 days — see §2.1) | weekly + on-demand |
-| Ask-my-library / gap analysis | — | — | ✅ |
+| Ask-my-library | — | **1 / month** (free taste) | ✅ (Pro quota) |
+| Gap analysis | — | — | ✅ |
 | Exports (Obsidian/Notion/BibTeX) | — | basic | full |
 | Team / shared collections | — | — | ✅ (seats) |
 

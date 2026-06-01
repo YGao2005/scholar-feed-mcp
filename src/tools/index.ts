@@ -38,6 +38,7 @@ import { register as registerLibrary } from "./library.js";
 import { register as registerCollectionsWrite } from "./collections_write.js";
 import { register as registerWatches } from "./watches.js";
 import { register as registerGaps } from "./gaps.js";
+import { register as registerAskLibrary } from "./ask_library.js";
 
 /**
  * Register all Scholar Feed MCP tools on the provided server instance.
@@ -64,4 +65,5 @@ export function registerAllTools(server: McpServer): void {
   registerCollectionsWrite(server);
   registerWatches(server);
   registerGaps(server);
+  registerAskLibrary(server);
 }

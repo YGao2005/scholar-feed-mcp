@@ -101,16 +101,15 @@ Two transport options (§5 open Q); the algorithm is identical.
 
 ## 5. Open questions (decide before/at build)
 
-1. **Synthesis fidelity — summaries vs full text.** *Lean: `llm_summary` for v1.* They're
-   already LLM-distilled (high signal), so synthesis-over-summaries is strong and ~free
-   incremental cost. Full-text chunks (needs the `agent/fulltext.py` path + chunking) is a
-   bigger, higher-fidelity v2 — only if v1 answers feel shallow.
-2. **Gating — Pro-only vs free taste.** *This is the sharp one.* The `limits-spec` tier
-   matrix says `ask_library` is **Pro-only**. But the closest analog, **Field Guide**, is
-   **free 1/month + Pro 20/month**, and Principle 2 ("fall in love in one session") argues
-   the flagship verb is exactly what a free user should *taste* once. *Lean: free 1/month +
-   Pro* (mirror Field Guide; update the limits-spec matrix). Cost isn't the reason to wall
-   it — one summary-grounded synthesis is cheap. Decide.
+1. ~~**Synthesis fidelity — summaries vs full text.**~~ **RESOLVED 2026-06-01: `llm_summary`
+   for v1.** Already LLM-distilled (high signal), ~free incremental cost, fast enough for a
+   synchronous response. Full-text chunks (the `agent/fulltext.py` path + chunking) is a
+   higher-fidelity v2 — only if v1 answers feel shallow.
+2. ~~**Gating — Pro-only vs free taste.**~~ **RESOLVED 2026-06-01: free 1/month taste + Pro**
+   (mirror Field Guide via `require_pro_or_quota("ask_library", 1)`). The flagship verb is
+   what a free user should feel once (Principle 2: fall in love in one session) — strongest
+   conversion hook, and cost isn't a reason to wall it. **Updates `limits-spec` §2 matrix**
+   (which said Pro-only) — see that file's ask row.
 3. **Sync vs poll/persist.** *Lean: synchronous v1* (return the answer in one response, like
    `gaps`) — summary-grounded synthesis is a single retrieval + single LLM call, fast enough
    to skip the `field_guide_reports` table + poll dance (no migration, less surface). Add
