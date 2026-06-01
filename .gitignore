@@ -3,3 +3,8 @@ build/
 dist/
 *.tsbuildinfo
 .DS_Store
+
+# Local secrets — never commit. Your SF_API_KEY lives here.
+.env
+.env.*
+!.env.*.example
