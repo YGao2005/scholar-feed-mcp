@@ -76,10 +76,16 @@ for a `topic` seed (a `collection` seed reuses stored embeddings). Pool weight ~
 
 ## 4. Open questions
 
-1. **Subtract library vs subtract just the seed collection?** Subtracting the whole library
-   is "what I've never saved anywhere"; subtracting only the collection is "what's missing
-   from THIS collection (but maybe saved elsewhere)." Lean: subtract the **collection** for
-   a collection seed, the **whole library** for a topic seed.
+1. ~~**Subtract library vs subtract just the seed collection?**~~ **RESOLVED (2026-06-01): keep
+   per-seed subtract — collection seed subtracts the collection's own members; topic seed
+   subtracts the whole library** (matches the shipped code in `backend/api/routers/gaps.py`).
+   Rationale: "what's missing from THIS collection" is the literal promise of a
+   collection-scoped gap analysis. Switching collection seeds to whole-library subtract
+   would *hide cross-collection signal* — a paper foundational to your "agents" collection
+   but filed under "RL" should surface as a gap in "agents" (the "file this here too" nudge),
+   not be suppressed because you saved it somewhere. If noise ("I already have that") becomes
+   a real complaint, the fix is to **annotate** "saved in your 'RL' collection" (see Q2),
+   not to subtract the whole library.
 2. **Annotate why** each gap matters (citation count in niche, who cites it) — cheap, high
    value for trust. Include in v1?
 3. Bundle `find_gaps` with the cheap **annotations** add-on (notes on saved papers) as the
