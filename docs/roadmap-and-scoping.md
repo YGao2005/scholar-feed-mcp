@@ -34,6 +34,7 @@ handoff spec.
 | save / unsave / like / list, collections | 3.3 | ✅ | ✅ exists | **working end-to-end** |
 | watches (create/list/check/delete) | 3.4 | ✅ | ✅ **deployed** (Heroku v385; migration 132 applied to prod) — topic + collection + **anchor** seeds (v385); author/citation/category still "coming soon" (declined as commodity per Principle 4) | **live** (routes return 403 unauth as expected); in-session pull works via the eval pass. Pending: an authenticated smoke test + the digest "New on your watches" section + watermark (follow-up) |
 | `find_gaps` | 3.5 | ✅ | ✅ **deployed** (Heroku v382) — foundational + frontier, read-only, Pro-gated, no migration | **live**; SQL validated against prod (Supabase MCP). Pending: authenticated smoke test |
+| `ask_library` | new | ✅ (committed, unpublished) | ✅ **deployed** (Heroku v388) — `GET /ask`, scoped exact-cosine retrieval + DeepSeek synthesis over `llm_summary`, no migration | **live**; free 1/mo + Pro, read-only. Retrieval SQL validated against prod; DeepSeek+Gemini keys confirmed set. Pending: an authenticated smoke test + an npm release of the client tool |
 | client surfaces `{error,message}` upgrade prompts | 3.5 | ✅ | — | done (Pro gates can rely on it) |
 
 ## The binding constraint
@@ -46,9 +47,9 @@ before adding new ones.
 
 | Feature | What it is | ICP value | Defensibility | Backend effort | Status |
 |---|---|---|---|---|---|
-| **Ask-my-library (RAG)** | Query your saved set through the agent ("answer using only my 'agents' collection") | Highest broad-ICP stickiness | High (your embeddings + their curated set) | **Big** (scoped retrieval + synthesis) | Owner leaning yes |
+| **Ask-my-library (RAG)** | Query your saved set through the agent ("answer using only my 'agents' collection") | Highest broad-ICP stickiness | High (your embeddings + their curated set) | ~~Big~~ **Medium** — it's Field Guide scoped to the library (reuses retrieval/quota/DeepSeek) | ✅ **v1 SHIPPED** (Heroku v388) — `GET /ask`, summaries, free 1/mo + Pro. See [`ask-my-library-spec.md`](./ask-my-library-spec.md) |
 | **Annotations** | Notes on saved papers + "summarize my notes across X" | Enabler / journal | Low | Low (a field + endpoint) | Not started |
-| **Landscape report** | Scheduled synthesis over the library ("state of my fields this month") | Founder/PM | Medium | Medium (builds on ask + gaps) | Not started |
+| **Landscape report** | Scheduled synthesis over the library ("state of my fields this month") | Founder/PM | Low now — **derive from ask** (a scheduled `ask_library` + a fixed prompt) | Not started — derivable post-ask |
 | **Team / shared collections** | Shared collection all members' agents read/write | Highest ARPU | Medium | Bigger (sharing/permissions) | Different SKU — usually deferred |
 | **Export** | Push library/collection to Obsidian/Notion/Zotero/BibTeX | Portability | Low | Low | Keep cheap/free (lowers lock-in objection) |
 | **Reading queue / triage** | read/unread, prioritized by novelty + recent saves | Productivity | Low | Medium | Not started |
