@@ -1,5 +1,82 @@
 # Changelog
 
+## [3.4.0] - 2026-06-01
+
+### Added — watch tools (require `SF_API_KEY`)
+
+Standing alerts: a watch is a persisted `search_papers` query, evaluated daily server-side
+against newly-indexed papers, whose new matches surface via the email digest and via an
+in-session pull. Watches are account-bound, so they require an `SF_API_KEY`.
+
+- `create_watch` — define a standing watch with a `novelty_min` floor (default 0.5) and
+  exactly one seed selector (`q`, `collection_name`/`collection_id`, `anchor_paper_id`,
+  `scope_to_citations_of`, `author_id`, or `category`). Get-or-create by name (never errors
+  on duplicate). The seed is passed through to the backend, which resolves `collection_name`.
+  The collection-neighborhood seed (`collection_name` + `novelty_min`) is the lead use case.
+- `list_watches` — enumerate watches with a one-line summary, `last_evaluated_at`, and
+  `pending_hits` (count new since the last digest delivery).
+- `check_watches` — pull new matching papers since the last digest, scoped to one watch
+  (`watch_name`/`watch_id`) or all. Read-only and idempotent: it does NOT advance any
+  watermark (only digest delivery does), so it is safe to call repeatedly.
+- `delete_watch` — remove a watch by `name` or `id`. Idempotent (deleting a missing watch
+  is a no-op).
+
+Surface is now **21 tools** (9 read + 12 write/library/watch). Read tools remain usable
+anonymously; library, collection, and watch tools require a key.
+
+## [3.3.0] - 2026-05-30
+
+### Added — write tools (require `SF_API_KEY`)
+
+The MCP can now mutate the authenticated user's library and collections, not just read.
+The `sf_` API key resolves to the same account that owns the website library, so writes
+flow into personalization (the For You feed) and the email digest. All write tools accept
+an **arXiv ID** (the backend resolves arXiv → the internal id on the write path).
+
+- `save_paper` / `unsave_paper` — bookmark or un-bookmark a paper. Idempotent: they read
+  the toggle endpoint's `action` response and self-correct to the desired end state.
+- `like_paper` — a "more like this" calibration signal (INSERT-only, idempotent).
+- `list_library` — read back the user's saved papers.
+- `list_collections` — enumerate collections with paper counts.
+- `create_collection` — create a named collection (get-or-create; no error on duplicate).
+- `add_to_collection` — add a paper by `collection_name` (get-or-create) or `collection_id`;
+  also auto-saves the paper. Idempotent.
+- `remove_from_collection` — remove a paper from a collection (the paper stays saved).
+
+Surface is now **17 tools** (9 read + 8 write/library). Read tools remain usable
+anonymously; write tools require a key.
+
+## [3.2.0] - 2026-05-29
+
+### Added
+
+- **Expanded MCP client coverage — 3 clients to 11.** The `init` wizard and README now cover the
+  editors and agents researchers actually use. New auto-configured clients: **VS Code** (GitHub
+  Copilot, `.vscode/mcp.json` with the `servers` key + `type: "stdio"`), **Windsurf**
+  (`~/.codeium/windsurf/mcp_config.json`), **Zed** (`settings.json` `context_servers`, with the
+  required `source: "custom"`), **Gemini CLI** (`~/.gemini/settings.json`), and **LM Studio**
+  (`~/.lmstudio/mcp.json`). For clients that can't be written safely, the wizard prints the exact
+  snippet to paste: **Continue** (YAML config), **JetBrains / PyCharm** (AI Assistant UI), and
+  **Cline / Roo Code** (extension UI).
+- README "Manual Installation" rewritten around the shared stdio server: one standard `mcpServers`
+  block, then a per-client section noting only what differs (config-file location + wrapper key).
+
+### Internal
+
+- `init` wizard: generalized the JSON merge to any top-level key (`mergeKeyedConfig`), so VS Code's
+  `servers` and Zed's `context_servers` reuse the same preserve-existing-entries merge as `mcpServers`.
+  Printed snippets keep the `<your-key>` placeholder — the real key is never written to stderr.
+
+## [3.1.0] - 2026-05-29
+
+### Added
+
+- `get_foundational_lineage` — paper-anchored citation-graph lineage (consensus-then-lift): the
+  foundational work for a *paper's niche* (niche_roots → field_level → discipline), with
+  `cited_by_in_niche` evidence. Answers the *relative* question — what is foundational for **this**
+  paper's niche, not the obvious global landmarks. Complements `get_field_orientation`
+  (topic-anchored, retrieval-only). No Pro quota. Tool surface 8 → 9.
+
 ## [3.0.2] - 2026-05-26
 
 ### Removed

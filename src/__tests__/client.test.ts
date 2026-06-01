@@ -124,6 +124,40 @@ describe("client error mapping", () => {
       },
     );
   });
+
+  it("surfaces a deliberate { error, message } envelope (e.g. cap/upgrade walls)", async () => {
+    const body = JSON.stringify({
+      error: "watch_limit",
+      message: "Free tier includes 1 watch. Pro lets you track more — scholarfeed.org/upgrade",
+      limit: 1,
+    });
+    await withStub({ status: 403, body }, {}, async () => {
+      await assert.rejects(client.get("/watches"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        // The backend's message wins over the generic 403 "Access denied" copy.
+        assert.match(msg, /Pro lets you track more/);
+        assert.doesNotMatch(msg, /Access denied/);
+        return true;
+      });
+    });
+  });
+
+  it("ignores a half-formed envelope (message without error code → generic copy)", async () => {
+    // message-only is NOT a deliberate envelope; must not surface, to avoid
+    // leaking incidental error strings the backend didn't intend for users.
+    await withStub(
+      { status: 403, body: JSON.stringify({ message: "raw internal detail" }) },
+      {},
+      async () => {
+        await assert.rejects(client.get("/x"), (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          assert.match(msg, /Access denied/);
+          assert.doesNotMatch(msg, /raw internal detail/);
+          return true;
+        });
+      },
+    );
+  });
 });
 
 describe("client timeout", () => {

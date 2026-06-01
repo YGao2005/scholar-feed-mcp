@@ -80,6 +80,28 @@ v3.0.0 is a **hard cutover** — there is no deprecation window. The previous v1
 
 ## Manual Installation
 
+The fastest path is `npx scholar-feed-mcp init`, which auto-detects your client and
+writes the config. To do it by hand, find your client below.
+
+Every client launches the **same** stdio server — `npx -y scholar-feed-mcp`. Most use
+the identical `mcpServers` JSON block; only the **config-file location** and the
+**wrapper key** change. The standard block (used by Cursor, Claude Desktop, Windsurf,
+Cline/Roo, Gemini CLI, LM Studio, and JetBrains) is:
+
+```json
+{
+  "mcpServers": {
+    "scholar-feed": {
+      "command": "npx",
+      "args": ["-y", "scholar-feed-mcp"]
+    }
+  }
+}
+```
+
+**API key (optional, for 1,000 calls/day):** add `"env": { "SF_API_KEY": "sf_your_key_here" }`
+to the server entry. Get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
+
 ### Claude Code
 
 ```bash
@@ -90,12 +112,27 @@ claude mcp add scholar-feed -- npx -y scholar-feed-mcp
 claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-feed-mcp
 ```
 
-### Cursor (.cursor/mcp.json)
+### Cursor (`.cursor/mcp.json`)
+
+Use the standard block above in `.cursor/mcp.json` (project) or `~/.cursor/mcp.json`
+(global), then restart Cursor.
+
+### Claude Desktop (`claude_desktop_config.json`)
+
+Settings → Developer → Edit Config, paste the standard block, then restart.
+File location: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS),
+`%APPDATA%\Claude\claude_desktop_config.json` (Windows).
+
+### VS Code — GitHub Copilot (`.vscode/mcp.json`)
+
+VS Code uses a `servers` key (not `mcpServers`) and an explicit `type`. Requires Copilot
+**agent mode**. You can also run `MCP: Add Server` from the Command Palette.
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "scholar-feed": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "scholar-feed-mcp"]
     }
@@ -103,14 +140,26 @@ claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-fee
 }
 ```
 
-To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the config.
+### Windsurf (`~/.codeium/windsurf/mcp_config.json`)
 
-### Claude Desktop (claude_desktop_config.json)
+In Cascade, click the MCP icon → Configure (opens `~/.codeium/windsurf/mcp_config.json`),
+paste the standard block, then click refresh.
+
+### Cline / Roo Code
+
+Click the **MCP Servers** icon in the sidebar → Configure / Edit, then paste the standard
+block into `cline_mcp_settings.json`. Cline and Roo Code share this format.
+
+### Zed (`settings.json`)
+
+Zed uses a `context_servers` key, and the `"source": "custom"` line is **required** —
+without it, Zed silently skips the entry.
 
 ```json
 {
-  "mcpServers": {
+  "context_servers": {
     "scholar-feed": {
+      "source": "custom",
       "command": "npx",
       "args": ["-y", "scholar-feed-mcp"]
     }
@@ -118,7 +167,36 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 }
 ```
 
-### Project-scoped (.mcp.json)
+### Continue (`~/.continue/config.yaml`)
+
+Continue uses YAML, with `mcpServers` as a **list**. Add to `~/.continue/config.yaml`
+(global) or `.continue/config.yaml` (workspace).
+
+```yaml
+mcpServers:
+  - name: scholar-feed
+    type: stdio
+    command: npx
+    args:
+      - "-y"
+      - scholar-feed-mcp
+```
+
+### Gemini CLI (`~/.gemini/settings.json`)
+
+Add the standard block to `~/.gemini/settings.json` (or project `.gemini/settings.json`).
+
+### JetBrains — PyCharm / IntelliJ (AI Assistant)
+
+Settings → Tools → AI Assistant → Model Context Protocol (MCP) → Add → **As JSON**, paste
+the standard block, then apply. Requires AI Assistant 2025.1+.
+
+### LM Studio (`~/.lmstudio/mcp.json`)
+
+Program tab → Install → Edit `mcp.json` (`~/.lmstudio/mcp.json`), paste the standard
+block, then save. LM Studio follows Cursor's `mcp.json` notation.
+
+### Project-scoped (`.mcp.json`)
 
 ```json
 {
@@ -132,7 +210,13 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 }
 ```
 
-**Windows note:** Use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "scholar-feed-mcp"]`.
+**Windows note:** for any of the JSON configs above, use `"command": "cmd"` and
+`"args": ["/c", "npx", "-y", "scholar-feed-mcp"]`.
+
+### Any other MCP client
+
+Scholar Feed is a standard stdio MCP server, so any MCP-compatible client works — use the
+standard `mcpServers` block above with `command: npx`, `args: ["-y", "scholar-feed-mcp"]`.
 
 ## Available Tools (9)
 
@@ -164,6 +248,25 @@ To add an API key, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the conf
 |------|-------------|----------------|
 | `get_field_orientation` | Cheap retrieval orientation for a research area — top papers, subfields, open problems. No Pro quota. | `topic`, `limit` |
 | `get_foundational_lineage` | Foundational work for a *paper's niche* via the citation graph (consensus-then-lift): niche_roots → field_level → discipline, with `cited_by_in_niche` evidence. Surfaces canonical anchors semantic search misses. No Pro quota. | `anchor_paper_id`, `scope`, `generality_ceiling`, `limit` |
+
+### Library, Collections & Watches (require `SF_API_KEY`)
+
+These MUTATE or read the authenticated user's account. Read tools work anonymously; these need a key.
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `save_paper` | Bookmark a paper to your library (idempotent; feeds personalization). | `arxiv_id` |
+| `unsave_paper` | Remove a paper from your library (idempotent). | `arxiv_id` |
+| `like_paper` | "More like this" calibration signal for the For You feed (insert-only). | `arxiv_id` |
+| `list_library` | List your saved papers, newest first. | `limit`, `page` |
+| `list_collections` | List collections with paper counts. | — |
+| `create_collection` | Create a named collection (get-or-create; no error on duplicate). | `name` |
+| `add_to_collection` | Add a paper to a collection by name or id (also auto-saves). | `arxiv_id`, `collection_name`, `collection_id` |
+| `remove_from_collection` | Remove a paper from a collection (stays saved). | `arxiv_id`, `collection_name`, `collection_id` |
+| `create_watch` | Standing daily-evaluated saved search; get-or-create by name. Exactly one seed selector. | `name`, `novelty_min`, `q`, `collection_name`, `collection_id`, `anchor_paper_id`, `scope_to_citations_of`, `author_id`, `category` |
+| `list_watches` | List watches with summary, `last_evaluated_at`, and `pending_hits`. | — |
+| `check_watches` | Pull new matches since the last digest (read-only, idempotent). | `watch_name`, `watch_id`, `limit` |
+| `delete_watch` | Delete a watch by name or id (idempotent). | `name`, `watch_id` |
 
 ## Novelty Score
 

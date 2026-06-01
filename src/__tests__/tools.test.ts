@@ -28,6 +28,20 @@ const EXPECTED_TOOLS = [
   "embed_text",
   "get_field_orientation",
   "get_foundational_lineage",
+  // v3.3 write/library surface (require SF_API_KEY)
+  "save_paper",
+  "unsave_paper",
+  "like_paper",
+  "list_library",
+  "list_collections",
+  "create_collection",
+  "add_to_collection",
+  "remove_from_collection",
+  // v3.4 watch surface (require SF_API_KEY)
+  "create_watch",
+  "list_watches",
+  "check_watches",
+  "delete_watch",
 ];
 
 /** Active tool source files that must never use console.log (corrupts stdio). */
@@ -41,6 +55,9 @@ const ACTIVE_TOOL_FILES = [
   "embed_text",
   "get_field_orientation",
   "get_foundational_lineage",
+  "library",
+  "collections_write",
+  "watches",
 ];
 
 describe("package.json", () => {
@@ -74,7 +91,7 @@ describe("package.json", () => {
 });
 
 describe("tool registry", () => {
-  it("registers exactly the 9 v3 tools", () => {
+  it("registers exactly the 21 v3.4 tools", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     assert.deepStrictEqual(
@@ -94,6 +111,90 @@ describe("tool registry", () => {
         `${name} must have an inputSchema`,
       );
     }
+  });
+});
+
+describe("watch tools surface", () => {
+  const watchTools = ["create_watch", "list_watches", "check_watches", "delete_watch"];
+
+  it("registers all four watch tools", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    for (const name of watchTools) {
+      assert.ok(tools.has(name), `${name} must be registered`);
+    }
+  });
+
+  it("each watch tool requires an SF_API_KEY in its description", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    for (const name of watchTools) {
+      assert.match(
+        tools.get(name)!.description,
+        /SF_API_KEY/,
+        `${name} description must mention SF_API_KEY`,
+      );
+    }
+  });
+
+  it("mutating watch tools advertise MUTATES; read tools do not", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    assert.match(tools.get("create_watch")!.description, /MUTATES/);
+    assert.match(tools.get("delete_watch")!.description, /MUTATES/);
+    assert.doesNotMatch(tools.get("list_watches")!.description, /MUTATES/);
+    assert.doesNotMatch(tools.get("check_watches")!.description, /MUTATES/);
+  });
+
+  it("idempotent watch tools say so in their descriptions", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    assert.match(tools.get("create_watch")!.description, /get-or-create/i);
+    assert.match(tools.get("check_watches")!.description, /idempotent/i);
+    assert.match(tools.get("delete_watch")!.description, /idempotent/i);
+  });
+
+  it("create_watch exposes name, novelty_min, and every seed selector", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    const schema = tools.get("create_watch")!.inputSchema;
+    for (const key of [
+      "name",
+      "novelty_min",
+      "q",
+      "collection_name",
+      "collection_id",
+      "anchor_paper_id",
+      "scope_to_citations_of",
+      "author_id",
+      "category",
+    ]) {
+      assert.ok(key in schema, `create_watch inputSchema must include ${key}`);
+    }
+  });
+
+  it("check_watches exposes watch_name, watch_id, and limit", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    const schema = tools.get("check_watches")!.inputSchema;
+    for (const key of ["watch_name", "watch_id", "limit"]) {
+      assert.ok(key in schema, `check_watches inputSchema must include ${key}`);
+    }
+  });
+
+  it("delete_watch exposes name and watch_id", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    const schema = tools.get("delete_watch")!.inputSchema;
+    for (const key of ["name", "watch_id"]) {
+      assert.ok(key in schema, `delete_watch inputSchema must include ${key}`);
+    }
+  });
+
+  it("list_watches takes no input parameters", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    assert.deepStrictEqual(Object.keys(tools.get("list_watches")!.inputSchema), []);
   });
 });
 

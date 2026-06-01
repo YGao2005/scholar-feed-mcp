@@ -34,10 +34,18 @@ import { register as registerCoAuthorGraph } from "./co_author_graph.js";
 import { register as registerEmbedText } from "./embed_text.js";
 import { register as registerGetFieldOrientation } from "./get_field_orientation.js";
 import { register as registerGetFoundationalLineage } from "./get_foundational_lineage.js";
+import { register as registerLibrary } from "./library.js";
+import { register as registerCollectionsWrite } from "./collections_write.js";
+import { register as registerWatches } from "./watches.js";
 
 /**
  * Register all Scholar Feed MCP tools on the provided server instance.
- * v3.1 surface: exactly 9 tools.
+ *
+ * v3.4 surface: 9 read tools + 12 write/library/watch tools (21 total). The
+ * write tools (save_paper, unsave_paper, like_paper, list_library,
+ * list_collections, create_collection, add_to_collection, remove_from_collection,
+ * create_watch, list_watches, check_watches, delete_watch) operate on the
+ * authenticated user's library/collections/watches and require an SF_API_KEY.
  */
 export function registerAllTools(server: McpServer): void {
   registerSearch(server);
@@ -49,4 +57,7 @@ export function registerAllTools(server: McpServer): void {
   registerEmbedText(server);
   registerGetFieldOrientation(server);
   registerGetFoundationalLineage(server);
+  registerLibrary(server);
+  registerCollectionsWrite(server);
+  registerWatches(server);
 }

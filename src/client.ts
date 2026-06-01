@@ -41,6 +41,37 @@ function authHeaders(): Record<string, string> {
   return key ? { Authorization: `Bearer ${key}` } : {};
 }
 
+/**
+ * Surface a deliberate, user-facing error envelope from the backend.
+ *
+ * The API returns `{ error, message }` for intentional business-rule walls —
+ * e.g. a quota/cap hit that carries an upgrade prompt ("Free tier includes 1
+ * watch. Pro lets you track more — scholarfeed.org/upgrade"). We surface
+ * `message` verbatim so the agent relays it to the user.
+ *
+ * Only when BOTH `error` (a machine code) and `message` (the human string) are
+ * present: that pairing marks an intentional, safe-to-show envelope. Plain or
+ * unstructured error bodies still fall through to the generic status-based
+ * messages, so we never leak internal error detail to the model.
+ */
+function structuredBackendMessage(body: string): string | null {
+  if (!body) return null;
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      typeof (parsed as Record<string, unknown>).error === "string" &&
+      typeof (parsed as Record<string, unknown>).message === "string"
+    ) {
+      return (parsed as { message: string }).message;
+    }
+  } catch {
+    // Body isn't JSON — fall through to the status-based messages.
+  }
+  return null;
+}
+
 class ScholarFeedClient {
   /**
    * GET with flat query params. Throws Error on non-2xx response or timeout.
@@ -102,6 +133,29 @@ class ScholarFeedClient {
   }
 
   /**
+   * Make a DELETE request to the Scholar Feed API.
+   * Returns null for a 204 No Content (the common case for membership-removal),
+   * else the parsed JSON body. Throws Error on non-2xx response or timeout.
+   */
+  async del<T>(path: string): Promise<T | null> {
+    const response = await this.fetchWithTimeout(`${getBaseUrl()}${path}`, {
+      method: "DELETE",
+      headers: {
+        ...authHeaders(),
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      await this.throwApiError(response);
+    }
+
+    if (response.status === 204) return null;
+    const body = await response.text();
+    return body ? (JSON.parse(body) as T) : null;
+  }
+
+  /**
    * fetch() wrapper that enforces a request timeout via AbortSignal.timeout.
    * An unbounded fetch can hang a tool call forever if the backend stalls;
    * the timeout turns that into a clear, actionable error instead.
@@ -138,6 +192,11 @@ class ScholarFeedClient {
   private async throwApiError(response: Response): Promise<never> {
     const body = await response.text();
     console.error(`[client] API error ${response.status}:`, body.slice(0, 500));
+
+    // A deliberate { error, message } envelope (e.g. a quota/cap wall with an
+    // upgrade prompt) wins over the generic status-based copy below.
+    const structured = structuredBackendMessage(body);
+    if (structured) throw new Error(structured);
 
     switch (response.status) {
       case 401:
