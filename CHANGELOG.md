@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.5.1] - 2026-06-01
+
+### Security — supply-chain & prompt-injection hardening
+
+- **Publish pipeline hardened.** The release workflow now splits an unprivileged
+  build/test job from a minimal publish job that is the sole holder of
+  `id-token: write`; every `npm ci` runs with `--ignore-scripts`; and all
+  GitHub Actions are pinned to immutable commit SHAs. This is the first release
+  published end-to-end through OIDC trusted publishing (with provenance), rather
+  than a manual local publish.
+- **Untrusted-content fencing.** External paper text returned by `search_papers`,
+  `get_paper` (JSON mode), and `fetch_fulltext` is now wrapped in explicit
+  `UNTRUSTED PAPER CONTENT` fences, reducing the indirect prompt-injection
+  surface where author-controlled text could steer a host agent. No change to
+  tool inputs or the bibtex output path.
+
 ## [3.5.0] - 2026-06-01
 
 ### Added — gap analysis (Pro; requires `SF_API_KEY`)
