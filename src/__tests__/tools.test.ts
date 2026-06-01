@@ -42,6 +42,8 @@ const EXPECTED_TOOLS = [
   "list_watches",
   "check_watches",
   "delete_watch",
+  // v3.5 gap analysis (read-only, Pro, requires SF_API_KEY)
+  "find_gaps",
 ];
 
 /** Active tool source files that must never use console.log (corrupts stdio). */
@@ -58,6 +60,7 @@ const ACTIVE_TOOL_FILES = [
   "library",
   "collections_write",
   "watches",
+  "gaps",
 ];
 
 describe("package.json", () => {
@@ -91,7 +94,7 @@ describe("package.json", () => {
 });
 
 describe("tool registry", () => {
-  it("registers exactly the 21 v3.4 tools", () => {
+  it("registers exactly the 22 v3.5 tools", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     assert.deepStrictEqual(
@@ -195,6 +198,31 @@ describe("watch tools surface", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     assert.deepStrictEqual(Object.keys(tools.get("list_watches")!.inputSchema), []);
+  });
+});
+
+describe("gap-analysis tool surface", () => {
+  it("registers find_gaps", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    assert.ok(tools.has("find_gaps"), "find_gaps must be registered");
+  });
+
+  it("find_gaps requires an SF_API_KEY and is read-only (no MUTATES)", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    const desc = tools.get("find_gaps")!.description;
+    assert.match(desc, /SF_API_KEY/);
+    assert.doesNotMatch(desc, /MUTATES/);
+  });
+
+  it("find_gaps exposes both seeds, scope, and limit", () => {
+    const { server, tools } = makeFakeServer();
+    registerAllTools(server);
+    const schema = tools.get("find_gaps")!.inputSchema;
+    for (const key of ["collection_name", "collection_id", "topic", "scope", "limit"]) {
+      assert.ok(key in schema, `find_gaps inputSchema must include ${key}`);
+    }
   });
 });
 

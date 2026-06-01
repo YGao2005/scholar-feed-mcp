@@ -37,15 +37,18 @@ import { register as registerGetFoundationalLineage } from "./get_foundational_l
 import { register as registerLibrary } from "./library.js";
 import { register as registerCollectionsWrite } from "./collections_write.js";
 import { register as registerWatches } from "./watches.js";
+import { register as registerGaps } from "./gaps.js";
 
 /**
  * Register all Scholar Feed MCP tools on the provided server instance.
  *
- * v3.4 surface: 9 read tools + 12 write/library/watch tools (21 total). The
- * write tools (save_paper, unsave_paper, like_paper, list_library,
- * list_collections, create_collection, add_to_collection, remove_from_collection,
- * create_watch, list_watches, check_watches, delete_watch) operate on the
- * authenticated user's library/collections/watches and require an SF_API_KEY.
+ * v3.5 surface (22 tools):
+ *   9 anonymous-capable read tools + find_gaps (read-only gap analysis, Pro,
+ *   requires SF_API_KEY) + 12 write/library/watch tools (save_paper, unsave_paper,
+ *   like_paper, list_library, list_collections, create_collection,
+ *   add_to_collection, remove_from_collection, create_watch, list_watches,
+ *   check_watches, delete_watch) that operate on the authenticated user's
+ *   library/collections/watches and require an SF_API_KEY.
  */
 export function registerAllTools(server: McpServer): void {
   registerSearch(server);
@@ -60,4 +63,5 @@ export function registerAllTools(server: McpServer): void {
   registerLibrary(server);
   registerCollectionsWrite(server);
   registerWatches(server);
+  registerGaps(server);
 }

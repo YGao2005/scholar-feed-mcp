@@ -218,7 +218,7 @@ block, then save. LM Studio follows Cursor's `mcp.json` notation.
 Scholar Feed is a standard stdio MCP server, so any MCP-compatible client works — use the
 standard `mcpServers` block above with `command: npx`, `args: ["-y", "scholar-feed-mcp"]`.
 
-## Available Tools (9)
+## Available Tools (22)
 
 ### Core Search & Discovery
 
@@ -249,9 +249,9 @@ standard `mcpServers` block above with `command: npx`, `args: ["-y", "scholar-fe
 | `get_field_orientation` | Cheap retrieval orientation for a research area — top papers, subfields, open problems. No Pro quota. | `topic`, `limit` |
 | `get_foundational_lineage` | Foundational work for a *paper's niche* via the citation graph (consensus-then-lift): niche_roots → field_level → discipline, with `cited_by_in_niche` evidence. Surfaces canonical anchors semantic search misses. No Pro quota. | `anchor_paper_id`, `scope`, `generality_ceiling`, `limit` |
 
-### Library, Collections & Watches (require `SF_API_KEY`)
+### Library, Collections, Watches & Gap Analysis (require `SF_API_KEY`)
 
-These MUTATE or read the authenticated user's account. Read tools work anonymously; these need a key.
+These MUTATE or read the authenticated user's account. The core read/search tools above work anonymously; these need a key.
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -267,6 +267,7 @@ These MUTATE or read the authenticated user's account. Read tools work anonymous
 | `list_watches` | List watches with summary, `last_evaluated_at`, and `pending_hits`. | — |
 | `check_watches` | Pull new matches since the last digest (read-only, idempotent). | `watch_name`, `watch_id`, `limit` |
 | `delete_watch` | Delete a watch by name or id (idempotent). | `name`, `watch_id` |
+| `find_gaps` | "What am I missing?" for a collection or topic — foundational + frontier work you haven't saved (read-only, **Pro**). | `collection_name`, `collection_id`, `topic`, `scope`, `limit` |
 
 ## Novelty Score
 
@@ -294,6 +295,7 @@ Use `novelty_min: 0.5` in `search_papers` to filter for genuinely novel work.
 | `embed_text` | 30/min |
 | `get_field_orientation` | 20/min |
 | `get_foundational_lineage` | 20/min |
+| `find_gaps` | 20/min |
 
 Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
 

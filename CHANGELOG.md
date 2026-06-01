@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.5.0] - 2026-06-01
+
+### Added — gap analysis (Pro; requires `SF_API_KEY`)
+
+- `find_gaps` — a "what am I missing?" analysis for a collection or topic. Returns two
+  buckets of work the user has NOT saved: `foundational_gaps` (canonical citation-graph
+  anchors in the niche, via aggregated lineage) and `frontier_gaps` (recent high-novelty
+  work in the niche). Provide exactly one seed (`collection_name`/`collection_id`/`topic`),
+  plus `scope` (`foundational`/`frontier`/`both`, default `both`) and `limit`. Read-only.
+  Requires `SF_API_KEY` (it subtracts the user's saved set) and is Pro-gated — free
+  accounts receive an upgrade prompt.
+
+### Changed
+
+- `client.ts` now surfaces a deliberate `{ error, message }` backend error envelope
+  verbatim (e.g. a quota/cap wall carrying an upgrade prompt), while unstructured error
+  bodies still get the safe, generic status-based message — no internal leakage. `find_gaps`
+  is the first consumer of this (its Pro gate relays cleanly through the agent).
+
+Surface is now **22 tools** (9 anonymous-capable read tools + `find_gaps` + 12
+library/collection/watch tools). Read tools remain usable anonymously; `find_gaps` and the
+write tools require a key.
+
 ## [3.4.0] - 2026-06-01
 
 ### Added — watch tools (require `SF_API_KEY`)
