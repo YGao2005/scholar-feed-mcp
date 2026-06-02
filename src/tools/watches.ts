@@ -37,6 +37,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
+import { fencePaperContent } from "./_untrusted.js";
 
 interface Watch {
   id: string;
@@ -361,7 +362,7 @@ export function register(server: McpServer): void {
         const params: Record<string, string> = { limit: String(limit) };
         if (id) params.watch_id = id;
         const result = await client.get<unknown>("/watches/hits", params);
-        return text(JSON.stringify(result, null, 2));
+        return text(fencePaperContent(result)); // matched papers = untrusted
       } catch (error) {
         return errorResult(error);
       }
@@ -514,7 +515,7 @@ export function register(server: McpServer): void {
           match: "all",
           recency_days,
         });
-        return text(JSON.stringify(result, null, 2));
+        return text(fencePaperContent(result)); // sample matched papers = untrusted
       } catch (error) {
         return errorResult(error);
       }

@@ -23,6 +23,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
+import { fencePaperContent } from "./_untrusted.js";
 
 interface ToggleResult {
   success: boolean;
@@ -111,10 +112,7 @@ export function register(server: McpServer): void {
       description:
         "Like a paper — a 'more like this' calibration signal that tunes the user's For You feed toward similar work. INSERT-only and idempotent (liking twice is a no-op, never un-likes). Distinct from save_paper: like expresses taste for ranking; save bookmarks for later reading. Requires SF_API_KEY.",
       inputSchema: {
-        arxiv_id: z
-          .string()
-          .min(1)
-          .describe("arXiv ID of the paper to like."),
+        arxiv_id: z.string().min(1).describe("arXiv ID of the paper to like."),
       },
     },
     async ({ arxiv_id }) => {
@@ -156,7 +154,7 @@ export function register(server: McpServer): void {
           limit: String(limit),
           page: String(page),
         });
-        return text(JSON.stringify(result, null, 2));
+        return text(fencePaperContent(result)); // saved papers = untrusted content
       } catch (error) {
         return errorResult(error);
       }

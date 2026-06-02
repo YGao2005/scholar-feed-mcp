@@ -14,6 +14,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
+import { fencePaperContent } from "./_untrusted.js";
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -65,9 +66,7 @@ export function register(server: McpServer): void {
           params,
         );
         return {
-          content: [
-            { type: "text" as const, text: JSON.stringify(result, null, 2) },
-          ],
+          content: [{ type: "text" as const, text: fencePaperContent(result) }],
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

@@ -212,7 +212,10 @@ describe("watch tools surface", () => {
   it("list_watches takes no input parameters", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
-    assert.deepStrictEqual(Object.keys(tools.get("list_watches")!.inputSchema), []);
+    assert.deepStrictEqual(
+      Object.keys(tools.get("list_watches")!.inputSchema),
+      [],
+    );
   });
 });
 
@@ -235,7 +238,13 @@ describe("gap-analysis tool surface", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     const schema = tools.get("find_gaps")!.inputSchema;
-    for (const key of ["collection_name", "collection_id", "topic", "scope", "limit"]) {
+    for (const key of [
+      "collection_name",
+      "collection_id",
+      "topic",
+      "scope",
+      "limit",
+    ]) {
       assert.ok(key in schema, `find_gaps inputSchema must include ${key}`);
     }
   });
@@ -243,15 +252,32 @@ describe("gap-analysis tool surface", () => {
 
 describe("stdio hygiene", () => {
   const toolDir = resolve(__dirname, "../tools");
+  const srcDir = resolve(__dirname, "..");
   // Match console.log( at line start or after whitespace — skip comment mentions.
   const callPattern = /^\s*console\.log\(/m;
 
   for (const mod of ACTIVE_TOOL_FILES) {
-    it(`${mod}.ts uses console.error, not console.log`, () => {
+    it(`tools/${mod}.ts uses console.error, not console.log`, () => {
       const content = readFileSync(resolve(toolDir, `${mod}.ts`), "utf-8");
       assert.ok(
         !callPattern.test(content),
         `${mod}.ts must not use console.log (corrupts JSON-RPC stdio)`,
+      );
+    });
+  }
+
+  // The entry point + HTTP client also run while stdout IS the JSON-RPC channel.
+  // The old guard scanned only tools/ — a stray console.log moved into index.ts's
+  // main() would have shipped silently. --version intentionally uses
+  // process.stdout.write (a pre-server CLI path that exits), NOT console.log, so
+  // this ban holds. init.ts is exempt: the interactive wizard exits before the
+  // server starts and legitimately prints prompts to stdout.
+  for (const f of ["index.ts", "client.ts"]) {
+    it(`${f} uses console.error, not console.log`, () => {
+      const content = readFileSync(resolve(srcDir, f), "utf-8");
+      assert.ok(
+        !callPattern.test(content),
+        `${f} must not use console.log (corrupts JSON-RPC stdio)`,
       );
     });
   }

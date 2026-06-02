@@ -25,7 +25,10 @@ if (process.argv[2] === "init") {
 if (process.argv[2] === "--version" || process.argv[2] === "-v") {
   const require = createRequire(import.meta.url);
   const { version: v } = require("../package.json") as { version: string };
-  console.log(`scholar-feed-mcp v${v}`);
+  // Intentional stdout write for a CLI flag (the server never runs in this path —
+  // we process.exit below). process.stdout.write, not console.log, so the stdout-
+  // hygiene test can ban console.log everywhere in the server runtime files.
+  process.stdout.write(`scholar-feed-mcp v${v}\n`);
   process.exit(0);
 }
 

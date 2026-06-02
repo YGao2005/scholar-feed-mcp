@@ -128,7 +128,8 @@ describe("client error mapping", () => {
   it("surfaces a deliberate { error, message } envelope (e.g. cap/upgrade walls)", async () => {
     const body = JSON.stringify({
       error: "watch_limit",
-      message: "Free tier includes 1 watch. Pro lets you track more — scholarfeed.org/upgrade",
+      message:
+        "Free tier includes 1 watch. Pro lets you track more — scholarfeed.org/upgrade",
       limit: 1,
     });
     await withStub({ status: 403, body }, {}, async () => {
@@ -166,6 +167,75 @@ describe("client timeout", () => {
     timeoutErr.name = "TimeoutError";
     await withStub({ throwError: timeoutErr }, {}, async () => {
       await assert.rejects(client.get("/x"), /timed out/i);
+    });
+  });
+});
+
+describe("client malformed-body defense (P0-1)", () => {
+  // A 2xx with a non-JSON body — a proxy/CDN HTML interstitial (Heroku 502 page),
+  // a truncated body — must NOT throw an opaque SyntaxError that leaks the raw
+  // upstream fragment to the model. It must become a clean, sanitized error.
+  it("turns a non-JSON 2xx body into a clean error, leaking no upstream HTML", async () => {
+    await withStub(
+      {
+        status: 200,
+        body: "<html><body>502 Bad Gateway from cdn</body></html>",
+      },
+      {},
+      async () => {
+        await assert.rejects(client.get("/x"), (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          assert.match(msg, /unreadable \(non-JSON\) response \(HTTP 200\)/);
+          assert.doesNotMatch(msg, /<html>/); // raw upstream fragment not surfaced
+          assert.doesNotMatch(msg, /502 Bad Gateway/);
+          assert.doesNotMatch(msg, /Unexpected token/i); // not the opaque parser error
+          return true;
+        });
+      },
+    );
+  });
+
+  it("turns an empty 2xx body into the same clean error", async () => {
+    await withStub({ status: 200, body: "" }, {}, async () => {
+      await assert.rejects(
+        client.get("/x"),
+        /unreadable \(non-JSON\) response/,
+      );
+    });
+  });
+});
+
+describe("client DELETE body handling", () => {
+  it("returns null on 204 No Content (the membership-removal common case)", async () => {
+    await withStub({ status: 204 }, {}, async (calls) => {
+      const r = await client.del("/collections/c1/papers/p1");
+      assert.strictEqual(r, null);
+      assert.strictEqual((calls[0].init as RequestInit).method, "DELETE");
+    });
+  });
+
+  it("returns null on a 200 with an empty body", async () => {
+    await withStub({ status: 200, body: "" }, {}, async () => {
+      assert.strictEqual(await client.del("/x"), null);
+    });
+  });
+
+  it("parses a 200 DELETE JSON body", async () => {
+    await withStub({ status: 200, json: { removed: 2 } }, {}, async () => {
+      assert.deepStrictEqual(await client.del<{ removed: number }>("/x"), {
+        removed: 2,
+      });
+    });
+  });
+
+  it("turns a non-JSON 200 DELETE body into a clean error (no leak)", async () => {
+    await withStub({ status: 200, body: "<html>oops</html>" }, {}, async () => {
+      await assert.rejects(client.del("/x"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.match(msg, /unreadable \(non-JSON\) response/);
+        assert.doesNotMatch(msg, /<html>/);
+        return true;
+      });
     });
   });
 });

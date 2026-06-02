@@ -20,6 +20,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
+import { fencePaperContent } from "./_untrusted.js";
 
 function text(t: string) {
   return { content: [{ type: "text" as const, text: t }] };
@@ -50,12 +51,16 @@ export function register(server: McpServer): void {
         collection_id: z
           .string()
           .optional()
-          .describe("Analyze gaps for a collection by UUID. Provide exactly one seed."),
+          .describe(
+            "Analyze gaps for a collection by UUID. Provide exactly one seed.",
+          ),
         topic: z
           .string()
           .min(1)
           .optional()
-          .describe("Analyze gaps for a free-text topic/area. Provide exactly one seed."),
+          .describe(
+            "Analyze gaps for a free-text topic/area. Provide exactly one seed.",
+          ),
         scope: z
           .enum(["foundational", "frontier", "both"])
           .default("both")
@@ -93,7 +98,7 @@ export function register(server: McpServer): void {
           limit: String(limit),
         };
         const result = await client.get<unknown>("/gaps", params);
-        return text(JSON.stringify(result, null, 2));
+        return text(fencePaperContent(result)); // gap analysis over papers = untrusted
       } catch (error) {
         return errorResult(error);
       }

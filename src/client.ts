@@ -108,7 +108,7 @@ class ScholarFeedClient {
       await this.throwApiError(response);
     }
 
-    return response.json() as Promise<T>;
+    return this.parseJson<T>(await response.text(), response.status);
   }
 
   /**
@@ -129,7 +129,7 @@ class ScholarFeedClient {
       await this.throwApiError(response);
     }
 
-    return response.json() as Promise<T>;
+    return this.parseJson<T>(await response.text(), response.status);
   }
 
   /** Make a PATCH request (partial update). Throws on non-2xx / timeout. */
@@ -147,7 +147,7 @@ class ScholarFeedClient {
       await this.throwApiError(response);
     }
 
-    return response.json() as Promise<T>;
+    return this.parseJson<T>(await response.text(), response.status);
   }
 
   /**
@@ -170,7 +170,31 @@ class ScholarFeedClient {
 
     if (response.status === 204) return null;
     const body = await response.text();
-    return body ? (JSON.parse(body) as T) : null;
+    return body ? this.parseJson<T>(body, response.status) : null;
+  }
+
+  /**
+   * Parse a 2xx body as JSON, defensively. A successful status with a non-JSON
+   * body — a proxy/CDN HTML interstitial (Heroku "Application error", a 502 page),
+   * a truncated body, or a 200 wrapping an upstream error page — would otherwise
+   * throw an opaque `SyntaxError: Unexpected token '<'…` whose message carries a
+   * RAW UPSTREAM FRAGMENT straight to the model (it bypasses throwApiError, which
+   * only runs on non-2xx). Turn it into a clean, sanitized error; log the body to
+   * stderr only, never to the returned message.
+   */
+  private parseJson<T>(body: string, status: number): T {
+    try {
+      return JSON.parse(body) as T;
+    } catch {
+      console.error(
+        `[client] non-JSON ${status} response body:`,
+        body.slice(0, 500),
+      );
+      throw new Error(
+        `The Scholar Feed API returned an unreadable (non-JSON) response (HTTP ${status}). ` +
+          "This is usually a transient upstream or proxy error — try again shortly.",
+      );
+    }
   }
 
   /**

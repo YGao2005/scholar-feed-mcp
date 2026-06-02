@@ -73,7 +73,10 @@ export function stubFetch(opts?: {
   ): Promise<Response> => {
     calls.push({ url: String(input), init });
     if (opts?.throwError) throw opts.throwError;
-    return new Response(payload, {
+    // 204/205/304 are null-body statuses — the Response constructor rejects a
+    // (even empty) string body there, so emit a null body to stub them faithfully.
+    const nullBody = status === 204 || status === 205 || status === 304;
+    return new Response(nullBody ? null : payload, {
       status,
       headers: { "content-type": "application/json" },
     });

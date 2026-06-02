@@ -17,6 +17,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
+import { fencePaperContent } from "./_untrusted.js";
 
 function text(t: string) {
   return { content: [{ type: "text" as const, text: t }] };
@@ -41,7 +42,9 @@ export function register(server: McpServer): void {
           .string()
           .min(5)
           .max(500)
-          .describe("The natural-language question to answer from your saved papers."),
+          .describe(
+            "The natural-language question to answer from your saved papers.",
+          ),
         collection_name: z
           .string()
           .min(1)
@@ -52,7 +55,9 @@ export function register(server: McpServer): void {
         collection_id: z
           .string()
           .optional()
-          .describe("Scope the answer to one collection by UUID. Omit to use your whole library."),
+          .describe(
+            "Scope the answer to one collection by UUID. Omit to use your whole library.",
+          ),
         limit: z
           .number()
           .int()
@@ -68,7 +73,9 @@ export function register(server: McpServer): void {
       try {
         if (collection_name && collection_id) {
           return errorResult(
-            new Error("Provide at most one of collection_name or collection_id."),
+            new Error(
+              "Provide at most one of collection_name or collection_id.",
+            ),
           );
         }
         const params: Record<string, string> = {
@@ -78,7 +85,7 @@ export function register(server: McpServer): void {
         if (collection_name) params.collection_name = collection_name;
         if (collection_id) params.collection_id = collection_id;
         const result = await client.get<unknown>("/ask", params);
-        return text(JSON.stringify(result, null, 2));
+        return text(fencePaperContent(result)); // answer synthesised over papers = untrusted
       } catch (error) {
         return errorResult(error);
       }
