@@ -57,6 +57,31 @@ Each tool file exports a `register(server: McpServer)` function that calls `serv
 3. Run `npm run typecheck` and `npm test` before pushing
 4. Open a PR with a description of what changed and why
 
+## Releasing (maintainers)
+
+Publishing to npm is **automated — there is no manual `npm publish`.** The
+[`publish.yml`](.github/workflows/publish.yml) workflow publishes on any pushed git
+tag matching `v*`, using npm **OIDC trusted publishing** (no stored npm token) with
+provenance.
+
+To cut a release from `main`:
+
+```bash
+git checkout main && git pull
+npm version <patch|minor|major>   # bumps package.json, commits, creates the vX.Y.Z tag
+git push --follow-tags            # pushing the tag is what triggers the publish
+```
+
+The workflow then runs two jobs:
+
+1. **verify** (unprivileged): asserts the tag matches `package.json` version, then
+   `npm run lint` + `npm run build` + `npm test`. A mismatch or a red check blocks the publish.
+2. **publish** (the only job granted `id-token: write`): `npm publish --provenance --access public`.
+
+So a release is a version bump + a tag push — never a hand-run `npm publish`. One-time
+registry setup is documented in the `publish.yml` header (npmjs.com → package Settings →
+Trusted Publisher: GitHub Actions, `YGao2005/scholar-feed-mcp`, workflow `publish.yml`).
+
 ## Reporting Issues
 
 Open an issue on GitHub. For bugs, include:
