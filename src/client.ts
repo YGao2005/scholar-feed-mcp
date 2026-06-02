@@ -132,6 +132,24 @@ class ScholarFeedClient {
     return response.json() as Promise<T>;
   }
 
+  /** Make a PATCH request (partial update). Throws on non-2xx / timeout. */
+  async patch<T>(path: string, body: unknown): Promise<T> {
+    const response = await this.fetchWithTimeout(`${getBaseUrl()}${path}`, {
+      method: "PATCH",
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      await this.throwApiError(response);
+    }
+
+    return response.json() as Promise<T>;
+  }
+
   /**
    * Make a DELETE request to the Scholar Feed API.
    * Returns null for a 204 No Content (the common case for membership-removal),

@@ -42,6 +42,9 @@ const EXPECTED_TOOLS = [
   "list_watches",
   "check_watches",
   "delete_watch",
+  // v3.7 watch v2 — structured filters + tuning loop (require SF_API_KEY)
+  "update_watch",
+  "preview_watch",
   // v3.5 gap analysis (read-only, Pro, requires SF_API_KEY)
   "find_gaps",
   // v3.6 ask-my-library (read-only; free 1/mo, Pro 200/day; requires SF_API_KEY)
@@ -121,9 +124,16 @@ describe("tool registry", () => {
 });
 
 describe("watch tools surface", () => {
-  const watchTools = ["create_watch", "list_watches", "check_watches", "delete_watch"];
+  const watchTools = [
+    "create_watch",
+    "list_watches",
+    "check_watches",
+    "delete_watch",
+    "update_watch",
+    "preview_watch",
+  ];
 
-  it("registers all four watch tools", () => {
+  it("registers all watch tools", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     for (const name of watchTools) {
@@ -148,8 +158,10 @@ describe("watch tools surface", () => {
     registerAllTools(server);
     assert.match(tools.get("create_watch")!.description, /MUTATES/);
     assert.match(tools.get("delete_watch")!.description, /MUTATES/);
+    assert.match(tools.get("update_watch")!.description, /MUTATES/);
     assert.doesNotMatch(tools.get("list_watches")!.description, /MUTATES/);
     assert.doesNotMatch(tools.get("check_watches")!.description, /MUTATES/);
+    assert.doesNotMatch(tools.get("preview_watch")!.description, /MUTATES/);
   });
 
   it("idempotent watch tools say so in their descriptions", () => {

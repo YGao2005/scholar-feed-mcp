@@ -19,11 +19,18 @@
  *     watermark (only digest delivery does), so it is safe to call repeatedly.
  *   delete_watch — idempotent; deleting a missing watch is a no-op.
  *
+ * v2 (docs/watch-v2-structured-spec.md): a watch can instead be a STRUCTURED filter
+ * (seed.kind="filter", seed.criteria={collections|authors|categories|text|has_code|
+ * min_novelty|similar}, AND-composed) — the composable, agent-tunable form. preview_watch
+ * dry-runs a criteria spec; update_watch retargets a watch in place.
+ *
  * Endpoints:
- *   POST   /watches        (create; body {name, novelty_min, seed:{...}})
- *   GET    /watches        (list, with pending_hits counts)
- *   GET    /watches/hits   (read-only pull; optional ?watch_id= & ?limit=)
- *   DELETE /watches/{id}   (remove; 204; idempotent)
+ *   POST   /watches          (create; body {name, novelty_min, seed:{...}})
+ *   GET    /watches          (list, with pending_hits counts)
+ *   GET    /watches/hits     (read-only pull; optional ?watch_id= & ?limit=)
+ *   POST   /watches/preview  (read-only dry-run of a v2 criteria spec)
+ *   PATCH  /watches/{id}     (partial update: name / novelty_min / criteria)
+ *   DELETE /watches/{id}     (remove; 204; idempotent)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -94,12 +101,67 @@ function buildSeed(args: {
   return { kind, [key]: value };
 }
 
+/**
+ * v2 structured filter — the composable, agent-tunable watch definition. Passed
+ * THROUGH to the backend, which validates it (api/watch_filter.py) and returns a
+ * clean {error, message} on anything invalid. A paper must satisfy ALL provided
+ * groups (AND). See docs/watch-v2-structured-spec.md.
+ */
+const filterCriteria = z
+  .object({
+    collections: z
+      .object({
+        ids: z.array(z.string()).describe("Collection UUIDs."),
+        relation: z
+          .enum(["similar", "cites", "by_authors"])
+          .default("similar")
+          .describe(
+            "How a new paper relates to the collection(s): 'similar' = semantic neighborhood (broad); 'cites' = the new paper cites a collection member (uses a 30-day window); 'by_authors' = shares an author with the collection.",
+          ),
+      })
+      .optional()
+      .describe("Watch papers related to one or more of your collections."),
+    authors: z
+      .object({
+        names: z.array(z.string()).optional().describe("Author display names."),
+        ids: z.array(z.string()).optional().describe("Author UUIDs."),
+      })
+      .optional()
+      .describe("Match papers by these authors."),
+    categories: z
+      .array(z.string())
+      .optional()
+      .describe("arXiv categories, e.g. ['cs.SE','cs.AI']."),
+    text: z
+      .object({
+        query: z.string().describe("Keyword/phrase (or a regex when mode='regex')."),
+        field: z.enum(["title", "abstract", "title_abstract"]).optional(),
+        mode: z.enum(["fulltext", "regex"]).optional(),
+      })
+      .optional()
+      .describe("Keyword (full-text) or regex match on title/abstract."),
+    has_code: z.boolean().optional().describe("Only papers with released code."),
+    min_novelty: z.number().min(0).max(1).optional().describe("Novelty floor (0..1)."),
+    similar: z
+      .object({
+        to: z
+          .string()
+          .describe('Target: "collection:<uuid>" | "paper:<arxivId>" | "text:<phrase>".'),
+        min_score: z.number().optional().describe("Cosine floor (default 0.70)."),
+      })
+      .optional()
+      .describe("Rank by semantic similarity to a target."),
+  })
+  .describe(
+    "Structured filter — combine any of these; a paper must satisfy ALL provided groups (AND). At least one group is required.",
+  );
+
 export function register(server: McpServer): void {
   server.registerTool(
     "create_watch",
     {
       description:
-        "Create a standing watch — a saved search_papers query evaluated daily against newly-indexed papers, surfacing new matches via the email digest and via check_watches. MUTATES. Get-or-create by name (like create_collection): re-creating with an existing name returns the existing watch unchanged — never errors on duplicate. Provide exactly one seed selector (q OR collection_name OR collection_id OR anchor_paper_id OR scope_to_citations_of OR author_id OR category); the collection-neighborhood seed (collection_name + novelty_min) is the strongest. The seed is passed through to the backend, which resolves collection_name. Requires SF_API_KEY.",
+        "Create a standing watch — evaluated daily against newly-indexed papers, surfacing new matches via the email digest and via check_watches. MUTATES. Get-or-create by name (re-creating with an existing name returns it unchanged — never errors on duplicate). TWO forms: (1) the v2 STRUCTURED filter via `criteria` (collections/authors/categories/text/has_code/min_novelty/similar, AND-composed) — the composable, agent-tunable form, recommended; tune it with preview_watch first, and edit later with update_watch. (2) a single legacy seed selector (q OR collection_name OR collection_id OR anchor_paper_id); if `criteria` is given it takes precedence. Requires SF_API_KEY.",
       inputSchema: {
         name: z
           .string()
@@ -154,6 +216,20 @@ export function register(server: McpServer): void {
           .describe(
             "Watch an arXiv category (e.g. 'cs.LG'), filtered by novelty_min. One seed selector only.",
           ),
+        criteria: filterCriteria
+          .optional()
+          .describe(
+            "v2 STRUCTURED filter (collections/authors/categories/text/has_code/min_novelty/similar). When provided, this defines the watch (kind='filter') and the single-selector seeds above are IGNORED. This is the composable, agent-tunable form — call preview_watch first to tune it.",
+          ),
+        recency_days: z
+          .number()
+          .int()
+          .min(1)
+          .max(60)
+          .optional()
+          .describe(
+            "For a structured (criteria) watch: only consider papers from the last N days (default 7; the 'cites' relation uses 30).",
+          ),
       },
     },
     async ({
@@ -166,8 +242,19 @@ export function register(server: McpServer): void {
       scope_to_citations_of,
       author_id,
       category,
+      criteria,
+      recency_days,
     }) => {
       try {
+        // v2 structured filter takes precedence over the single-selector seeds.
+        if (criteria) {
+          const created = await client.post<Watch>("/watches", {
+            name: name.trim(),
+            novelty_min,
+            seed: { kind: "filter", criteria, match: "all", recency_days },
+          });
+          return text(`Watch ready: ${JSON.stringify(created, null, 2)}`);
+        }
         const seed = buildSeed({
           q,
           collection_name,
@@ -289,6 +376,86 @@ export function register(server: McpServer): void {
         }
         await client.del(`/watches/${encodeURIComponent(id)}`);
         return text(`Deleted watch ${watch_id ? id : `"${name}"`}.`);
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "update_watch",
+    {
+      description:
+        "Update an existing watch in place — rename, change novelty_min, or RETARGET its structured filter `criteria`. MUTATES. Address by watch_id OR name. Changing criteria replaces the definition and clears the watch's pending hits (so stale matches don't deliver); the next daily eval repopulates. Tune the new criteria with preview_watch first. Requires SF_API_KEY.",
+      inputSchema: {
+        name: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Find the watch by its current name. Provide this OR watch_id."),
+        watch_id: z
+          .string()
+          .optional()
+          .describe("Find the watch by UUID. Provide this OR name."),
+        new_name: z.string().min(1).max(100).optional().describe("Rename the watch."),
+        novelty_min: z.number().min(0).max(1).optional().describe("New novelty floor (0..1)."),
+        criteria: filterCriteria
+          .optional()
+          .describe("Replace the watch's filter (becomes kind='filter'). Clears pending hits."),
+        recency_days: z.number().int().min(1).max(60).optional().describe("Window for the new criteria."),
+      },
+    },
+    async ({ name, watch_id, new_name, novelty_min, criteria, recency_days }) => {
+      try {
+        let id = watch_id;
+        if (!id) {
+          if (!name) throw new Error("Provide either watch_id or name.");
+          const existing = await findWatchByName(name);
+          if (!existing) return text(`No watch named "${name}" — nothing to update.`);
+          id = existing.id;
+        }
+        const body: Record<string, unknown> = {};
+        if (new_name !== undefined) body.name = new_name;
+        if (novelty_min !== undefined) body.novelty_min = novelty_min;
+        if (criteria !== undefined)
+          body.seed = { kind: "filter", criteria, match: "all", recency_days };
+        if (Object.keys(body).length === 0) {
+          return errorResult(
+            new Error("Nothing to update — provide new_name, novelty_min, and/or criteria."),
+          );
+        }
+        const updated = await client.patch<Watch>(`/watches/${encodeURIComponent(id)}`, body);
+        return text(`Watch updated: ${JSON.stringify(updated, null, 2)}`);
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "preview_watch",
+    {
+      description:
+        "Dry-run a structured filter over recent papers WITHOUT creating a watch — the tuning loop. Returns {window_days, needs_similarity, match_count, sample} so you can iterate (add a category, raise min_novelty, switch the collection relation) before saving with create_watch. Read-only. Requires SF_API_KEY.",
+      inputSchema: {
+        criteria: filterCriteria.describe("The structured filter to test."),
+        recency_days: z
+          .number()
+          .int()
+          .min(1)
+          .max(60)
+          .optional()
+          .describe("Window in days (default 7; the 'cites' relation uses 30)."),
+      },
+    },
+    async ({ criteria, recency_days }) => {
+      try {
+        const result = await client.post<unknown>("/watches/preview", {
+          criteria,
+          match: "all",
+          recency_days,
+        });
+        return text(JSON.stringify(result, null, 2));
       } catch (error) {
         return errorResult(error);
       }

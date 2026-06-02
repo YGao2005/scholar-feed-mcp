@@ -1,6 +1,6 @@
 {
   "name": "scholar-feed-mcp",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "MCP server for Scholar Feed — search 600,000+ CS/AI/ML papers with LLM-powered analysis",
   "type": "module",
   "license": "MIT",

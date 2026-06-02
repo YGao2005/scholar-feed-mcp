@@ -1,6 +1,6 @@
 # Scholar Feed — Watch v2: structured, agent-managed filters
 
-Status: **draft for review** · Owner: @YGao2005 · Last updated: 2026-06-02
+Status: **v1 SHIPPED** (backend Heroku v396; MCP client v3.7.0) · Owner: @YGao2005 · Last updated: 2026-06-02
 Related: [`watch-tool-spec.md`](./watch-tool-spec.md), [`watches-backend-spec.md`](./watches-backend-spec.md)
 (v1 cosine matcher), [`roadmap-and-scoping.md`](./roadmap-and-scoping.md).
 
@@ -173,9 +173,11 @@ cs.SE · has code"*. That precise "why" is the curation; the optional LLM synthe
 
 ## 7. Sequencing
 
-1. **v1 (this spec):** structured criteria = {collections(cites/by_authors/similar), authors,
-   categories, text(fulltext/regex), has_code, min_novelty, similar}, `match:all`,
-   per-watch SQL matcher, `preview_watch`, deterministic labels. Backward-compat the v1 cosine
-   watches as `similar`.
-2. **Defer:** institutions (enrichment), method/task/domain as primary gates (until fresh-paper
-   fill improves), the LLM synthesis preamble.
+1. ✅ **v1 SHIPPED (2026-06-02):** structured criteria = {collections(cites/by_authors/similar),
+   authors, categories, text(fulltext/regex), has_code, min_novelty, similar}, `match:all`,
+   per-watch SQL matcher (backend Heroku v394), `create(kind=filter)`/`update_watch`/`preview_watch`
+   (v396), MCP client tools `create_watch(criteria)`/`update_watch`/`preview_watch` (v3.7.0).
+   v1 cosine watches backward-compat as `similar`. Validated read-only on Aiyara across relations.
+2. **Defer:** institutions (enrichment — no per-paper affiliation data), method/task/domain as
+   primary gates (until fresh-paper fill improves), the LLM synthesis preamble; email-format
+   tweaks + the live Aiyara watch are the next interactive step.
