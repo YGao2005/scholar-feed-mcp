@@ -1,6 +1,6 @@
 # Scholar Feed — Watch v2: structured, agent-managed filters
 
-Status: **v1 SHIPPED** (backend Heroku v396; MCP client v3.7.0) · Owner: @YGao2005 · Last updated: 2026-06-02
+Status: **v1 + delivery/transparency SHIPPED** (backend Heroku `7f3f1c0`; MCP client v3.7.0, doc clarifications pending next release) · Owner: @YGao2005 · Last updated: 2026-06-02
 Related: [`watch-tool-spec.md`](./watch-tool-spec.md), [`watches-backend-spec.md`](./watches-backend-spec.md)
 (v1 cosine matcher), [`roadmap-and-scoping.md`](./roadmap-and-scoping.md).
 
@@ -153,6 +153,25 @@ Unchanged plumbing: `get_watch_candidates` → unified list → top tier. The la
 cs.SE · has code"*. That precise "why" is the curation; the optional LLM synthesis preamble
 (see roadmap) is a separate later polish, not load-bearing for scope.
 
+**SHIPPED (2026-06-02, Heroku `7f3f1c0`).** The unified digest
+(`scripts/templates/unified_email.html` + `scripts/unified_email_sender.py`) now renders a
+distinct **"On Your Watches"** block (items whose top reason is `watch`) ABOVE the algorithmic
+**"For You Today"** feed — declared standing intent vs inferred — with a hairline divider when
+both are present and graceful collapse when either is empty. A shared `paper_item` Jinja macro
+keeps the two sections DRY; the more/less feedback buttons are preserved on every item in both.
+The shipped layout is the deterministic *block*, NOT an LLM preamble — a prose brief that
+*replaces* the list would kill the per-paper feedback signal (if ever built it must be additive +
+Pro-only). Note: partition is by **display** `reason_kind`, so a watch hit whose top reason
+outranks `watch` (e.g. `cites_saved`) stays in the feed — preserves the strict appears-once rule.
+
+**Transparency (same deploy).** Each item shows a **Novelty NN/100** badge (`llm_novelty_score`
+× 100, attached via one batched `attach_novelty()` lookup over the final item set). There is NO
+uniform "match %": the per-kind signals (cosine for similar/topic, a flat author bonus, a
+citation-edge constant, the site's composite for interest) are not comparable, so only novelty —
+the one cross-kind metric — is surfaced as a number. A footer **"How papers are chosen"** legend
+explains each category's selection + the novelty rubric (method ≤45 + impact ≤40 + scope ≤15,
+LLM-judged from the abstract; only the sum is stored).
+
 ---
 
 ## 6. Open questions (decide before build)
@@ -178,6 +197,13 @@ cs.SE · has code"*. That precise "why" is the curation; the optional LLM synthe
    per-watch SQL matcher (backend Heroku v394), `create(kind=filter)`/`update_watch`/`preview_watch`
    (v396), MCP client tools `create_watch(criteria)`/`update_watch`/`preview_watch` (v3.7.0).
    v1 cosine watches backward-compat as `similar`. Validated read-only on Aiyara across relations.
-2. **Defer:** institutions (enrichment — no per-paper affiliation data), method/task/domain as
-   primary gates (until fresh-paper fill improves), the LLM synthesis preamble; email-format
-   tweaks + the live Aiyara watch are the next interactive step.
+2. ✅ **Delivery + transparency SHIPPED (2026-06-02, Heroku `7f3f1c0`):** the "On Your Watches"
+   digest block (§5), the per-paper **Novelty NN/100** badge, and the "How papers are chosen"
+   legend — all deterministic, shown to everyone. First live structured watch created on the
+   **Aiyara** collection (`similar` @ 0.90 floor, 14d) and delivered end-to-end (a real digest
+   send was verified).
+3. **Defer:** institutions (enrichment — no per-paper affiliation data); method/task/domain as
+   primary gates (until fresh-paper fill improves); the LLM synthesis preamble (additive + Pro-only
+   if ever); **native `collections.min_score`** (let an agent floor a similar-collection watch
+   without a parallel `similar` predicate — small backend change: 2 floor-reading spots +
+   validation; today the idiom is documented in the `create_watch` tool description instead).

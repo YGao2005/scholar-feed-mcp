@@ -24,6 +24,17 @@
 
 No tool surface or argument changes. Test suite: 101 → 120.
 
+### Docs — watch tool descriptions (no behaviour change)
+
+- `create_watch` now documents the cosine-floor idiom for collection-similarity watches: a
+  `collections.relation:"similar"` group keeps the default 0.70 floor unless you ALSO pass a
+  top-level `similar` predicate targeting the same collection
+  (`similar:{to:"collection:<uuid>", min_score:…}`); the `collections` group has no floor of its own.
+- `preview_watch` notes that `match_count` saturates at 200 (the cosine fetch window) on broad
+  topics — tune by the `sample` scores, not the count alone.
+- `delete_watch` no longer says editing is out of scope (use `update_watch`); the file header
+  lists all six watch tools.
+
 ## [3.6.0] - 2026-06-02
 
 ### Added — ask_library (requires `SF_API_KEY`)
