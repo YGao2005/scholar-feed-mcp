@@ -1,5 +1,6 @@
 /**
- * Watch tools — create_watch, list_watches, check_watches, delete_watch.
+ * Watch tools — create_watch, preview_watch, update_watch, list_watches,
+ * check_watches, delete_watch.
  *
  * A watch is a persisted search_papers query, evaluated daily server-side against
  * newly-indexed papers, whose new matches surface via the email digest and via the
@@ -116,7 +117,7 @@ const filterCriteria = z
           .enum(["similar", "cites", "by_authors"])
           .default("similar")
           .describe(
-            "How a new paper relates to the collection(s): 'similar' = semantic neighborhood (broad); 'cites' = the new paper cites a collection member (uses a 30-day window); 'by_authors' = shares an author with the collection.",
+            "How a new paper relates to the collection(s): 'similar' = semantic neighborhood (broad); 'cites' = the new paper cites a collection member (uses a 30-day window); 'by_authors' = shares an author with the collection. NOTE: 'similar' here uses the default 0.70 cosine floor — to tighten it, ALSO pass a top-level `similar` predicate targeting the same collection (e.g. similar:{to:'collection:<that uuid>', min_score:0.9}); the collections group has no floor of its own.",
           ),
       })
       .optional()
@@ -134,23 +135,40 @@ const filterCriteria = z
       .describe("arXiv categories, e.g. ['cs.SE','cs.AI']."),
     text: z
       .object({
-        query: z.string().describe("Keyword/phrase (or a regex when mode='regex')."),
+        query: z
+          .string()
+          .describe("Keyword/phrase (or a regex when mode='regex')."),
         field: z.enum(["title", "abstract", "title_abstract"]).optional(),
         mode: z.enum(["fulltext", "regex"]).optional(),
       })
       .optional()
       .describe("Keyword (full-text) or regex match on title/abstract."),
-    has_code: z.boolean().optional().describe("Only papers with released code."),
-    min_novelty: z.number().min(0).max(1).optional().describe("Novelty floor (0..1)."),
+    has_code: z
+      .boolean()
+      .optional()
+      .describe("Only papers with released code."),
+    min_novelty: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe("Novelty floor (0..1)."),
     similar: z
       .object({
         to: z
           .string()
-          .describe('Target: "collection:<uuid>" | "paper:<arxivId>" | "text:<phrase>".'),
-        min_score: z.number().optional().describe("Cosine floor (default 0.70)."),
+          .describe(
+            'Target: "collection:<uuid>" | "paper:<arxivId>" | "text:<phrase>".',
+          ),
+        min_score: z
+          .number()
+          .optional()
+          .describe("Cosine floor (default 0.70)."),
       })
       .optional()
-      .describe("Rank by semantic similarity to a target."),
+      .describe(
+        "Rank by semantic similarity to a target, with an optional cosine floor. Target the SAME collection used in `collections` (to:'collection:<uuid>') to put a floor on a collection-neighborhood watch.",
+      ),
   })
   .describe(
     "Structured filter — combine any of these; a paper must satisfy ALL provided groups (AND). At least one group is required.",
@@ -209,7 +227,9 @@ export function register(server: McpServer): void {
         author_id: z
           .string()
           .optional()
-          .describe("Watch an author's new work, by author ID. One seed selector only."),
+          .describe(
+            "Watch an author's new work, by author ID. One seed selector only.",
+          ),
         category: z
           .string()
           .optional()
@@ -310,11 +330,15 @@ export function register(server: McpServer): void {
           .string()
           .min(1)
           .optional()
-          .describe("Scope to one watch by name. Provide this OR watch_id, or neither for all."),
+          .describe(
+            "Scope to one watch by name. Provide this OR watch_id, or neither for all.",
+          ),
         watch_id: z
           .string()
           .optional()
-          .describe("Scope to one watch by UUID. Provide this OR watch_name, or neither for all."),
+          .describe(
+            "Scope to one watch by UUID. Provide this OR watch_name, or neither for all.",
+          ),
         limit: z
           .number()
           .int()
@@ -348,7 +372,7 @@ export function register(server: McpServer): void {
     "delete_watch",
     {
       description:
-        "Delete a watch, addressed by watch_id OR name. MUTATES. Idempotent: deleting a non-existent watch is a no-op (no error). Editing a watch is out of scope — delete and recreate. Requires SF_API_KEY.",
+        "Delete a watch, addressed by watch_id OR name. MUTATES. Idempotent: deleting a non-existent watch is a no-op (no error). To change a watch in place (rename / novelty_min / retarget criteria) use update_watch instead of delete-and-recreate. Requires SF_API_KEY.",
       inputSchema: {
         name: z
           .string()
@@ -392,26 +416,54 @@ export function register(server: McpServer): void {
           .string()
           .min(1)
           .optional()
-          .describe("Find the watch by its current name. Provide this OR watch_id."),
+          .describe(
+            "Find the watch by its current name. Provide this OR watch_id.",
+          ),
         watch_id: z
           .string()
           .optional()
           .describe("Find the watch by UUID. Provide this OR name."),
-        new_name: z.string().min(1).max(100).optional().describe("Rename the watch."),
-        novelty_min: z.number().min(0).max(1).optional().describe("New novelty floor (0..1)."),
+        new_name: z
+          .string()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Rename the watch."),
+        novelty_min: z
+          .number()
+          .min(0)
+          .max(1)
+          .optional()
+          .describe("New novelty floor (0..1)."),
         criteria: filterCriteria
           .optional()
-          .describe("Replace the watch's filter (becomes kind='filter'). Clears pending hits."),
-        recency_days: z.number().int().min(1).max(60).optional().describe("Window for the new criteria."),
+          .describe(
+            "Replace the watch's filter (becomes kind='filter'). Clears pending hits.",
+          ),
+        recency_days: z
+          .number()
+          .int()
+          .min(1)
+          .max(60)
+          .optional()
+          .describe("Window for the new criteria."),
       },
     },
-    async ({ name, watch_id, new_name, novelty_min, criteria, recency_days }) => {
+    async ({
+      name,
+      watch_id,
+      new_name,
+      novelty_min,
+      criteria,
+      recency_days,
+    }) => {
       try {
         let id = watch_id;
         if (!id) {
           if (!name) throw new Error("Provide either watch_id or name.");
           const existing = await findWatchByName(name);
-          if (!existing) return text(`No watch named "${name}" — nothing to update.`);
+          if (!existing)
+            return text(`No watch named "${name}" — nothing to update.`);
           id = existing.id;
         }
         const body: Record<string, unknown> = {};
@@ -421,10 +473,15 @@ export function register(server: McpServer): void {
           body.seed = { kind: "filter", criteria, match: "all", recency_days };
         if (Object.keys(body).length === 0) {
           return errorResult(
-            new Error("Nothing to update — provide new_name, novelty_min, and/or criteria."),
+            new Error(
+              "Nothing to update — provide new_name, novelty_min, and/or criteria.",
+            ),
           );
         }
-        const updated = await client.patch<Watch>(`/watches/${encodeURIComponent(id)}`, body);
+        const updated = await client.patch<Watch>(
+          `/watches/${encodeURIComponent(id)}`,
+          body,
+        );
         return text(`Watch updated: ${JSON.stringify(updated, null, 2)}`);
       } catch (error) {
         return errorResult(error);
@@ -436,7 +493,7 @@ export function register(server: McpServer): void {
     "preview_watch",
     {
       description:
-        "Dry-run a structured filter over recent papers WITHOUT creating a watch — the tuning loop. Returns {window_days, needs_similarity, match_count, sample} so you can iterate (add a category, raise min_novelty, switch the collection relation) before saving with create_watch. Read-only. Requires SF_API_KEY.",
+        "Dry-run a structured filter over recent papers WITHOUT creating a watch — the tuning loop. Returns {window_days, needs_similarity, match_count, sample} so you can iterate (add a category, raise min_novelty, switch the collection relation) before saving with create_watch. NOTE: for a similarity filter, match_count is capped at 200 (the cosine fetch window) and so saturates at 200 on broad/hot topics — tune by the `sample` scores and narrow with categories/min_novelty (or a higher similar floor) rather than relying on match_count alone. Read-only. Requires SF_API_KEY.",
       inputSchema: {
         criteria: filterCriteria.describe("The structured filter to test."),
         recency_days: z
@@ -445,7 +502,9 @@ export function register(server: McpServer): void {
           .min(1)
           .max(60)
           .optional()
-          .describe("Window in days (default 7; the 'cites' relation uses 30)."),
+          .describe(
+            "Window in days (default 7; the 'cites' relation uses 30).",
+          ),
       },
     },
     async ({ criteria, recency_days }) => {
