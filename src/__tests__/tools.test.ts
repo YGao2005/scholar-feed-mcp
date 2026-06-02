@@ -44,6 +44,8 @@ const EXPECTED_TOOLS = [
   "delete_watch",
   // v3.5 gap analysis (read-only, Pro, requires SF_API_KEY)
   "find_gaps",
+  // v3.6 ask-my-library (read-only; free 1/mo, Pro 200/day; requires SF_API_KEY)
+  "ask_library",
 ];
 
 /** Active tool source files that must never use console.log (corrupts stdio). */
@@ -61,6 +63,7 @@ const ACTIVE_TOOL_FILES = [
   "collections_write",
   "watches",
   "gaps",
+  "ask_library",
 ];
 
 describe("package.json", () => {
@@ -94,7 +97,7 @@ describe("package.json", () => {
 });
 
 describe("tool registry", () => {
-  it("registers exactly the 22 v3.5 tools", () => {
+  it("registers exactly the 23 tools", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     assert.deepStrictEqual(

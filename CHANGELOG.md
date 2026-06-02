@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.6.0] - 2026-06-02
+
+### Added — ask_library (requires `SF_API_KEY`)
+
+- `ask_library` — "answer from my saved set": a cited synthesis over the papers you've saved
+  (your whole library, or one collection), grounded ONLY in that set. The inverse of
+  `find_gaps` (which surfaces what you're MISSING). Provide a `question`, optionally scope to
+  one collection (`collection_name` OR `collection_id`), and `limit` the grounding set (max
+  20, default 8). Read-only. Free accounts get 1 question/month; Pro raises this to 200/day.
+
+### Changed — limits & tier docs corrected to the enforced backend model
+
+- `embed_text` is now documented as **Pro-only** — it calls the Gemini embedding endpoint,
+  which returns a 403 `pro_required` for anonymous and free callers. No behaviour change; the
+  README and tool description previously omitted the Pro requirement.
+- README rate-limit/tier section rewritten to match what the backend now enforces: a daily
+  volume quota of **100/day anonymous, 1,000/day free, 10,000/day Pro** (per account, across
+  all your keys), with the AI synthesis verbs metered separately — `ask_library` 1/month free
+  then 200/day on Pro; `find_gaps` and `embed_text` Pro-only.
+
+Surface is now **23 tools** (9 anonymous-capable read tools + `find_gaps` + `ask_library` +
+12 library/collection/watch tools). Read tools remain usable anonymously; `find_gaps`,
+`ask_library`, `embed_text`, and the write tools require a key.
+
 ## [3.5.1] - 2026-06-01
 
 ### Security — supply-chain & prompt-injection hardening

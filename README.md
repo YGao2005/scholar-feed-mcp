@@ -54,7 +54,7 @@ v3.0.0 is a **hard cutover** — there is no deprecation window. The previous v1
 | `fetch_fulltext` | Extract results/experiments sections from LaTeX source. |
 | `find_author` | Find authors by name/topic query (`q=`) or retrieve a profile by ID (`id=`). Merges the former `discover_authors` + `get_author`. |
 | `co_author_graph` | Co-authorship neighborhood for an author — edges derived live from the citation graph. |
-| `embed_text` | Get a 768-dim Gemini embedding for a text string (useful for HyDE and custom similarity). |
+| `embed_text` | Get a 768-dim Gemini embedding for a text string (useful for HyDE and custom similarity). **Pro-only** (anonymous/free get a 403 `pro_required`). |
 | `get_field_orientation` | Cheap retrieval orientation for a research area — top papers, subfields, open problems. No Pro quota. |
 | `get_foundational_lineage` | The foundational work for a *paper's niche* via the citation graph — niche_roots → field_level → discipline (collapsed landmarks), with `cited_by_in_niche` evidence. Surfaces canonical anchors semantic search misses. No Pro quota. |
 
@@ -240,7 +240,7 @@ standard `mcpServers` block above with `command: npx`, `args: ["-y", "scholar-fe
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `embed_text` | Get a 768-dim Gemini embedding for text (for HyDE and custom similarity) | `text`, `task_type` |
+| `embed_text` | Get a 768-dim Gemini embedding for text (for HyDE and custom similarity). **Pro-only** — anonymous/free callers get a 403 `pro_required`. | `text`, `task_type` |
 
 ### Research
 
@@ -268,6 +268,7 @@ These MUTATE or read the authenticated user's account. The core read/search tool
 | `check_watches` | Pull new matches since the last digest (read-only, idempotent). | `watch_name`, `watch_id`, `limit` |
 | `delete_watch` | Delete a watch by name or id (idempotent). | `name`, `watch_id` |
 | `find_gaps` | "What am I missing?" for a collection or topic — foundational + frontier work you haven't saved (read-only, **Pro**). | `collection_name`, `collection_id`, `topic`, `scope`, `limit` |
+| `ask_library` | "Answer from my saved set" — a cited synthesis over your library or one collection, grounded only in papers you've saved (read-only). The inverse of `find_gaps`. **Free 1/month, then Pro 200/day.** | `question`, `collection_name`, `collection_id`, `limit` |
 
 ## Novelty Score
 
@@ -296,8 +297,11 @@ Use `novelty_min: 0.5` in `search_papers` to filter for genuinely novel work.
 | `get_field_orientation` | 20/min |
 | `get_foundational_lineage` | 20/min |
 | `find_gaps` | 20/min |
+| `ask_library` | 10/min |
 
 Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
+
+**Daily volume quota** (separate from the per-minute limits above, counted per account across all your keys): **100 calls/day** anonymous, **1,000/day** with a free key, **10,000/day** on Pro. The AI synthesis tools have their own limits: `ask_library` is **1/month free, then 200/day on Pro**; `find_gaps` and `embed_text` are **Pro-only** (a 403 `pro_required` otherwise).
 
 ## Example Response
 
