@@ -16,13 +16,23 @@
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "scholar-feed",
-    "research",
-    "papers",
     "arxiv",
+    "research",
+    "research-papers",
+    "papers",
+    "citations",
+    "citation-graph",
+    "semantic-search",
+    "literature-review",
+    "embeddings",
+    "bibtex",
     "ai",
     "machine-learning",
-    "model-context-protocol"
+    "claude",
+    "claude-code",
+    "cursor"
   ],
   "bin": {
     "scholar-feed-mcp": "./build/index.js"
