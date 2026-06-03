@@ -66,6 +66,32 @@ describe("client auth headers", () => {
   });
 });
 
+describe("client session header", () => {
+  it("stamps a stable X-SF-Session UUID on every request, across verbs", async () => {
+    await withStub({}, {}, async (calls) => {
+      await client.get("/public/health");
+      await client.post("/likes", { paper_id: "p1" });
+      const s1 = headerOf(calls[0], "X-SF-Session");
+      const s2 = headerOf(calls[1], "X-SF-Session");
+      assert.match(
+        s1 ?? "",
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+      // One id for the whole process, identical across calls and verbs, so the
+      // backend can collapse an agent's fan-out into a single session.
+      assert.strictEqual(s1, s2);
+    });
+  });
+
+  it("sends the session id even on anonymous (unkeyed) requests", async () => {
+    await withStub({}, {}, async (calls) => {
+      await client.get("/public/health");
+      assert.notStrictEqual(headerOf(calls[0], "X-SF-Session"), undefined);
+      assert.strictEqual(headerOf(calls[0], "Authorization"), undefined);
+    });
+  });
+});
+
 describe("client URL building", () => {
   it("honors SF_API_BASE_URL and appends flat query params", async () => {
     await withStub({}, {}, async (calls) => {

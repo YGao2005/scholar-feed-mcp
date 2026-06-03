@@ -12,6 +12,8 @@
  * console.log() on stdout would corrupt the JSON-RPC stdio transport.
  */
 
+import { randomUUID } from "node:crypto";
+
 const DEFAULT_BASE_URL = "https://api.scholarfeed.org/api/v1";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -39,6 +41,33 @@ function getTimeoutMs(): number {
 function authHeaders(): Record<string, string> {
   const key = getApiKey();
   return key ? { Authorization: `Bearer ${key}` } : {};
+}
+
+/**
+ * A stable per-process session id, generated lazily on first request and reused
+ * for the life of the process. One stdio MCP process is one client session, so
+ * stamping every request with it lets the backend stitch a single agent
+ * session's calls together — and tell genuine activity apart from one reasoning
+ * loop that fans out into dozens of tool calls. Generated lazily (not at import)
+ * to keep importing this module side-effect-free, matching the call-time config
+ * reads above. Opaque random value — carries no user or environment identity.
+ */
+let sessionId: string | null = null;
+function getSessionId(): string {
+  return (sessionId ??= randomUUID());
+}
+
+/**
+ * Headers shared by every request: auth (when keyed), the session id, then the
+ * caller's Accept/Content-Type. Centralizing them keeps the per-verb methods
+ * from each re-implementing the common set.
+ */
+function requestHeaders(extra: Record<string, string>): Record<string, string> {
+  return {
+    ...authHeaders(),
+    "X-SF-Session": getSessionId(),
+    ...extra,
+  };
 }
 
 /**
@@ -98,10 +127,7 @@ class ScholarFeedClient {
 
     const response = await this.fetchWithTimeout(url, {
       method: "GET",
-      headers: {
-        ...authHeaders(),
-        Accept: "application/json",
-      },
+      headers: requestHeaders({ Accept: "application/json" }),
     });
 
     if (!response.ok) {
@@ -118,10 +144,7 @@ class ScholarFeedClient {
   async post<T>(path: string, body: unknown): Promise<T> {
     const response = await this.fetchWithTimeout(`${getBaseUrl()}${path}`, {
       method: "POST",
-      headers: {
-        ...authHeaders(),
-        "Content-Type": "application/json",
-      },
+      headers: requestHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
     });
 
@@ -136,10 +159,7 @@ class ScholarFeedClient {
   async patch<T>(path: string, body: unknown): Promise<T> {
     const response = await this.fetchWithTimeout(`${getBaseUrl()}${path}`, {
       method: "PATCH",
-      headers: {
-        ...authHeaders(),
-        "Content-Type": "application/json",
-      },
+      headers: requestHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
     });
 
@@ -158,10 +178,7 @@ class ScholarFeedClient {
   async del<T>(path: string): Promise<T | null> {
     const response = await this.fetchWithTimeout(`${getBaseUrl()}${path}`, {
       method: "DELETE",
-      headers: {
-        ...authHeaders(),
-        Accept: "application/json",
-      },
+      headers: requestHeaders({ Accept: "application/json" }),
     });
 
     if (!response.ok) {
