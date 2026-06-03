@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png">
+    <img alt="Scholar Feed" src="assets/logo-light.png" width="140" height="140">
+  </picture>
+</p>
+
 # Scholar Feed MCP Server
 
 [![CI](https://github.com/YGao2005/scholar-feed-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/YGao2005/scholar-feed-mcp/actions/workflows/ci.yml)
@@ -5,7 +12,7 @@
 [![Node](https://img.shields.io/node/v/scholar-feed-mcp.svg)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/npm/l/scholar-feed-mcp.svg)](./LICENSE)
 
-Search 600,000+ CS/AI/ML research papers with LLM-powered novelty analysis from Claude Code, Cursor, or any MCP client.
+Search 600,000+ CS/AI/ML research papers with LLM-generated novelty analysis, without leaving Claude Code, Cursor, or any MCP client. Built for researchers running a literature review where they already work: search, trace citations, pull full text, and export BibTeX in the same session.
 
 [Scholar Feed](https://www.scholarfeed.org) indexes arXiv papers daily and ranks them using a multi-signal scoring system (recency, citation velocity, institutional reputation, code availability). Each paper has an LLM-generated summary and novelty score.
 
@@ -20,73 +27,37 @@ This interactive wizard will:
 2. Detect your MCP client (Claude Code, Cursor, or Claude Desktop)
 3. Write the config and verify the connection
 
-**No API key required.** Anonymous access gives you 100 calls/day — enough for a typical research session. For higher limits (1,000/day per account), get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
+**No API key required.** Anonymous access gives you 100 calls/day, enough for a typical research session. For higher limits (1,000/day per account), get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
 
 Try asking: *"Search for recent papers on test-time compute scaling"*
 
-## Migrating from v1.x to v3.0.0
-
-v3.0.0 is a **hard cutover** — there is no deprecation window. The previous v1.x tool surface was consolidated down to 8 focused tools. Existing agents using removed tools will need to update their calls before upgrading.
-
-### Breaking changes — full replacement table
-
-| Removed tool (v1.x) | v3 replacement |
-|---|---|
-| `find_similar(arxiv_id=id)` | `search_papers(anchor_paper_id=id)` |
-| `find_citations_about(arxiv_id=X, query=Q)` | `search_papers(scope_to_citations_of=X, q=Q)` |
-| `whats_trending(category=C)` | `search_papers(sort='trending', category=C)` |
-| `batch_lookup(arxiv_ids=[...])` | `get_paper(arxiv_ids=[...])` |
-| `export_bibtex(arxiv_ids=[...])` | `get_paper(arxiv_ids=[...], format='bibtex')` |
-| `discover_authors(q=Q)` | `find_author(q=Q)` |
-| `get_author(author_id=id)` | `find_author(id=id)` |
-| `compare_methods(models=[...])` | Use the `/compare-methods` skill (see [scholarfeed.org/skills](https://www.scholarfeed.org/skills)) |
-| `field_guide(topic=T)` | `get_field_orientation(topic=T)` for cheap retrieval; full orientation via the `/field-guide` skill |
-| `check_connection` | Removed — errors signal connectivity. No action needed; remove any health-check calls. |
-| `fetch_repo(arxiv_id=id)` | Removed — 0 observed calls in production. Backend route preserved for skill use. |
-
-### The 9 v3 tools
-
-| Tool | Description |
-|---|---|
-| `search_papers` | Semantic + keyword search. Now also handles similar-paper discovery (`anchor_paper_id`), citation-scoped search (`scope_to_citations_of`), and trending (`sort='trending'`). |
-| `get_paper` | Full paper details by arXiv ID. Now also handles batch lookup (`arxiv_ids=[...]`) and BibTeX export (`format='bibtex'`). |
-| `get_citations` | Citation graph — outgoing refs or incoming citations (`direction='citing'/'cited'`). |
-| `fetch_fulltext` | Extract results/experiments sections from LaTeX source. |
-| `find_author` | Find authors by name/topic query (`q=`) or retrieve a profile by ID (`id=`). Merges the former `discover_authors` + `get_author`. |
-| `co_author_graph` | Co-authorship neighborhood for an author — edges derived live from the citation graph. |
-| `embed_text` | Get a 768-dim Gemini embedding for a text string (useful for HyDE and custom similarity). **Pro-only** (anonymous/free get a 403 `pro_required`). |
-| `get_field_orientation` | Cheap retrieval orientation for a research area — top papers, subfields, open problems. No Pro quota. |
-| `get_foundational_lineage` | The foundational work for a *paper's niche* via the citation graph — niche_roots → field_level → discipline (collapsed landmarks), with `cited_by_in_niche` evidence. Surfaces canonical anchors semantic search misses. No Pro quota. |
-
-**New in v3.1.0:**
-- `get_foundational_lineage` — paper-anchored citation-graph lineage (consensus-then-lift). Answers the *relative* question: what is foundational for THIS paper's specific niche, not the obvious global landmarks. Complements `get_field_orientation` (topic-anchored, retrieval-only).
-
-**New in v3.0.0** (reaching npm for the first time):
-- `find_author` — merged `discover_authors` + `get_author` into a single tool with exactly-one-of (`q` or `id`) semantics.
-- `get_field_orientation` — the cheap-retrieval half of the former `field_guide`, demoted from tool to skill in v3 but re-added as a lightweight tool (0.6 × citation score + 0.4 × cosine similarity; no DeepSeek, no Pro quota). Pairs with the `/field-guide` skill for deeper orientation.
-- `co_author_graph` and `embed_text` — shipped in the local v2.1.0 build but never published to npm; v3.0.0 is the first public release of both.
-
 ## What You Can Do
 
-**Technology scouting** — "What novel research on retrieval-augmented generation was published this month?"
+**Technology scouting:** "What novel research on retrieval-augmented generation was published this month?"
 
-**Literature review** — "Find papers similar to 2401.04088 and export their BibTeX"
+**Literature review:** "Find papers similar to 2401.04088 and export their BibTeX"
 
-**Trend monitoring** — "What's trending in cs.CV this week? Summarize the top 3."
+**Trend monitoring:** "What's trending in cs.CV this week? Summarize the top 3."
 
-**Author discovery** — "Who are the top researchers working on efficient LLM inference?"
+**Author discovery:** "Who are the top researchers working on efficient LLM inference?"
 
-**Field orientation** — "Give me an orientation report on sparse mixture-of-experts architectures."
+**Field orientation:** "Give me an orientation report on sparse mixture-of-experts architectures."
 
-## Manual Installation
+## Installation
 
-The fastest path is `npx scholar-feed-mcp init`, which auto-detects your client and
-writes the config. To do it by hand, find your client below.
+The fastest path is `npx scholar-feed-mcp init`, which auto-detects your client and writes the config. To set it up by hand, every client launches the same stdio server (`npx -y scholar-feed-mcp`); only the config-file location and the wrapper key differ.
 
-Every client launches the **same** stdio server — `npx -y scholar-feed-mcp`. Most use
-the identical `mcpServers` JSON block; only the **config-file location** and the
-**wrapper key** change. The standard block (used by Cursor, Claude Desktop, Windsurf,
-Cline/Roo, Gemini CLI, LM Studio, and JetBrains) is:
+**Claude Code** takes a one-line command:
+
+```bash
+# Anonymous (100 calls/day)
+claude mcp add scholar-feed -- npx -y scholar-feed-mcp
+
+# With an API key (1,000 calls/day per account)
+claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-feed-mcp
+```
+
+**Every other client** takes this standard JSON block:
 
 ```json
 {
@@ -99,34 +70,26 @@ Cline/Roo, Gemini CLI, LM Studio, and JetBrains) is:
 }
 ```
 
-**API key (optional, for 1,000 calls/day):** add `"env": { "SF_API_KEY": "sf_your_key_here" }`
-to the server entry. Get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
+To raise limits to 1,000 calls/day, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the server entry. Get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
 
-### Claude Code
+Drop that block into the right config file:
 
-```bash
-# Without API key (anonymous, 100 calls/day)
-claude mcp add scholar-feed -- npx -y scholar-feed-mcp
+| Client | Config file | Notes |
+|--------|-------------|-------|
+| Cursor | `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global) | Restart Cursor. |
+| Claude Desktop | macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`; Windows: `%APPDATA%\Claude\claude_desktop_config.json` | Settings → Developer → Edit Config, then restart. |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` | Cascade → MCP icon → Configure, then refresh. |
+| Cline / Roo Code | `cline_mcp_settings.json` | MCP Servers sidebar icon → Configure. Cline and Roo Code share this format. |
+| Gemini CLI | `~/.gemini/settings.json` (or project `.gemini/settings.json`) | |
+| LM Studio | `~/.lmstudio/mcp.json` | Program tab → Install → Edit `mcp.json`. Follows Cursor's notation. |
+| JetBrains (PyCharm / IntelliJ) | AI Assistant → MCP → Add → As JSON | Requires AI Assistant 2025.1+. |
 
-# With API key (1,000 calls/day per account)
-claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-feed-mcp
-```
+A few clients need a different wrapper key or file format:
 
-### Cursor (`.cursor/mcp.json`)
+<details>
+<summary><strong>VS Code (GitHub Copilot), Zed, Continue, and project-scoped configs</strong></summary>
 
-Use the standard block above in `.cursor/mcp.json` (project) or `~/.cursor/mcp.json`
-(global), then restart Cursor.
-
-### Claude Desktop (`claude_desktop_config.json`)
-
-Settings → Developer → Edit Config, paste the standard block, then restart.
-File location: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS),
-`%APPDATA%\Claude\claude_desktop_config.json` (Windows).
-
-### VS Code — GitHub Copilot (`.vscode/mcp.json`)
-
-VS Code uses a `servers` key (not `mcpServers`) and an explicit `type`. Requires Copilot
-**agent mode**. You can also run `MCP: Add Server` from the Command Palette.
+**VS Code: GitHub Copilot** (`.vscode/mcp.json`) uses a `servers` key and an explicit `type`, and needs Copilot agent mode. You can also run `MCP: Add Server` from the Command Palette.
 
 ```json
 {
@@ -140,20 +103,7 @@ VS Code uses a `servers` key (not `mcpServers`) and an explicit `type`. Requires
 }
 ```
 
-### Windsurf (`~/.codeium/windsurf/mcp_config.json`)
-
-In Cascade, click the MCP icon → Configure (opens `~/.codeium/windsurf/mcp_config.json`),
-paste the standard block, then click refresh.
-
-### Cline / Roo Code
-
-Click the **MCP Servers** icon in the sidebar → Configure / Edit, then paste the standard
-block into `cline_mcp_settings.json`. Cline and Roo Code share this format.
-
-### Zed (`settings.json`)
-
-Zed uses a `context_servers` key, and the `"source": "custom"` line is **required** —
-without it, Zed silently skips the entry.
+**Zed** (`settings.json`) uses a `context_servers` key, and the `"source": "custom"` line is required (without it, Zed silently skips the entry).
 
 ```json
 {
@@ -167,10 +117,7 @@ without it, Zed silently skips the entry.
 }
 ```
 
-### Continue (`~/.continue/config.yaml`)
-
-Continue uses YAML, with `mcpServers` as a **list**. Add to `~/.continue/config.yaml`
-(global) or `.continue/config.yaml` (workspace).
+**Continue** uses YAML, with `mcpServers` as a list, in `~/.continue/config.yaml` (global) or `.continue/config.yaml` (workspace).
 
 ```yaml
 mcpServers:
@@ -182,21 +129,7 @@ mcpServers:
       - scholar-feed-mcp
 ```
 
-### Gemini CLI (`~/.gemini/settings.json`)
-
-Add the standard block to `~/.gemini/settings.json` (or project `.gemini/settings.json`).
-
-### JetBrains — PyCharm / IntelliJ (AI Assistant)
-
-Settings → Tools → AI Assistant → Model Context Protocol (MCP) → Add → **As JSON**, paste
-the standard block, then apply. Requires AI Assistant 2025.1+.
-
-### LM Studio (`~/.lmstudio/mcp.json`)
-
-Program tab → Install → Edit `mcp.json` (`~/.lmstudio/mcp.json`), paste the standard
-block, then save. LM Studio follows Cursor's `mcp.json` notation.
-
-### Project-scoped (`.mcp.json`)
+**Project-scoped** (`.mcp.json`), to share the server across a repo:
 
 ```json
 {
@@ -210,15 +143,13 @@ block, then save. LM Studio follows Cursor's `mcp.json` notation.
 }
 ```
 
-**Windows note:** for any of the JSON configs above, use `"command": "cmd"` and
-`"args": ["/c", "npx", "-y", "scholar-feed-mcp"]`.
+</details>
 
-### Any other MCP client
+**Windows:** for any JSON config above, use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "scholar-feed-mcp"]`.
 
-Scholar Feed is a standard stdio MCP server, so any MCP-compatible client works — use the
-standard `mcpServers` block above with `command: npx`, `args: ["-y", "scholar-feed-mcp"]`.
+Scholar Feed is a standard stdio MCP server, so any other MCP-compatible client works with the standard block too.
 
-## Available Tools (22)
+## Available Tools (25)
 
 ### Core Search & Discovery
 
@@ -240,13 +171,13 @@ standard `mcpServers` block above with `command: npx`, `args: ["-y", "scholar-fe
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `embed_text` | Get a 768-dim Gemini embedding for text (for HyDE and custom similarity). **Pro-only** — anonymous/free callers get a 403 `pro_required`. | `text`, `task_type` |
+| `embed_text` | Get a 768-dim Gemini embedding for text (for HyDE and custom similarity). **Pro-only**, so anonymous/free callers get a 403 `pro_required`. | `text`, `task_type` |
 
 ### Research
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `get_field_orientation` | Cheap retrieval orientation for a research area — top papers, subfields, open problems. No Pro quota. | `topic`, `limit` |
+| `get_field_orientation` | Cheap retrieval orientation for a research area: top papers, subfields, open problems. No Pro quota. | `topic`, `limit` |
 | `get_foundational_lineage` | Foundational work for a *paper's niche* via the citation graph (consensus-then-lift): niche_roots → field_level → discipline, with `cited_by_in_niche` evidence. Surfaces canonical anchors semantic search misses. No Pro quota. | `anchor_paper_id`, `scope`, `generality_ceiling`, `limit` |
 
 ### Library, Collections, Watches & Gap Analysis (require `SF_API_KEY`)
@@ -259,16 +190,18 @@ These MUTATE or read the authenticated user's account. The core read/search tool
 | `unsave_paper` | Remove a paper from your library (idempotent). | `arxiv_id` |
 | `like_paper` | "More like this" calibration signal for the For You feed (insert-only). | `arxiv_id` |
 | `list_library` | List your saved papers, newest first. | `limit`, `page` |
-| `list_collections` | List collections with paper counts. | — |
+| `list_collections` | List collections with paper counts. | (none) |
 | `create_collection` | Create a named collection (get-or-create; no error on duplicate). | `name` |
 | `add_to_collection` | Add a paper to a collection by name or id (also auto-saves). | `arxiv_id`, `collection_name`, `collection_id` |
 | `remove_from_collection` | Remove a paper from a collection (stays saved). | `arxiv_id`, `collection_name`, `collection_id` |
-| `create_watch` | Standing daily-evaluated saved search; get-or-create by name. Exactly one seed selector. | `name`, `novelty_min`, `q`, `collection_name`, `collection_id`, `anchor_paper_id`, `scope_to_citations_of`, `author_id`, `category` |
-| `list_watches` | List watches with summary, `last_evaluated_at`, and `pending_hits`. | — |
+| `create_watch` | Standing daily-evaluated saved search; get-or-create by name. Define it with a structured `criteria` filter (recommended) or a single seed selector. | `name`, `novelty_min`, `criteria`, `recency_days`, `q`, `collection_name`, `collection_id`, `anchor_paper_id`, `scope_to_citations_of`, `author_id`, `category` |
+| `list_watches` | List watches with summary, `last_evaluated_at`, and `pending_hits`. | (none) |
 | `check_watches` | Pull new matches since the last digest (read-only, idempotent). | `watch_name`, `watch_id`, `limit` |
+| `update_watch` | Edit a watch in place: rename, change `novelty_min`, or retarget its structured `criteria` (clears pending hits). Address by name or id. | `name`, `watch_id`, `new_name`, `novelty_min`, `criteria`, `recency_days` |
+| `preview_watch` | Dry-run a structured `criteria` filter over recent papers without creating a watch; returns `match_count` and a `sample` to tune before saving. Read-only. | `criteria`, `recency_days` |
 | `delete_watch` | Delete a watch by name or id (idempotent). | `name`, `watch_id` |
-| `find_gaps` | "What am I missing?" for a collection or topic — foundational + frontier work you haven't saved (read-only, **Pro**). | `collection_name`, `collection_id`, `topic`, `scope`, `limit` |
-| `ask_library` | "Answer from my saved set" — a cited synthesis over your library or one collection, grounded only in papers you've saved (read-only). The inverse of `find_gaps`. **Free 1/month, then Pro 200/day.** | `question`, `collection_name`, `collection_id`, `limit` |
+| `find_gaps` | "What am I missing?" for a collection or topic: foundational + frontier work you haven't saved (read-only, **Pro**). | `collection_name`, `collection_id`, `topic`, `scope`, `limit` |
+| `ask_library` | "Answer from my saved set": a cited synthesis over your library or one collection, grounded only in papers you've saved (read-only). The inverse of `find_gaps`. **Free 1/month, then Pro 200/day.** | `question`, `collection_name`, `collection_id`, `limit` |
 
 ## Novelty Score
 
@@ -333,13 +266,13 @@ Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit
 }
 ```
 
-Pass `next_cursor` back to get the next page (keyset pagination — more stable than page numbers for large result sets).
+Pass `next_cursor` back to get the next page (keyset pagination, which is more stable than page numbers for large result sets).
 
 ## Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `SF_API_KEY` | No | — | Your Scholar Feed API key (starts with `sf_`). Without it, runs in anonymous mode (100 calls/day). |
+| `SF_API_KEY` | No | (none) | Your Scholar Feed API key (starts with `sf_`). Without it, runs in anonymous mode (100 calls/day). |
 | `SF_API_BASE_URL` | No | Production URL | Override API base URL |
 
 ## Development
@@ -372,6 +305,29 @@ If you're stuck on an old version after an update: `npx --yes scholar-feed-mcp@l
 
 **Windows: "command not found"**
 Use `"command": "cmd"` with `"args": ["/c", "npx", "-y", "scholar-feed-mcp"]` in your MCP config.
+
+## Migrating from v1.x
+
+<details>
+<summary>Removed v1.x tools and their v3 replacements</summary>
+
+v3.0.0 was a hard cutover with no deprecation window: the v1.x surface was consolidated into a smaller set of focused tools. If an agent still calls a removed v1.x tool, update it per this table. Full version history is in [CHANGELOG.md](CHANGELOG.md).
+
+| Removed tool (v1.x) | v3 replacement |
+|---|---|
+| `find_similar(arxiv_id=id)` | `search_papers(anchor_paper_id=id)` |
+| `find_citations_about(arxiv_id=X, query=Q)` | `search_papers(scope_to_citations_of=X, q=Q)` |
+| `whats_trending(category=C)` | `search_papers(sort='trending', category=C)` |
+| `batch_lookup(arxiv_ids=[...])` | `get_paper(arxiv_ids=[...])` |
+| `export_bibtex(arxiv_ids=[...])` | `get_paper(arxiv_ids=[...], format='bibtex')` |
+| `discover_authors(q=Q)` | `find_author(q=Q)` |
+| `get_author(author_id=id)` | `find_author(id=id)` |
+| `compare_methods(models=[...])` | Use the `/compare-methods` skill (see [scholarfeed.org/skills](https://www.scholarfeed.org/skills)) |
+| `field_guide(topic=T)` | `get_field_orientation(topic=T)` for cheap retrieval; full orientation via the `/field-guide` skill |
+| `check_connection` | Removed. Errors signal connectivity; remove any health-check calls. |
+| `fetch_repo(arxiv_id=id)` | Removed (0 observed calls in production). Backend route preserved for skill use. |
+
+</details>
 
 ## License
 

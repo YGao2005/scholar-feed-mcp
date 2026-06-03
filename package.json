@@ -1,7 +1,8 @@
 {
   "name": "scholar-feed-mcp",
-  "version": "3.7.0",
-  "description": "MCP server for Scholar Feed — search 600,000+ CS/AI/ML papers with LLM-powered analysis",
+  "mcpName": "io.github.YGao2005/scholar-feed-mcp",
+  "version": "3.7.1",
+  "description": "MCP server for Scholar Feed: search 600,000+ CS/AI/ML papers with LLM-powered analysis",
   "type": "module",
   "license": "MIT",
   "author": "Scholar Feed <hello@scholarfeed.org>",
@@ -37,7 +38,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "node --import tsx --test src/__tests__/*.test.ts",
-    "prepublishOnly": "npm run lint && npm run build && npm test"
+    "coverage": "c8 node --import tsx --test src/__tests__/*.test.ts",
+    "prepublishOnly": "npm run lint && npm run build && npm run coverage"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -46,6 +48,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@types/node": "^20.0.0",
+    "c8": "^11.0.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.3",

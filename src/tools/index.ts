@@ -4,7 +4,7 @@
  * Imports the v3 tool modules and exports registerAllTools(),
  * which registers each tool on the given McpServer instance.
  *
- * v3.1.0 surface (9 tools):
+ * Read/search core (9 tools, since v3.1.0):
  *   search_papers, get_paper, get_citations, fetch_fulltext,
  *   find_author, co_author_graph, embed_text, get_field_orientation,
  *   get_foundational_lineage
@@ -43,13 +43,16 @@ import { register as registerAskLibrary } from "./ask_library.js";
 /**
  * Register all Scholar Feed MCP tools on the provided server instance.
  *
- * v3.5 surface (22 tools):
- *   9 anonymous-capable read tools + find_gaps (read-only gap analysis, Pro,
- *   requires SF_API_KEY) + 12 write/library/watch tools (save_paper, unsave_paper,
- *   like_paper, list_library, list_collections, create_collection,
- *   add_to_collection, remove_from_collection, create_watch, list_watches,
- *   check_watches, delete_watch) that operate on the authenticated user's
- *   library/collections/watches and require an SF_API_KEY.
+ * v3.7 surface (25 tools):
+ *   9 read/search tools (anonymous-capable, except embed_text which is Pro) +
+ *   find_gaps (read-only gap analysis, Pro) + ask_library (cited synthesis over
+ *   your saved set) + 14 library/collection/watch tools that operate on the
+ *   authenticated user's account and require an SF_API_KEY:
+ *     library (4):     save_paper, unsave_paper, like_paper, list_library
+ *     collections (4): list_collections, create_collection, add_to_collection,
+ *                      remove_from_collection
+ *     watches (6):     create_watch, list_watches, check_watches, update_watch,
+ *                      preview_watch, delete_watch
  */
 export function registerAllTools(server: McpServer): void {
   registerSearch(server);

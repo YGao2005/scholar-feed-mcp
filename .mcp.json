@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "scholar-feed": {
+      "command": "npx",
+      "args": ["-y", "scholar-feed-mcp"]
+    }
+  }
+}

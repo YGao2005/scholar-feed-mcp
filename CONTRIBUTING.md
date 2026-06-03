@@ -16,7 +16,7 @@ You'll need an API key from [scholarfeed.org/settings](https://www.scholarfeed.o
 ## Development
 
 ```bash
-npm run dev        # Watch mode — rebuilds on file changes
+npm run dev        # Watch mode, rebuilds on file changes
 npm run typecheck  # Type check without emitting
 npm test           # Run tests
 ```
@@ -25,7 +25,7 @@ npm test           # Run tests
 
 ```
 src/
-  index.ts          # Entry point — server setup + init subcommand
+  index.ts          # Entry point: server setup + init subcommand
   client.ts         # API client wrapper (auth, error handling)
   init.ts           # Interactive setup wizard
   tools/
@@ -38,17 +38,17 @@ src/
 
 1. Create `src/tools/your_tool.ts` following the pattern of existing tools
 2. Import and register it in `src/tools/index.ts`
-3. Add it to the tool table in `README.md`
-4. Add a test case in `src/__tests__/tools.test.ts`
+3. Add it to the tool table in `README.md` (and bump the count in the heading)
+4. Add tests in `src/__tests__/`: registration in `tools.test.ts`, handler behavior in `handlers.test.ts` (or `write_tools.test.ts` for account-mutating tools)
 
 Each tool file exports a `register(server: McpServer)` function that calls `server.registerTool()` with a name, Zod input schema, and handler.
 
 ### Code Style
 
-- **Strict TypeScript** — `strict: true`, no `any` unless unavoidable
-- **All logging to stderr** — `console.error()` only. `console.log()` corrupts the JSON-RPC stdio transport.
-- **ESM imports** — always include `.js` extension in relative imports
-- **Zod schemas** — all tool inputs validated with Zod
+- **Strict TypeScript**: `strict: true`, no `any` unless unavoidable
+- **All logging to stderr**: `console.error()` only. `console.log()` corrupts the JSON-RPC stdio transport.
+- **ESM imports**: always include `.js` extension in relative imports
+- **Zod schemas**: all tool inputs validated with Zod
 
 ## Submitting Changes
 
@@ -59,7 +59,7 @@ Each tool file exports a `register(server: McpServer)` function that calls `serv
 
 ## Releasing (maintainers)
 
-Publishing to npm is **automated — there is no manual `npm publish`.** The
+Publishing to npm is **automated; there is no manual `npm publish`.** The
 [`publish.yml`](.github/workflows/publish.yml) workflow publishes on any pushed git
 tag matching `v*`, using npm **OIDC trusted publishing** (no stored npm token) with
 provenance.
@@ -78,7 +78,7 @@ The workflow then runs two jobs:
    `npm run lint` + `npm run build` + `npm test`. A mismatch or a red check blocks the publish.
 2. **publish** (the only job granted `id-token: write`): `npm publish --provenance --access public`.
 
-So a release is a version bump + a tag push — never a hand-run `npm publish`. One-time
+So a release is a version bump plus a tag push, never a hand-run `npm publish`. One-time
 registry setup is documented in the `publish.yml` header (npmjs.com → package Settings →
 Trusted Publisher: GitHub Actions, `YGao2005/scholar-feed-mcp`, workflow `publish.yml`).
 

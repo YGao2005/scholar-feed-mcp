@@ -42,7 +42,7 @@ const EXPECTED_TOOLS = [
   "list_watches",
   "check_watches",
   "delete_watch",
-  // v3.7 watch v2 — structured filters + tuning loop (require SF_API_KEY)
+  // v3.7 watch v2: structured filters + tuning loop (require SF_API_KEY)
   "update_watch",
   "preview_watch",
   // v3.5 gap analysis (read-only, Pro, requires SF_API_KEY)
@@ -100,7 +100,7 @@ describe("package.json", () => {
 });
 
 describe("tool registry", () => {
-  it("registers exactly the 23 tools", () => {
+  it("registers exactly the 25 tools", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     assert.deepStrictEqual(

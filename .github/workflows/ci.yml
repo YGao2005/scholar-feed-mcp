@@ -33,4 +33,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm run build
-      - run: npm test
+      # `coverage` runs the full test suite under c8 and enforces the floors in
+      # .c8rc.json (check-coverage:true) — a no-decrease ratchet, same idea as the
+      # backend's --cov-fail-under. Bump the floors up as coverage climbs.
+      - run: npm run coverage

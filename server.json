@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.YGao2005/scholar-feed-mcp",
+  "title": "Scholar Feed",
+  "description": "Semantic search, citation-graph traversal, full-text extraction, embeddings, and BibTeX export over 600,000+ CS/AI/ML papers.",
+  "version": "3.7.1",
+  "websiteUrl": "https://www.scholarfeed.org",
+  "repository": {
+    "url": "https://github.com/YGao2005/scholar-feed-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "scholar-feed-mcp",
+      "version": "3.7.1",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "SF_API_KEY",
+          "description": "Optional free API key from scholarfeed.org/settings. Anonymous mode allows 100 calls/day; with a key, 1,000/day.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
