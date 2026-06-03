@@ -1,0 +1,30 @@
+{
+  "name": "scholar-feed",
+  "owner": {
+    "name": "Scholar Feed",
+    "email": "hello@scholarfeed.org"
+  },
+  "description": "Scholar Feed: research-paper search and literature-review tools for Claude Code.",
+  "plugins": [
+    {
+      "name": "scholar-feed",
+      "source": "./",
+      "description": "Search 600,000+ CS/AI/ML papers with LLM novelty analysis, citation graph, full-text extraction, and BibTeX. Ships the scholar-feed MCP server (25 tools).",
+      "author": {
+        "name": "Scholar Feed",
+        "email": "hello@scholarfeed.org"
+      },
+      "homepage": "https://www.scholarfeed.org",
+      "repository": "https://github.com/YGao2005/scholar-feed-mcp",
+      "license": "MIT",
+      "keywords": [
+        "research",
+        "arxiv",
+        "literature-review",
+        "citations",
+        "semantic-search"
+      ],
+      "category": "research"
+    }
+  ]
+}
