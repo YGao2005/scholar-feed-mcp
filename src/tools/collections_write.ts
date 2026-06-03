@@ -72,7 +72,9 @@ async function getOrCreateCollection(
   } catch {
     const afterRace = await findCollectionByName(collection_name);
     if (afterRace) return afterRace;
-    throw new Error(`Could not create or find collection "${collection_name}".`);
+    throw new Error(
+      `Could not create or find collection "${collection_name}".`,
+    );
   }
 }
 
@@ -152,7 +154,10 @@ export function register(server: McpServer): void {
     },
     async ({ arxiv_id, collection_name, collection_id }) => {
       try {
-        const coll = await getOrCreateCollection(collection_id, collection_name);
+        const coll = await getOrCreateCollection(
+          collection_id,
+          collection_name,
+        );
         await client.post(`/collections/${coll.id}/papers`, {
           paper_id: arxiv_id,
         });
