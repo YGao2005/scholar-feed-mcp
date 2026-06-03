@@ -1,0 +1,15 @@
+# Keep the build context lean: deps and output are rebuilt inside the image.
+.git
+.github
+node_modules
+build
+coverage
+.nyc_output
+assets
+docs
+scripts
+*.md
+.env
+.env.*
+.c8rc.json
+src/__tests__
