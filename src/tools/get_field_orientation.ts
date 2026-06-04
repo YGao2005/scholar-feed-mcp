@@ -23,6 +23,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "get_field_orientation",
     {
+      title: "Get Field Orientation",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "Returns CANDIDATE FOUNDATIONAL PAPERS for a research topic — cheap retrieval only, no synthesis. Ranks papers by a blend of citation count (0.6 weight, captures importance) and semantic similarity to your topic (0.4 weight). Use this to bootstrap a literature survey or get a fast sense of the landscape. For a synthesized orientation report (key concepts, open problems, reading order), use the /field-guide skill which calls this tool internally. Does not require a Pro API key — no LLM calls are made.",
       inputSchema: {

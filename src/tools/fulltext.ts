@@ -13,6 +13,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "fetch_fulltext",
     {
+      title: "Fetch Full Text",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "Extract paper content from an arXiv paper's LaTeX source. Two modes: 'results' (default) returns 800 chars of results/experiments + 3 table captions. 'all' returns full paper sections (abstract, introduction, related work, method, results, conclusion) at up to 3000 chars each + 5 table captions. ~62% of arXiv papers have LaTeX source. May take a few seconds.",
       inputSchema: {

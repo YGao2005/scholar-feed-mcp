@@ -179,6 +179,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "create_watch",
     {
+      title: "Create Watch",
+      annotations: { readOnlyHint: false, destructiveHint: false },
       description:
         "Create a standing watch — evaluated daily against newly-indexed papers, surfacing new matches via the email digest and via check_watches. MUTATES. Get-or-create by name (re-creating with an existing name returns it unchanged — never errors on duplicate). TWO forms: (1) the v2 STRUCTURED filter via `criteria` (collections/authors/categories/text/has_code/min_novelty/similar, AND-composed) — the composable, agent-tunable form, recommended; tune it with preview_watch first, and edit later with update_watch. (2) a single legacy seed selector (q OR collection_name OR collection_id OR anchor_paper_id); if `criteria` is given it takes precedence. Requires SF_API_KEY.",
       inputSchema: {
@@ -307,6 +309,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "list_watches",
     {
+      title: "List Watches",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "List the authenticated user's watches with name, a one-line definition summary, last_evaluated_at, and pending_hits (count of new matches since the last digest delivery). Read-only. Use before create_watch to see what's already tracked. Requires SF_API_KEY.",
       inputSchema: {},
@@ -324,6 +328,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "check_watches",
     {
+      title: "Check Watches",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "Pull new matching papers since the last digest delivery, in the same shape as search_papers results. Optionally scope to one watch by watch_name OR watch_id; omit both for all watches. Read-only and idempotent — does NOT advance any watermark (only digest delivery does), so it is safe to call repeatedly (no mark-on-read). This is the in-session 'anything new on my watches?' pull. Requires SF_API_KEY.",
       inputSchema: {
@@ -372,6 +378,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "delete_watch",
     {
+      title: "Delete Watch",
+      annotations: { readOnlyHint: false, destructiveHint: true },
       description:
         "Delete a watch, addressed by watch_id OR name. MUTATES. Idempotent: deleting a non-existent watch is a no-op (no error). To change a watch in place (rename / novelty_min / retarget criteria) use update_watch instead of delete-and-recreate. Requires SF_API_KEY.",
       inputSchema: {
@@ -410,6 +418,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "update_watch",
     {
+      title: "Update Watch",
+      annotations: { readOnlyHint: false, destructiveHint: false },
       description:
         "Update an existing watch in place — rename, change novelty_min, or RETARGET its structured filter `criteria`. MUTATES. Address by watch_id OR name. Changing criteria replaces the definition and clears the watch's pending hits (so stale matches don't deliver); the next daily eval repopulates. Tune the new criteria with preview_watch first. Requires SF_API_KEY.",
       inputSchema: {
@@ -493,6 +503,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "preview_watch",
     {
+      title: "Preview Watch",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "Dry-run a structured filter over recent papers WITHOUT creating a watch — the tuning loop. Returns {window_days, needs_similarity, match_count, sample} so you can iterate (add a category, raise min_novelty, switch the collection relation) before saving with create_watch. NOTE: for a similarity filter, match_count is capped at 200 (the cosine fetch window) and so saturates at 200 on broad/hot topics — tune by the `sample` scores and narrow with categories/min_novelty (or a higher similar floor) rather than relying on match_count alone. Read-only. Requires SF_API_KEY.",
       inputSchema: {

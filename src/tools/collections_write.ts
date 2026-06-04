@@ -82,6 +82,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "list_collections",
     {
+      title: "List Collections",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "List the authenticated user's collections (named groups of saved papers) with paper counts. Read-only. Use before add_to_collection to see existing collections. Requires SF_API_KEY.",
       inputSchema: {},
@@ -99,6 +101,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "create_collection",
     {
+      title: "Create Collection",
+      annotations: { readOnlyHint: false, destructiveHint: false },
       description:
         "Create a new named collection. MUTATES. If a collection with that name already exists, returns the existing one (get-or-create — never errors on duplicate). Requires SF_API_KEY.",
       inputSchema: {
@@ -130,6 +134,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "add_to_collection",
     {
+      title: "Add to Collection",
+      annotations: { readOnlyHint: false, destructiveHint: false },
       description:
         "Add a paper to a collection, addressed by collection_id OR collection_name (get-or-create by name — no need to look up an id first). MUTATES: also auto-saves the paper to the library. Idempotent (adding a paper already in the collection is a no-op). Requires SF_API_KEY.",
       inputSchema: {
@@ -172,6 +178,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "remove_from_collection",
     {
+      title: "Remove from Collection",
+      annotations: { readOnlyHint: false, destructiveHint: true },
       description:
         "Remove a paper from a collection, addressed by collection_id OR collection_name. MUTATES (the paper stays in your library; it's only removed from this collection). Idempotent. Requires SF_API_KEY.",
       inputSchema: {

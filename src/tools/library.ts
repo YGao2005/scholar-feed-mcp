@@ -47,6 +47,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "save_paper",
     {
+      title: "Save Paper",
+      annotations: { readOnlyHint: false, destructiveHint: false },
       description:
         "Save a paper to the authenticated user's Scholar Feed library (bookmark). MUTATES the library and feeds the user's personalization — saved papers are the strongest signal in the For You feed and the email digest. Idempotent: calling it again on an already-saved paper leaves it saved. Requires SF_API_KEY. To file it into a named collection in one step, use add_to_collection (that also saves).",
       inputSchema: {
@@ -78,6 +80,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "unsave_paper",
     {
+      title: "Unsave Paper",
+      annotations: { readOnlyHint: false, destructiveHint: true },
       description:
         "Remove a paper from the authenticated user's Scholar Feed library. MUTATES the library. Idempotent: removing a paper that isn't saved leaves it unsaved. Note: the saved library is a superset of all collections, so un-saving a paper ALSO removes it from every collection it was in. To keep it filed in a collection, use remove_from_collection instead (that leaves the paper saved). Requires SF_API_KEY.",
       inputSchema: {
@@ -109,6 +113,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "like_paper",
     {
+      title: "Like Paper",
+      annotations: { readOnlyHint: false, destructiveHint: false },
       description:
         "Like a paper — a 'more like this' calibration signal that tunes the user's For You feed toward similar work. INSERT-only and idempotent (liking twice is a no-op, never un-likes). Distinct from save_paper: like expresses taste for ranking; save bookmarks for later reading. Requires SF_API_KEY.",
       inputSchema: {
@@ -130,6 +136,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "list_library",
     {
+      title: "List Library",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "List the authenticated user's saved papers (their library), newest first. Read-only. Use this to review a reading list or to see what's already saved before saving more. Requires SF_API_KEY.",
       inputSchema: {
