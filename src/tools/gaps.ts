@@ -38,6 +38,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "find_gaps",
     {
+      title: "Find Research Gaps",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "Find important work you HAVEN'T saved, for a collection or topic — a 'what am I missing?' analysis. Returns two buckets: foundational_gaps (canonical citation-graph anchors in the niche, not in your library) and frontier_gaps (recent high-novelty work in the niche, not yet saved). Provide exactly one seed: collection_name OR collection_id OR topic. The backend derives the niche, runs lineage + recent-novelty search, and subtracts your saved set. Read-only. Requires SF_API_KEY (it needs your library to subtract) and is a Pro feature — free accounts receive an upgrade prompt.",
       inputSchema: {

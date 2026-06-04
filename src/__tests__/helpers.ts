@@ -15,9 +15,17 @@ export type ToolHandler = (
   args: Record<string, unknown>,
 ) => Promise<ToolResult>;
 
+export interface ToolAnnotations {
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  [key: string]: unknown;
+}
+
 export interface CapturedTool {
+  title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  annotations?: ToolAnnotations;
   handler: ToolHandler;
 }
 
@@ -34,12 +42,19 @@ export function makeFakeServer(): {
   const fake = {
     registerTool(
       name: string,
-      def: { description: string; inputSchema: Record<string, unknown> },
+      def: {
+        title?: string;
+        description: string;
+        inputSchema: Record<string, unknown>;
+        annotations?: ToolAnnotations;
+      },
       handler: ToolHandler,
     ): void {
       tools.set(name, {
+        title: def.title,
         description: def.description,
         inputSchema: def.inputSchema,
+        annotations: def.annotations,
         handler,
       });
     },

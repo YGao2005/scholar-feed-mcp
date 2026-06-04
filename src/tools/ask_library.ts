@@ -35,6 +35,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "ask_library",
     {
+      title: "Ask Library",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "Answer a question using ONLY the papers you've saved — a synthesis over your library (or one collection) with inline [arXiv-ID] citations. The inverse of find_gaps (which finds important work you're MISSING): ask_library reasons over what you HAVE. Optionally scope to one collection (collection_name OR collection_id); omit both to use your whole library. Read-only. Requires SF_API_KEY (it reads your saved set). Free accounts get 1 question/month; Pro raises this to 200/day.",
       inputSchema: {

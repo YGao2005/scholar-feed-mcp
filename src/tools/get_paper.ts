@@ -21,6 +21,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "get_paper",
     {
+      title: "Get Paper",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "Get full details for one or more papers by arXiv ID. Pass a single-element array for one paper; pass multiple IDs to batch-fetch up to 50 papers in one call (replaces the removed batch_lookup tool). Pass format='bibtex' to get a .bib citation entry (replaces the removed export_bibtex tool — bibtex is single-paper only; for multi-paper bibtex, call repeatedly). Default returns a lean 12-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score). Pass verbose=true for the full 28-field shape with structured extraction (method_name, contribution_type, task_category, datasets, baselines) and institution_tags. Use fields='arxiv_id,title,abstract' to select an exact subset, or fetch_fulltext with sections='all' for the full paper.",
       inputSchema: {

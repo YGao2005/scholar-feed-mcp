@@ -13,6 +13,8 @@ export function register(server: McpServer): void {
   server.registerTool(
     "get_citations",
     {
+      title: "Get Citations",
+      annotations: { readOnlyHint: true, destructiveHint: false },
       description:
         "Get the citation graph for a paper, sorted by citing-paper rank_score (highest-impact first). 'citing' = outgoing references this paper cites; 'cited_by' = incoming citations from other papers. Default response is a lean 12-field shape per paper — pass verbose=true for the full 28-field shape.",
       inputSchema: {
