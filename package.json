@@ -33,6 +33,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean --out-dir build",
     "dev": "tsup src/index.ts --format esm --watch --out-dir build",
+    "dev:http": "tsx src/server-http.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -43,10 +44,15 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "jose": "^6.2.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^20.0.0",
     "c8": "^11.0.0",
     "eslint": "^9.39.4",
