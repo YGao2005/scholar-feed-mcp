@@ -8,11 +8,17 @@
  * so importing this module has no side effects — that keeps the unit tests honest
  * and lets each test set env per case.
  *
+ * The API key and session id additionally honor a per-request AsyncLocalStorage
+ * context when one is active (the remote Streamable HTTP transport sets it),
+ * falling back to process.env / a per-process singleton when there is none (the
+ * stdio path). See src/http/credentials.ts.
+ *
  * CRITICAL: All logging uses console.error() — never console.log().
  * console.log() on stdout would corrupt the JSON-RPC stdio transport.
  */
 
 import { randomUUID } from "node:crypto";
+import { getCurrentCreds } from "./http/credentials.js";
 
 const DEFAULT_BASE_URL = "https://api.scholarfeed.org/api/v1";
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -27,7 +33,17 @@ function getBaseUrl(): string {
   return process.env.SF_API_BASE_URL ?? DEFAULT_BASE_URL;
 }
 
+// API key resolution. On the remote (Streamable HTTP) transport an
+// AsyncLocalStorage context carries the per-request key, so each caller forwards
+// its OWN downstream key. With no active context (the stdio path and the
+// env-based unit tests) we fall back to process.env, preserving current
+// behavior. Note `getCurrentCreds().apiKey` may itself be null (an anonymous
+// remote request); in that case we honor the null and do NOT fall through to the
+// process env, so a server-level SF_API_KEY can never leak into an anonymous
+// remote request.
 function getApiKey(): string | null {
+  const creds = getCurrentCreds();
+  if (creds) return creds.apiKey;
   return process.env.SF_API_KEY ?? null;
 }
 
@@ -54,6 +70,12 @@ function authHeaders(): Record<string, string> {
  */
 let sessionId: string | null = null;
 function getSessionId(): string {
+  // On the remote transport each request supplies its own fresh session id via
+  // the ALS context; use it so the backend collapses that one request's fan-out
+  // (not the whole multi-tenant process) into a single session. With no active
+  // context, fall back to the stdio path's per-process lazy singleton.
+  const creds = getCurrentCreds();
+  if (creds) return creds.sessionId;
   return (sessionId ??= randomUUID());
 }
 
@@ -240,7 +262,19 @@ class ScholarFeedClient {
             "Raise the limit with SF_API_TIMEOUT_MS if needed.",
         );
       }
-      throw err;
+      // Any other fetch failure (DNS, ECONNREFUSED, TLS, undici "fetch failed")
+      // must not surface raw: the error — and especially `err.cause` — can
+      // disclose the backend hostname / resolved IP / port (e.g.
+      // "getaddrinfo ENOTFOUND <host>", "connect ECONNREFUSED <ip:port>") to the
+      // model. Log the raw error to stderr only and throw a sanitized message.
+      console.error(
+        "[client] network error reaching the Scholar Feed API:",
+        err,
+      );
+      throw new Error(
+        "Could not reach the Scholar Feed API (a transient network or upstream " +
+          "error). Please try again shortly.",
+      );
     }
   }
 
