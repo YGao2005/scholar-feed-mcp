@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<!--
+  Scholar Feed MCP - GitHub social preview / Open Graph card.
+  Self-contained. No network requests. Render at exactly 1280x640.
+  House style: no em or en dashes anywhere in visible copy or comments.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    /* GitHub canvas base, elevated with depth */
+    --canvas: #0d1117;
+    --canvas-2: #0a0e14;
+    --ink: #e6edf3;
+    --ink-soft: #adbac7;
+    --ink-faint: #6e7b8a;
+    /* single restrained accent: a cool scholarly cyan */
+    --accent: #4fd1c5;
+    --accent-deep: #2dd4bf;
+    --hairline: rgba(230, 237, 243, 0.10);
+    --font-sans: "Inter", "Helvetica Neue", "Helvetica", Arial, system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Menlo", "Monaco", monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { background: var(--canvas-2); }
+
+  /* The exact screenshot surface. Nothing escapes this box. */
+  .card {
+    position: relative;
+    width: 1280px;
+    height: 640px;
+    overflow: hidden;
+    background: var(--canvas);
+    font-family: var(--font-sans);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  /* Layer 1: diagonal canvas gradient for quiet depth */
+  .bg-gradient {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 90% at 0% 0%, rgba(79, 209, 197, 0.10) 0%, rgba(79, 209, 197, 0) 42%),
+      linear-gradient(135deg, #11161f 0%, #0d1117 46%, #090c11 100%);
+  }
+
+  /* Layer 2: faint dot grid texture */
+  .bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(230, 237, 243, 0.05) 1px, transparent 1.4px);
+    background-size: 26px 26px;
+    background-position: -1px -1px;
+    /* fade the grid out toward the lower right so it never feels busy */
+    -webkit-mask-image: linear-gradient(120deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.25) 70%, rgba(0,0,0,0) 100%);
+            mask-image: linear-gradient(120deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.25) 70%, rgba(0,0,0,0) 100%);
+  }
+
+  /* Layer 3: oversized logo watermark, low opacity, bleeding off the right edge */
+  .watermark {
+    position: absolute;
+    top: 50%;
+    right: -156px;
+    transform: translateY(-50%);
+    width: 720px;
+    height: 720px;
+    opacity: 0.06;
+    color: var(--accent);
+    pointer-events: none;
+  }
+  .watermark svg { width: 100%; height: 100%; display: block; }
+
+  /* Top accent hairline that reads as a "scan line" along the very top */
+  .topline {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent) 0%, rgba(79, 209, 197, 0.35) 30%, rgba(79, 209, 197, 0) 64%);
+  }
+
+  /* Content stack, held inside the 80px safe area */
+  .stack {
+    position: absolute;
+    inset: 0;
+    padding: 80px;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+  }
+
+  /* HEADER: mark + wordmark, vertically centered together */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+  }
+  .mark {
+    width: 76px;
+    height: 76px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    background:
+      linear-gradient(160deg, rgba(79, 209, 197, 0.18), rgba(79, 209, 197, 0.04));
+    border: 1px solid rgba(79, 209, 197, 0.28);
+    box-shadow:
+      0 0 0 1px rgba(13, 17, 23, 0.6) inset,
+      0 18px 40px -18px rgba(79, 209, 197, 0.45);
+  }
+  .mark svg { width: 50px; height: 50px; display: block; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* spacer pushes the title block toward optical center while keeping rhythm */
+  .spacer-top { flex: 0 0 56px; }
+
+  /* TITLE BLOCK */
+  .title {
+    font-size: 92px;
+    line-height: 0.98;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .title .mcp {
+    color: var(--accent);
+  }
+
+  .tagline {
+    margin-top: 26px;
+    font-size: 31px;
+    line-height: 1.34;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    color: var(--ink-soft);
+    max-width: 760px;
+  }
+
+  /* the rest of the column flexes so the footer sits at the bottom
+     with a deliberate gap above the fact strip */
+  .grow { flex: 1 1 auto; }
+
+  /* FACT STRIP: monospace, set on its own line with a leading accent tick */
+  .facts {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 21px;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+  .facts .tick {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 0 14px 1px rgba(79, 209, 197, 0.65);
+    flex: 0 0 auto;
+  }
+  .facts .num { color: var(--accent); font-weight: 600; }
+  .facts .dot { color: var(--ink-faint); padding: 0 2px; }
+
+  /* gap between facts and footer for breathing room */
+  .facts-to-footer { flex: 0 0 30px; }
+
+  .rule {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(90deg, var(--hairline) 0%, rgba(230, 237, 243, 0.02) 60%, rgba(230, 237, 243, 0) 100%);
+    margin-bottom: 24px;
+  }
+
+  /* FOOTER */
+  .footer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: var(--font-mono);
+    font-size: 20px;
+    letter-spacing: 0.01em;
+    color: var(--ink-faint);
+  }
+  .footer .gh {
+    color: var(--ink-soft);
+  }
+  .footer .slash { color: rgba(79, 209, 197, 0.55); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="bg-gradient"></div>
+    <div class="bg-grid"></div>
+
+    <!-- oversized watermark of the mark, recolored to the accent -->
+    <div class="watermark" aria-hidden="true">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="19" y="19" width="60" height="15" fill="currentColor"/>
+        <rect x="19" y="67" width="60" height="15" fill="currentColor"/>
+        <rect x="7" y="43" width="85" height="15" fill="currentColor"/>
+        <rect x="42" y="34" width="9" height="12" transform="rotate(90 42 34)" fill="currentColor"/>
+        <rect x="68" y="58" width="9" height="12" transform="rotate(90 68 58)" fill="currentColor"/>
+      </svg>
+    </div>
+
+    <div class="topline"></div>
+
+    <div class="stack">
+      <!-- header: mark in a tile + eyebrow label -->
+      <div class="header">
+        <div class="mark">
+          <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="19" y="19" width="60" height="15" fill="white"/>
+            <rect x="19" y="67" width="60" height="15" fill="white"/>
+            <rect x="7" y="43" width="85" height="15" fill="white"/>
+            <rect x="42" y="34" width="9" height="12" transform="rotate(90 42 34)" fill="white"/>
+            <rect x="68" y="58" width="9" height="12" transform="rotate(90 68 58)" fill="white"/>
+          </svg>
+        </div>
+        <div class="eyebrow">Research, in your editor</div>
+      </div>
+
+      <div class="spacer-top"></div>
+
+      <!-- title block -->
+      <h1 class="title">Scholar Feed <span class="mcp">MCP</span></h1>
+      <p class="tagline">Search 600,000+ CS/AI/ML papers without leaving Claude Code or Cursor.</p>
+
+      <div class="grow"></div>
+
+      <!-- fact strip -->
+      <div class="facts">
+        <span class="tick"></span>
+        <span><span class="num">25</span> tools</span>
+        <span class="dot">&middot;</span>
+        <span><span class="num">600,000+</span> papers</span>
+        <span class="dot">&middot;</span>
+        <span>anonymous or free key</span>
+      </div>
+
+      <div class="facts-to-footer"></div>
+
+      <!-- footer -->
+      <div class="rule"></div>
+      <div class="footer">
+        <span class="gh">github.com/YGao2005<span class="slash">/</span>scholar-feed-mcp</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
