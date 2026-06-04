@@ -113,10 +113,20 @@ describe("remote HTTP transport (Streamable HTTP, stateless)", () => {
     assert.strictEqual(envelope.jsonrpc, "2.0");
     assert.strictEqual(envelope.error, undefined);
     const result = envelope.result as {
-      serverInfo?: { name?: string };
+      serverInfo?: {
+        name?: string;
+        title?: string;
+        icons?: Array<{ src?: string }>;
+      };
       protocolVersion?: string;
     };
     assert.strictEqual(result.serverInfo?.name, "scholar-feed");
+    // Branding the host renders for the connector (title + logo icon).
+    assert.strictEqual(result.serverInfo?.title, "Scholar Feed");
+    assert.ok(
+      result.serverInfo?.icons?.[0]?.src?.startsWith("https://"),
+      "serverInfo must advertise an https icon for the connector logo",
+    );
   });
 
   it("lists all 25 tools over POST /mcp tools/list", async () => {

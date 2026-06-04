@@ -24,6 +24,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { OAuthTokenVerifier } from "@modelcontextprotocol/sdk/server/auth/provider.js";
 import { registerAllTools } from "./tools/index.js";
+import { buildServerInfo } from "./server-info.js";
 import { runWithCreds } from "./http/credentials.js";
 import { ScholarFeedTokenVerifier } from "./http/oauth/verifier.js";
 import {
@@ -315,7 +316,7 @@ async function handleMcpPost(
     return;
   }
 
-  const server = new McpServer({ name: "scholar-feed", version });
+  const server = new McpServer(buildServerInfo(version));
   registerAllTools(server);
 
   const transport = new StreamableHTTPServerTransport({
