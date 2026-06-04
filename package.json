@@ -34,6 +34,9 @@
     "build": "tsup src/index.ts --format esm --dts --clean --out-dir build",
     "dev": "tsup src/index.ts --format esm --watch --out-dir build",
     "dev:http": "tsx src/server-http.ts",
+    "worker:dev": "wrangler dev --define SF_WORKER_VERSION:\"\\\"$npm_package_version\\\"\"",
+    "worker:deploy": "wrangler deploy --define SF_WORKER_VERSION:\"\\\"$npm_package_version\\\"\"",
+    "worker:dryrun": "wrangler deploy --dry-run --outdir dist-worker --define SF_WORKER_VERSION:\"\\\"$npm_package_version\\\"\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -61,7 +64,8 @@
     "tsup": "^8.0.0",
     "tsx": "^4.22.3",
     "typescript": "^5.5.0",
-    "typescript-eslint": "^8.60.0"
+    "typescript-eslint": "^8.60.0",
+    "wrangler": "^4.97.0"
   },
   "engines": {
     "node": ">=18.0.0"
