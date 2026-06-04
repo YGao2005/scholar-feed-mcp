@@ -25,6 +25,43 @@ export function iconUrl(): string {
 }
 
 /**
+ * The brand favicon, hosted on the brand domain. The remote MCP origin
+ * (mcp.scholarfeed.org) is a bare API surface with no favicon, so a host that
+ * renders the connector icon from the ORIGIN's favicon — claude.ai does this —
+ * would otherwise fall back to the hosting platform's logo (e.g. Vercel's). The
+ * remote entry points redirect GET /favicon.ico here so the brand logo shows.
+ */
+export const BRAND_FAVICON_URL = "https://www.scholarfeed.org/favicon.ico";
+
+/**
+ * A minimal branded landing page for GET / on the remote MCP origin. Humans who
+ * open the URL in a browser get a pointer to the docs instead of a bare 404, and
+ * a host that parses the root HTML gets a `<link rel="icon">` brand signal (a
+ * second path to the right connector logo alongside the favicon redirect).
+ */
+export function landingPageHtml(): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scholar Feed MCP</title>
+<link rel="icon" href="${BRAND_FAVICON_URL}">
+<link rel="icon" type="image/png" href="${iconUrl()}">
+<meta property="og:title" content="Scholar Feed MCP">
+<meta property="og:image" content="${iconUrl()}">
+<style>body{font-family:system-ui,-apple-system,sans-serif;max-width:34rem;margin:4rem auto;padding:0 1.25rem;line-height:1.55;color:#0f172a}a{color:#2563eb}code{background:#f1f5f9;padding:.12rem .4rem;border-radius:.25rem;font-size:.95em}</style>
+</head>
+<body>
+<h1>Scholar Feed MCP</h1>
+<p>This is the Model Context Protocol endpoint for <a href="https://www.scholarfeed.org">Scholar Feed</a> — search 600,000+ CS/AI/ML papers with LLM analysis, a citation graph, and full-text extraction.</p>
+<p>Point an MCP client at <code>POST /mcp</code> on this host. Docs &amp; free API keys: <a href="https://www.scholarfeed.org/developers">scholarfeed.org/developers</a>.</p>
+</body>
+</html>
+`;
+}
+
+/**
  * Build the server identity for a given package version. Taken as a parameter
  * (rather than read here) so each entry point keeps its single createRequire
  * read of package.json.

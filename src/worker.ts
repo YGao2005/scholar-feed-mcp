@@ -35,7 +35,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { OAuthTokenVerifier } from "@modelcontextprotocol/sdk/server/auth/provider.js";
 import { registerAllTools } from "./tools/index.js";
-import { buildServerInfo } from "./server-info.js";
+import {
+  buildServerInfo,
+  BRAND_FAVICON_URL,
+  landingPageHtml,
+} from "./server-info.js";
 import { runWithCreds } from "./http/credentials.js";
 import { ScholarFeedTokenVerifier } from "./http/oauth/verifier.js";
 import {
@@ -256,6 +260,23 @@ export default {
     // SF_API_KEY.
     bridgeConfigToProcessEnv(env);
 
+    const { pathname } = new URL(request.url);
+    const method = request.method.toUpperCase();
+
+    // Public branding endpoints, handled BEFORE the DNS-rebinding guards because
+    // they carry NO MCP data — just a public logo + a human landing page. A host
+    // like claude.ai renders the connector icon from the ORIGIN's favicon; with
+    // these unrouted the bare origin falls back to the hosting platform's logo.
+    // Mirrors the GET / + GET /favicon.ico routes in server-http.ts.
+    if (method === "GET" && pathname === "/favicon.ico") {
+      return Response.redirect(BRAND_FAVICON_URL, 302);
+    }
+    if (method === "GET" && pathname === "/") {
+      return new Response(landingPageHtml(), {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
+
     // DNS-rebinding guard (Origin half): reject browser cross-site Origins not on
     // the allowlist. Identical policy to server-http.ts.
     if (!isOriginAllowed(request.headers.get("origin") ?? undefined)) {
@@ -267,9 +288,6 @@ export default {
     if (!isHostAllowed(request.headers.get("host") ?? undefined)) {
       return jsonRpcError(403, -32000, "Forbidden: host not allowed");
     }
-
-    const { pathname } = new URL(request.url);
-    const method = request.method.toUpperCase();
 
     // RFC 9728 protected-resource metadata, served at both the bare and the
     // /mcp-suffixed well-known paths (see metadata.ts header).

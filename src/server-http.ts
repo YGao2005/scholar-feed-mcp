@@ -23,7 +23,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { OAuthTokenVerifier } from "@modelcontextprotocol/sdk/server/auth/provider.js";
 import { registerAllTools } from "./tools/index.js";
-import { buildServerInfo } from "./server-info.js";
+import {
+  buildServerInfo,
+  BRAND_FAVICON_URL,
+  landingPageHtml,
+} from "./server-info.js";
 import { runWithCreds } from "./http/credentials.js";
 import { ScholarFeedTokenVerifier } from "./http/oauth/verifier.js";
 import {
@@ -229,6 +233,19 @@ export function createApp(opts: CreateAppOptions = {}): express.Express {
     opts.credentialResolver ?? defaultCredentialResolver;
   const enableJsonResponse = opts.enableJsonResponse ?? false;
   const app = express();
+
+  // Public branding endpoints, mounted BEFORE the CORS + DNS-rebinding guards
+  // because they carry NO MCP data — just a public logo + a human landing page.
+  // A host like claude.ai renders the connector icon from the ORIGIN's favicon;
+  // with these unrouted, the bare MCP origin falls back to the hosting platform's
+  // logo (e.g. Vercel's). The favicon redirects to the brand domain; GET / serves
+  // a small branded page (also carrying a <link rel="icon"> brand signal).
+  app.get("/favicon.ico", (_req: Request, res: Response) => {
+    res.redirect(302, BRAND_FAVICON_URL);
+  });
+  app.get("/", (_req: Request, res: Response) => {
+    res.type("html").send(landingPageHtml());
+  });
 
   // CORS: expose the MCP transport headers so browser-based hosts can read them.
   // Origin enforcement itself is handled by the explicit guard below (CORS
