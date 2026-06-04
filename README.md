@@ -19,7 +19,7 @@ Search 600,000+ CS/AI/ML research papers with LLM-generated novelty analysis, wi
 ## Quick Start
 
 ```bash
-npx scholar-feed-mcp init
+npx scholar-feed-mcp@latest init
 ```
 
 This interactive wizard will:
@@ -45,16 +45,16 @@ Try asking: *"Search for recent papers on test-time compute scaling"*
 
 ## Installation
 
-The fastest path is `npx scholar-feed-mcp init`, which auto-detects your client and writes the config. To set it up by hand, every client launches the same stdio server (`npx -y scholar-feed-mcp`); only the config-file location and the wrapper key differ.
+The fastest path is `npx scholar-feed-mcp@latest init`, which auto-detects your client and writes the config. To set it up by hand, every client launches the same stdio server (`npx -y scholar-feed-mcp@latest`); only the config-file location and the wrapper key differ.
 
 **Claude Code** takes a one-line command:
 
 ```bash
 # Anonymous (100 calls/day)
-claude mcp add scholar-feed -- npx -y scholar-feed-mcp
+claude mcp add scholar-feed -- npx -y scholar-feed-mcp@latest
 
 # With an API key (1,000 calls/day per account)
-claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-feed-mcp
+claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-feed-mcp@latest
 ```
 
 **Every other client** takes this standard JSON block:
@@ -64,7 +64,7 @@ claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-fee
   "mcpServers": {
     "scholar-feed": {
       "command": "npx",
-      "args": ["-y", "scholar-feed-mcp"]
+      "args": ["-y", "scholar-feed-mcp@latest"]
     }
   }
 }
@@ -97,7 +97,7 @@ A few clients need a different wrapper key or file format:
     "scholar-feed": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "scholar-feed-mcp"]
+      "args": ["-y", "scholar-feed-mcp@latest"]
     }
   }
 }
@@ -111,7 +111,7 @@ A few clients need a different wrapper key or file format:
     "scholar-feed": {
       "source": "custom",
       "command": "npx",
-      "args": ["-y", "scholar-feed-mcp"]
+      "args": ["-y", "scholar-feed-mcp@latest"]
     }
   }
 }
@@ -126,7 +126,7 @@ mcpServers:
     command: npx
     args:
       - "-y"
-      - scholar-feed-mcp
+      - scholar-feed-mcp@latest
 ```
 
 **Project-scoped** (`.mcp.json`), to share the server across a repo:
@@ -136,7 +136,7 @@ mcpServers:
   "mcpServers": {
     "scholar-feed": {
       "command": "npx",
-      "args": ["-y", "scholar-feed-mcp"],
+      "args": ["-y", "scholar-feed-mcp@latest"],
       "env": { "SF_API_KEY": "${SF_API_KEY}" }
     }
   }
@@ -145,7 +145,7 @@ mcpServers:
 
 </details>
 
-**Windows:** for any JSON config above, use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "scholar-feed-mcp"]`.
+**Windows:** for any JSON config above, use `"command": "cmd"` and `"args": ["/c", "npx", "-y", "scholar-feed-mcp@latest"]`.
 
 Scholar Feed is a standard stdio MCP server, so any other MCP-compatible client works with the standard block too.
 
@@ -297,14 +297,22 @@ The key may have been revoked. Generate a new one at [scholarfeed.org/settings](
 **"Rate limit exceeded" or "Anonymous daily limit exceeded"**
 Anonymous mode allows 100 calls/day. Get a free API key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings) for 1,000 calls/day per account.
 
+**Server shows as "failed" with no error — especially right after an update**
+The first launch (and the first launch after each new release) makes `npx` download the package. The published bin is a single self-contained file with no dependency tree to resolve, so this is fast — but on a slow link it can still outrun your client's start-up timeout, and the server then shows as "failed" with no detail. Fixes: (1) warm the cache by running it once in a terminal — `npx -y scholar-feed-mcp@latest --version` — then restart your client; (2) raise the MCP start-up timeout if your client supports it (Claude Code: `MCP_TIMEOUT=60000`). For the fastest, offline-capable launches, install once globally and point the config at it instead of `npx`:
+
+```bash
+npm install -g scholar-feed-mcp
+# then in your MCP config:  "command": "scholar-feed-mcp", "args": []
+```
+
 **Tool calls time out or fail silently**
 Ensure Node.js 18+ is installed (`node --version`). Older versions lack the native `fetch` API.
 
 **Stale npx cache**
-If you're stuck on an old version after an update: `npx --yes scholar-feed-mcp@latest`
+The config blocks above pin `scholar-feed-mcp@latest`, which re-resolves the newest version each launch. If you previously used an unpinned `scholar-feed-mcp` and are stuck on an old build: `npx --yes scholar-feed-mcp@latest`.
 
 **Windows: "command not found"**
-Use `"command": "cmd"` with `"args": ["/c", "npx", "-y", "scholar-feed-mcp"]` in your MCP config.
+Use `"command": "cmd"` with `"args": ["/c", "npx", "-y", "scholar-feed-mcp@latest"]` in your MCP config.
 
 ## Migrating from v1.x
 

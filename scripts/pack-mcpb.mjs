@@ -2,13 +2,10 @@
 /**
  * Reproducibly pack the MCPB bundle (Claude Desktop one-click install).
  *
- * build/index.js is NOT self-contained — tsup leaves @modelcontextprotocol/sdk
- * and zod (and their prod closure) as external runtime imports, so the .mcpb must
- * ship a node_modules. But the repo's node_modules is the full ~300MB dev tree
- * (wrangler/workerd/typescript/esbuild/...), and `mcpb pack .` would bundle all of
- * it plus coverage/, dist-worker/, docs/, src/. Instead we stage a minimal tree
- * with a PRODUCTION-ONLY install and pack that — a lean (~3MB) bundle, without
- * touching the repo's node_modules.
+ * build/index.js is a SINGLE self-contained esbuild bundle (see tsup.config.ts):
+ * every runtime dep is inlined, so the .mcpb ships NO node_modules. We still stage
+ * a minimal tree (rather than `mcpb pack .`) so packing doesn't sweep in the repo's
+ * ~300MB dev node_modules plus coverage/, dist-worker/, docs/, src/.
  *
  * Usage: npm run mcpb:pack   ->  ./scholar-feed-mcp.mcpb (gitignored)
  */
@@ -32,13 +29,12 @@ run("npm", ["run", "build"], repo);
 
 const stage = await mkdtemp(join(tmpdir(), "sf-mcpb-"));
 try {
-  console.error(`[mcpb] staging a production-only tree at ${stage}`);
-  // Only what the bundle needs: the manifest, the stdio build, the branded icon,
-  // and the package files so a prod install resolves the runtime deps.
+  console.error(`[mcpb] staging a minimal tree at ${stage}`);
+  // Only what the bundle needs: the manifest, the self-contained stdio build, the
+  // branded icon, and package.json (the entry reads its version from it at runtime).
   const items = [
     "manifest.json",
     "package.json",
-    "package-lock.json",
     "build",
     "assets/icon-marketplace.png",
     "README.md",
@@ -51,11 +47,6 @@ try {
     await mkdir(dirname(dest), { recursive: true });
     await cp(src, dest, { recursive: true });
   }
-
-  console.error(
-    "[mcpb] installing PRODUCTION dependencies in the staging tree...",
-  );
-  run("npm", ["ci", "--omit=dev", "--ignore-scripts"], stage);
 
   console.error("[mcpb] packing...");
   run("npx", ["--yes", "@anthropic-ai/mcpb", "pack", stage, out], repo);
