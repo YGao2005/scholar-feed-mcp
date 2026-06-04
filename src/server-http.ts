@@ -47,8 +47,22 @@ import {
 // shared with the Cloudflare Workers entry point in worker.ts).
 export { isOriginAllowed, isHostAllowed };
 
-const require = createRequire(import.meta.url);
-const { version } = require("../package.json") as { version: string };
+/**
+ * Package version for serverInfo. Read via createRequire so the long-lived Node
+ * process + tests advertise the real version. Wrapped in try/catch because some
+ * deploy bundlers (e.g. Vercel's file tracer) cannot resolve the relative
+ * require at runtime — fall back to an env override, then a placeholder, rather
+ * than crashing module load (which would 500 every request on serverless).
+ */
+function readVersion(): string {
+  try {
+    const require = createRequire(import.meta.url);
+    return (require("../package.json") as { version: string }).version;
+  } catch {
+    return process.env.SF_SERVER_VERSION ?? "0.0.0";
+  }
+}
+const version = readVersion();
 
 /** Cap inbound JSON bodies. MCP tool-call payloads are small; this guards the
  * public surface against oversized-body abuse without clipping real requests. */
@@ -92,6 +106,7 @@ async function handleMcpPost(
   res: Response,
   verifier: OAuthTokenVerifier,
   resolver: CredentialResolver,
+  enableJsonResponse: boolean,
 ): Promise<void> {
   // Resolve creds BEFORE building the server so a 401/501 short-circuits without
   // standing up an McpServer + transport for a request we will not serve.
@@ -139,6 +154,12 @@ async function handleMcpPost(
   const transport = new StreamableHTTPServerTransport({
     // Stateless: no session id, no session validation, GET/DELETE unsupported.
     sessionIdGenerator: undefined,
+    // On serverless (Vercel) there is no long-lived res.on("close") lifecycle and
+    // this stateless server has no server->client push, so buffering each
+    // request's JSON-RPC replies into one application/json response is lossless
+    // and avoids SSE-teardown truncation (the same choice worker.ts makes). The
+    // long-lived Node process leaves this false (SSE) by default.
+    enableJsonResponse,
   });
 
   // Tear down per-request resources once the client disconnects / response ends.
@@ -189,6 +210,13 @@ export interface CreateAppOptions {
   verifier?: OAuthTokenVerifier;
   /** token->key bridge. Defaults to the fail-loud UnconfiguredCredentialResolver. */
   credentialResolver?: CredentialResolver;
+  /**
+   * Buffer each request's JSON-RPC replies into ONE application/json response
+   * instead of streaming over SSE. Recommended on serverless (no res.on("close")
+   * lifecycle); the stateless server has no server->client push, so JSON mode is
+   * lossless. Defaults to false (SSE) for the long-lived Node process + tests.
+   */
+  enableJsonResponse?: boolean;
 }
 
 /**
@@ -199,6 +227,7 @@ export function createApp(opts: CreateAppOptions = {}): express.Express {
   const verifier = opts.verifier ?? defaultVerifier;
   const credentialResolver =
     opts.credentialResolver ?? defaultCredentialResolver;
+  const enableJsonResponse = opts.enableJsonResponse ?? false;
   const app = express();
 
   // CORS: expose the MCP transport headers so browser-based hosts can read them.
@@ -257,7 +286,7 @@ export function createApp(opts: CreateAppOptions = {}): express.Express {
   app.use(express.json({ limit: BODY_LIMIT }));
 
   app.post("/mcp", (req, res) => {
-    void handleMcpPost(req, res, verifier, credentialResolver);
+    void handleMcpPost(req, res, verifier, credentialResolver, enableJsonResponse);
   });
   app.get("/mcp", methodNotAllowed);
   app.delete("/mcp", methodNotAllowed);

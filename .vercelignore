@@ -1,0 +1,17 @@
+# Keep the Vercel upload lean — only src/ + package.json + tsconfig.json are
+# needed to build the Express entrypoint (src/server.ts). node_modules is
+# installed fresh by Vercel; everything below is irrelevant to the deploy.
+node_modules
+build
+dist
+dist-worker
+coverage
+docs
+docker-mcp-registry
+assets
+*.mcpb
+.wrangler
+.github
+.claude-plugin
+CHANGELOG.md
+README.md
