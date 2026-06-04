@@ -34,12 +34,12 @@
       "command": "node",
       "args": ["${__dirname}/build/index.js"],
       "env": {
-        "SF_API_KEY": "${user_config.api_key}"
+        "SF_API_KEY": "${user_config.sf_api_key}"
       }
     }
   },
   "user_config": {
-    "api_key": {
+    "sf_api_key": {
       "type": "string",
       "title": "Scholar Feed API key (optional)",
       "description": "Paste a free key from scholarfeed.org/settings to raise limits to 1,000 calls/day. Leave blank for anonymous mode (100 calls/day).",

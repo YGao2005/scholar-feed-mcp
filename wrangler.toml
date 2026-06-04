@@ -1,0 +1,63 @@
+# Cloudflare Workers config for the Scholar Feed MCP remote (Streamable HTTP) server.
+#
+# This deploys src/worker.ts — the Workers port of src/server-http.ts. It serves
+# the SAME stateless MCP surface: POST /mcp builds a fresh McpServer + transport
+# per request, plus the RFC 9728 protected-resource metadata at the two
+# .well-known paths. It is NOT part of the published npm `bin` (that is the stdio
+# build, `tsup src/index.ts` -> build/index.js); wrangler bundles worker.ts at
+# deploy time from devDependencies.
+#
+# Deploy (operator, requires Cloudflare auth):
+#   npx wrangler login
+#   npm run worker:dryrun   # no auth: proves it bundles for the Workers runtime
+#   npm run worker:deploy   # auth: publishes to *.workers.dev
+# Then map a custom domain (e.g. mcp.scholarfeed.org) in the Cloudflare dashboard
+# or via a [[routes]] block, and add the DNS record.
+
+name = "scholar-feed-mcp"
+main = "src/worker.ts"
+
+# 2024-09-23+ makes `nodejs_compat` auto-enable nodejs_compat_v2, which bundles
+# the Node polyfills/globals worker.ts depends on: node:async_hooks
+# (AsyncLocalStorage, src/http/credentials.ts) and node:crypto (randomUUID in
+# resolve-creds.ts; jose's WebCrypto in the verifier).
+compatibility_date = "2026-06-02"
+compatibility_flags = ["nodejs_compat"]
+
+# Static, non-secret CONFIG vars the runtime modules read. worker.ts bridges
+# these from `env` into process.env at the top of fetch() (idempotent, race-free)
+# as a safety net; with nodejs_compat they should also appear on process.env
+# directly. Uncomment + set per environment. DO NOT set SF_API_KEY here: the
+# remote server must NEVER carry a process-level key — each request derives its
+# own from its Authorization header. A server-level key is a latent cross-tenant
+# leak (the stdio package is the ONLY surface that uses SF_API_KEY).
+#
+# [vars]
+# # Backend API base + per-request fetch timeout (ms). Defaults baked into
+# # client.ts (https://api.scholarfeed.org/api/v1, 30000) if unset.
+# SF_API_BASE_URL = "https://api.scholarfeed.org/api/v1"
+# SF_API_TIMEOUT_MS = "30000"
+#
+# # DNS-rebinding guards. SF_MCP_ALLOWED_HOSTS is REQUIRED for any non-loopback
+# # deploy (unset = loopback-only, which rejects every real request). Set it to
+# # the public host this Worker answers on. SF_MCP_ALLOWED_ORIGINS is the
+# # browser-Origin allowlist (comma-separated) for web hosts like claude.ai.
+# SF_MCP_ALLOWED_HOSTS = "mcp.scholarfeed.org"
+# SF_MCP_ALLOWED_ORIGINS = "https://claude.ai"
+#
+# # OAuth Resource Server (M4). Resource URI = the token `aud`; AUDIENCE overrides
+# # it for the verifier if they ever diverge. JWKS_URL / ISSUER point at the AS
+# # (Supabase: {SUPABASE_URL}/auth/v1 and .../auth/v1/.well-known/jwks.json).
+# # Set ENFORCE_ISSUER = "true" before opening OAuth to real tokens.
+# SF_MCP_RESOURCE_URI = "https://mcp.scholarfeed.org/mcp"
+# SF_MCP_AUDIENCE = "https://mcp.scholarfeed.org/mcp"
+# SF_OAUTH_ISSUER = "https://<project>.supabase.co/auth/v1"
+# SF_OAUTH_JWKS_URL = "https://<project>.supabase.co/auth/v1/.well-known/jwks.json"
+# SF_OAUTH_ENFORCE_ISSUER = "false"
+#
+# # Connector logo a host renders (defaults to the branded icon on GitHub raw).
+# SF_MCP_ICON_URL = "https://www.scholarfeed.org/icon.png"
+
+# No Durable Objects, KV, R2, or D1: the server is fully stateless (a fresh
+# McpServer + transport per request; per-request creds live in AsyncLocalStorage
+# for the duration of one request only).

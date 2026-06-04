@@ -1,0 +1,33 @@
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
+#
+# Scholar Feed MCP — a STDIO server published to npm as `scholar-feed-mcp`.
+# Smithery launches the published bin via npx. SF_API_KEY is OPTIONAL: the
+# server works anonymously (100 calls/day); a free key raises limits to
+# 1,000/day. Get one at https://www.scholarfeed.org/settings
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required: []
+    properties:
+      SF_API_KEY:
+        type: string
+        title: Scholar Feed API key (optional)
+        description: >-
+          Optional. Paste a free key from https://www.scholarfeed.org/settings
+          to raise limits to 1,000 calls/day. Leave blank for anonymous mode
+          (100 calls/day). Keys start with "sf_".
+  commandFunction:
+    # A JS function that produces the CLI command + env to start the MCP on stdio.
+    # Maps the optional SF_API_KEY config value into the launched server's env;
+    # when omitted, the server runs in anonymous mode.
+    |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', 'scholar-feed-mcp'],
+      env: config && config.SF_API_KEY ? { SF_API_KEY: config.SF_API_KEY } : {}
+    })
+  exampleConfig:
+    SF_API_KEY: sf_your_free_key_here
