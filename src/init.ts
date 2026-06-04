@@ -1,13 +1,13 @@
 /**
  * Interactive setup wizard for Scholar Feed MCP.
  *
- * Usage: npx scholar-feed-mcp init
+ * Usage: npx scholar-feed-mcp@latest init
  *
  * Prompts for an API key (optional) and an MCP client, then configures the
  * appropriate config file or prints the snippet to paste. No external
  * dependencies — uses Node.js built-ins only.
  *
- * Every client launches the same stdio server (`npx -y scholar-feed-mcp`); they
+ * Every client launches the same stdio server (`npx -y scholar-feed-mcp@latest`); they
  * differ only in config-file location and the wrapper key:
  *   - Most clients use `mcpServers` (Cursor, Claude Desktop, Windsurf, Gemini
  *     CLI, LM Studio) — handled by mergeMcpServersConfig.
@@ -149,7 +149,7 @@ function standardJsonSnippet(hasKey: boolean): string {
   "mcpServers": {
     "scholar-feed": {
       "command": "npx",
-      "args": ["-y", "scholar-feed-mcp"]${envLine}
+      "args": ["-y", "scholar-feed-mcp@latest"]${envLine}
     }
   }
 }`;
@@ -163,7 +163,7 @@ function continueYamlSnippet(hasKey: boolean): string {
     command: npx
     args:
       - "-y"
-      - scholar-feed-mcp${envBlock}`;
+      - scholar-feed-mcp@latest${envBlock}`;
 }
 
 export async function runInit(): Promise<void> {
@@ -214,7 +214,7 @@ export async function runInit(): Promise<void> {
   // Standard `mcpServers` server entry (Cursor, Claude Desktop, Windsurf, Gemini, LM Studio).
   const serverBlock: Record<string, unknown> = {
     command: "npx",
-    args: ["-y", "scholar-feed-mcp"],
+    args: ["-y", "scholar-feed-mcp@latest"],
   };
   if (hasKey) {
     serverBlock.env = env;
@@ -234,7 +234,7 @@ export async function runInit(): Promise<void> {
         "--",
         "npx",
         "-y",
-        "scholar-feed-mcp",
+        "scholar-feed-mcp@latest",
       ];
       try {
         execFileSync("claude", addArgs, { stdio: "inherit" });
@@ -250,7 +250,7 @@ export async function runInit(): Promise<void> {
         // scrollback, screen-shares, and bug reports.
         const keyHint = apiKey ? " -e SF_API_KEY=<your-key>" : "";
         console.error(
-          `  claude mcp add scholar-feed${keyHint} -- npx -y scholar-feed-mcp`,
+          `  claude mcp add scholar-feed${keyHint} -- npx -y scholar-feed-mcp@latest`,
         );
       }
       break;
@@ -278,7 +278,7 @@ export async function runInit(): Promise<void> {
       const vscodeBlock: Record<string, unknown> = {
         type: "stdio",
         command: "npx",
-        args: ["-y", "scholar-feed-mcp"],
+        args: ["-y", "scholar-feed-mcp@latest"],
       };
       if (hasKey) vscodeBlock.env = env;
       mergeKeyedConfig(filePath, "servers", vscodeBlock);
@@ -309,7 +309,7 @@ export async function runInit(): Promise<void> {
       const zedBlock: Record<string, unknown> = {
         source: "custom",
         command: "npx",
-        args: ["-y", "scholar-feed-mcp"],
+        args: ["-y", "scholar-feed-mcp@latest"],
       };
       if (hasKey) zedBlock.env = env;
       mergeKeyedConfig(filePath, "context_servers", zedBlock);
@@ -371,7 +371,9 @@ export async function runInit(): Promise<void> {
       break;
     }
     default: {
-      console.error("  Invalid choice. Run 'npx scholar-feed-mcp init' again.");
+      console.error(
+        "  Invalid choice. Run 'npx scholar-feed-mcp@latest init' again.",
+      );
       rl.close();
       process.exit(1);
     }

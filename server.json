@@ -3,7 +3,7 @@
   "name": "io.github.YGao2005/scholar-feed-mcp",
   "title": "Scholar Feed",
   "description": "Search 600,000+ CS/AI/ML papers with citation graph, full text, embeddings, and BibTeX.",
-  "version": "3.7.1",
+  "version": "3.8.0",
   "websiteUrl": "https://www.scholarfeed.org",
   "repository": {
     "url": "https://github.com/YGao2005/scholar-feed-mcp",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "scholar-feed-mcp",
-      "version": "3.7.1",
+      "version": "3.8.0",
       "transport": { "type": "stdio" },
       "environmentVariables": [
         {

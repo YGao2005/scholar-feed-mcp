@@ -1,7 +1,7 @@
 {
   "name": "scholar-feed-mcp",
   "mcpName": "io.github.YGao2005/scholar-feed-mcp",
-  "version": "3.7.1",
+  "version": "3.8.0",
   "description": "MCP server for Scholar Feed: search 600,000+ CS/AI/ML papers with LLM-powered analysis",
   "type": "module",
   "license": "MIT",
@@ -31,8 +31,8 @@
     "build"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean --out-dir build",
-    "dev": "tsup src/index.ts --format esm --watch --out-dir build",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "dev:http": "tsx src/server-http.ts",
     "worker:dev": "wrangler dev --define SF_WORKER_VERSION:\"\\\"$npm_package_version\\\"\"",
     "worker:deploy": "wrangler deploy --define SF_WORKER_VERSION:\"\\\"$npm_package_version\\\"\"",
@@ -46,28 +46,28 @@
     "coverage": "c8 node --import tsx --test src/__tests__/*.test.ts",
     "prepublishOnly": "npm run lint && npm run build && npm run coverage"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "jose": "^6.2.3",
-    "zod": "^4.4.3"
-  },
+  "comment:dependencies": "Runtime deps are intentionally empty: the published bin (build/index.js) is a self-contained esbuild bundle (see tsup.config.ts), so `npx`/Docker consumers install ZERO transitive deps. The five former runtime deps (sdk/zod for the stdio bundle; express/cors/jose for the HTTP+Worker deploy targets) live in devDependencies — they are bundled in at build time by every deploy target and CI, never installed by consumers.",
+  "dependencies": {},
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^20.0.0",
     "c8": "^11.0.0",
+    "cors": "^2.8.6",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
+    "express": "^5.2.1",
     "globals": "^17.6.0",
+    "jose": "^6.2.3",
     "prettier": "^3.8.3",
     "tsup": "^8.0.0",
     "tsx": "^4.22.3",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.60.0",
-    "wrangler": "^4.97.0"
+    "wrangler": "^4.97.0",
+    "zod": "^4.4.3"
   },
   "engines": {
     "node": ">=18.0.0"

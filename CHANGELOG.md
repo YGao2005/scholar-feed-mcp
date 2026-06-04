@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.8.0] - 2026-06-04
+
+### Changed (install reliability — fixes silent cold-start failures)
+
+- **The published bin is now a single self-contained bundle.** `build/index.js` is built with
+  esbuild bundling (tsup `noExternal`), inlining and tree-shaking the only code the stdio path
+  uses (the MCP SDK's stdio/server classes + zod). All five former runtime dependencies moved
+  to `devDependencies`, so `dependencies` is now empty and **`npx scholar-feed-mcp` installs
+  zero transitive packages** — the cold download drops from ~24 MB of `node_modules` (the SDK
+  dragged in its full Streamable-HTTP closure: express, cors, ajv, the hono tree) to one
+  ~0.6 MB file. The old heavy cold install could outrun an MCP client's start-up timeout on a
+  slow link and make the server "fail silently"; bundling removes that failure mode and the
+  per-publish re-download cost. The HTTP/Worker deploy targets bundle these deps at build time
+  from `devDependencies`, unchanged. No tool or API change.
+- **All install snippets now pin `@latest`.** The README config blocks and the `init` wizard
+  write `scholar-feed-mcp@latest` (was bare `scholar-feed-mcp`), so a launch always re-resolves
+  the newest version instead of getting pinned to a stale npx-cached build — which silently kept
+  users on old tool surfaces (and, before 3.7.0, without prompt-injection fencing).
+- **Troubleshooting docs** gained a "server shows as failed with no error" section: warm the
+  cache (`npx -y scholar-feed-mcp@latest --version`), raise `MCP_TIMEOUT`, or `npm i -g` for the
+  fastest offline-capable launches.
+
 ## [3.7.1] - 2026-06-03
 
 ### Added
