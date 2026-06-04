@@ -41,6 +41,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "mcpb:pack": "node scripts/pack-mcpb.mjs",
     "test": "node --import tsx --test src/__tests__/*.test.ts",
     "coverage": "c8 node --import tsx --test src/__tests__/*.test.ts",
     "prepublishOnly": "npm run lint && npm run build && npm run coverage"
