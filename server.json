@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.YGao2005/scholar-feed-mcp",
   "title": "Scholar Feed",
-  "description": "Semantic search, citation-graph traversal, full-text extraction, embeddings, and BibTeX export over 600,000+ CS/AI/ML papers.",
+  "description": "Search 600,000+ CS/AI/ML papers with citation graph, full text, embeddings, and BibTeX.",
   "version": "3.7.1",
   "websiteUrl": "https://www.scholarfeed.org",
   "repository": {
