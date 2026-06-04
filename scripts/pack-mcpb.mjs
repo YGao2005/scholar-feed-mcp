@@ -20,8 +20,12 @@ import { fileURLToPath } from "node:url";
 
 const repo = fileURLToPath(new URL("..", import.meta.url));
 const out = join(repo, "scholar-feed-mcp.mcpb");
-const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: "inherit" });
-const exists = async (p) => access(p).then(() => true).catch(() => false);
+const run = (cmd, args, cwd) =>
+  execFileSync(cmd, args, { cwd, stdio: "inherit" });
+const exists = async (p) =>
+  access(p)
+    .then(() => true)
+    .catch(() => false);
 
 console.error("[mcpb] building the stdio bundle (npm run build)...");
 run("npm", ["run", "build"], repo);
@@ -48,7 +52,9 @@ try {
     await cp(src, dest, { recursive: true });
   }
 
-  console.error("[mcpb] installing PRODUCTION dependencies in the staging tree...");
+  console.error(
+    "[mcpb] installing PRODUCTION dependencies in the staging tree...",
+  );
   run("npm", ["ci", "--omit=dev", "--ignore-scripts"], stage);
 
   console.error("[mcpb] packing...");

@@ -303,7 +303,13 @@ export function createApp(opts: CreateAppOptions = {}): express.Express {
   app.use(express.json({ limit: BODY_LIMIT }));
 
   app.post("/mcp", (req, res) => {
-    void handleMcpPost(req, res, verifier, credentialResolver, enableJsonResponse);
+    void handleMcpPost(
+      req,
+      res,
+      verifier,
+      credentialResolver,
+      enableJsonResponse,
+    );
   });
   app.get("/mcp", methodNotAllowed);
   app.delete("/mcp", methodNotAllowed);
