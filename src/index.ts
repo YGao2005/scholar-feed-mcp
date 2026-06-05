@@ -14,7 +14,7 @@ import { createRequire } from "module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerAllTools } from "./tools/index.js";
-import { buildServerInfo } from "./server-info.js";
+import { buildServerInfo, SERVER_INSTRUCTIONS } from "./server-info.js";
 
 // Handle subcommands before starting the MCP server
 if (process.argv[2] === "init") {
@@ -36,7 +36,9 @@ if (process.argv[2] === "--version" || process.argv[2] === "-v") {
 const require = createRequire(import.meta.url);
 const { version } = require("../package.json") as { version: string };
 
-const server = new McpServer(buildServerInfo(version));
+const server = new McpServer(buildServerInfo(version), {
+  instructions: SERVER_INSTRUCTIONS,
+});
 
 registerAllTools(server);
 

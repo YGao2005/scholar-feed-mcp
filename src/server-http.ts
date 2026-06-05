@@ -25,6 +25,7 @@ import type { OAuthTokenVerifier } from "@modelcontextprotocol/sdk/server/auth/p
 import { registerAllTools } from "./tools/index.js";
 import {
   buildServerInfo,
+  SERVER_INSTRUCTIONS,
   BRAND_FAVICON_URL,
   landingPageHtml,
 } from "./server-info.js";
@@ -152,7 +153,9 @@ async function handleMcpPost(
     return;
   }
 
-  const server = new McpServer(buildServerInfo(version));
+  const server = new McpServer(buildServerInfo(version), {
+    instructions: SERVER_INSTRUCTIONS,
+  });
   registerAllTools(server);
 
   const transport = new StreamableHTTPServerTransport({
