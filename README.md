@@ -11,6 +11,7 @@
 [![npm version](https://img.shields.io/npm/v/scholar-feed-mcp.svg)](https://www.npmjs.com/package/scholar-feed-mcp)
 [![Node](https://img.shields.io/node/v/scholar-feed-mcp.svg)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/npm/l/scholar-feed-mcp.svg)](./LICENSE)
+[![smithery badge](https://smithery.ai/badge/yangg40/scholar-feed)](https://smithery.ai/servers/yangg40/scholar-feed)
 
 Search 600,000+ CS/AI/ML research papers with LLM-generated novelty analysis, without leaving Claude Code, Cursor, or any MCP client. Built for researchers running a literature review where they already work: search, trace citations, pull full text, and export BibTeX in the same session.
 
@@ -315,29 +316,6 @@ The config blocks above pin `scholar-feed-mcp@latest`, which re-resolves the new
 
 **Windows: "command not found"**
 Use `"command": "cmd"` with `"args": ["/c", "npx", "-y", "scholar-feed-mcp@latest"]` in your MCP config.
-
-## Migrating from v1.x
-
-<details>
-<summary>Removed v1.x tools and their v3 replacements</summary>
-
-v3.0.0 was a hard cutover with no deprecation window: the v1.x surface was consolidated into a smaller set of focused tools. If an agent still calls a removed v1.x tool, update it per this table. Full version history is in [CHANGELOG.md](CHANGELOG.md).
-
-| Removed tool (v1.x) | v3 replacement |
-|---|---|
-| `find_similar(arxiv_id=id)` | `search_papers(anchor_paper_id=id)` |
-| `find_citations_about(arxiv_id=X, query=Q)` | `search_papers(scope_to_citations_of=X, q=Q)` |
-| `whats_trending(category=C)` | `search_papers(sort='trending', category=C)` |
-| `batch_lookup(arxiv_ids=[...])` | `get_paper(arxiv_ids=[...])` |
-| `export_bibtex(arxiv_ids=[...])` | `get_paper(arxiv_ids=[...], format='bibtex')` |
-| `discover_authors(q=Q)` | `find_author(q=Q)` |
-| `get_author(author_id=id)` | `find_author(id=id)` |
-| `compare_methods(models=[...])` | Use the `/compare-methods` skill (see [scholarfeed.org/skills](https://www.scholarfeed.org/skills)) |
-| `field_guide(topic=T)` | `get_field_orientation(topic=T)` for cheap retrieval; full orientation via the `/field-guide` skill |
-| `check_connection` | Removed. Errors signal connectivity; remove any health-check calls. |
-| `fetch_repo(arxiv_id=id)` | Removed (0 observed calls in production). Backend route preserved for skill use. |
-
-</details>
 
 ## Privacy
 
