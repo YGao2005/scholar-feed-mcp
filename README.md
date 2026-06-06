@@ -47,6 +47,8 @@ Try asking: *"Search for recent papers on test-time compute scaling"*
 
 The fastest path is `npx scholar-feed-mcp@latest init`, which auto-detects your client and writes the config. To set it up by hand, every client launches the same stdio server (`npx -y scholar-feed-mcp@latest`); only the config-file location and the wrapper key differ.
 
+**Claude Desktop (one-click)** installs without editing any config: download the `.mcpb` bundle from the [latest release](https://github.com/YGao2005/scholar-feed-mcp/releases/latest) and open it (or drag it into **Settings > Extensions**). The installer shows one optional field for a Scholar Feed API key (`sf_...`): leave it blank for anonymous mode (100 calls/day), or paste a free key from [scholarfeed.org/settings](https://www.scholarfeed.org/settings) for 1,000/day.
+
 **Claude Code** takes a one-line command:
 
 ```bash
