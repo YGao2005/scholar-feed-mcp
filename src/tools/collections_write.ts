@@ -10,6 +10,12 @@
  * collection add/remove path. Collections can be addressed by id OR by name
  * (get-or-create by name), so an agent never has to look up an id first.
  *
+ * Nesting: storage is flat, but a "/" in a name is the folder convention —
+ * "AgentOPA/Formal" is the collection "Formal" inside an "AgentOPA" folder.
+ * Folders are derived from the name (no parent row to create first), and the
+ * web UI renders them as a collapsible tree. list_collections surfaces the
+ * derived folder/depth per collection so an agent can reason about the tree.
+ *
  * Endpoints:
  *   GET    /collections                       (list, with paper counts)
  *   POST   /collections                       (create; body {name})
@@ -29,6 +35,27 @@ interface Collection {
 
 interface CollectionList {
   collections: Collection[];
+}
+
+/**
+ * Annotate each collection with its derived nesting, splitting the name on "/".
+ * Storage stays flat; this just exposes the folder path the "/" convention
+ * implies so an agent (and the operator reading raw output) can see the tree.
+ * Empty segments are dropped, so "A // B" collapses to folder "A", leaf "B".
+ */
+function withNesting(collections: Collection[]) {
+  return collections.map((c) => {
+    const segments = c.name
+      .split("/")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return {
+      ...c,
+      leaf_name: segments[segments.length - 1] ?? c.name,
+      folder: segments.length > 1 ? segments.slice(0, -1).join("/") : null,
+      depth: Math.max(0, segments.length - 1),
+    };
+  });
 }
 
 function text(t: string) {
@@ -90,8 +117,18 @@ export function register(server: McpServer): void {
     },
     async () => {
       try {
-        const result = await client.get<unknown>("/collections");
-        return text(JSON.stringify(result, null, 2));
+        const data = await client.get<CollectionList>("/collections");
+        return text(
+          JSON.stringify(
+            {
+              nesting_hint:
+                'A "/" in a name is a folder: "AgentOPA/G1" is collection "G1" in folder "AgentOPA". Folders are derived (not stored) — to nest, just name a collection "Parent/Child".',
+              collections: withNesting(data.collections || []),
+            },
+            null,
+            2,
+          ),
+        );
       } catch (error) {
         return errorResult(error);
       }
@@ -104,13 +141,15 @@ export function register(server: McpServer): void {
       title: "Create Collection",
       annotations: { readOnlyHint: false, destructiveHint: false },
       description:
-        "Create a new named collection. MUTATES. If a collection with that name already exists, returns the existing one (get-or-create — never errors on duplicate). Requires SF_API_KEY.",
+        'Create a new named collection. MUTATES. If a collection with that name already exists, returns the existing one (get-or-create — never errors on duplicate). Use "/" to nest under a folder, e.g. "AgentOPA/Formal" — the folder is derived from the name, so there is no parent to create first. Requires SF_API_KEY.',
       inputSchema: {
         name: z
           .string()
           .min(1)
           .max(100)
-          .describe("Name for the collection, e.g. 'KV-cache compression'."),
+          .describe(
+            "Name for the collection, e.g. 'KV-cache compression'. Use '/' to nest: 'AgentOPA/Formal' files it under an 'AgentOPA' folder.",
+          ),
       },
     },
     async ({ name }) => {
@@ -137,7 +176,7 @@ export function register(server: McpServer): void {
       title: "Add to Collection",
       annotations: { readOnlyHint: false, destructiveHint: false },
       description:
-        "Add a paper to a collection, addressed by collection_id OR collection_name (get-or-create by name — no need to look up an id first). MUTATES: also auto-saves the paper to the library. Idempotent (adding a paper already in the collection is a no-op). Requires SF_API_KEY.",
+        'Add a paper to a collection, addressed by collection_id OR collection_name (get-or-create by name — no need to look up an id first). Nest with "/": collection_name "AgentOPA/Formal" files the paper under an "AgentOPA" folder. MUTATES: also auto-saves the paper to the library. Idempotent (adding a paper already in the collection is a no-op). Requires SF_API_KEY.',
       inputSchema: {
         arxiv_id: z
           .string()
@@ -148,7 +187,7 @@ export function register(server: McpServer): void {
           .min(1)
           .optional()
           .describe(
-            "Name of the collection. Created if it doesn't exist. Provide this OR collection_id.",
+            "Name of the collection. Created if it doesn't exist. Use '/' to nest, e.g. 'AgentOPA/Formal'. Provide this OR collection_id.",
           ),
         collection_id: z
           .string()
