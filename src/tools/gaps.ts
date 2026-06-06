@@ -21,9 +21,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencePaperContent } from "./_untrusted.js";
+import { asStructuredObject, gapsOutput } from "./_output.js";
 
-function text(t: string) {
-  return { content: [{ type: "text" as const, text: t }] };
+function text(t: string, structured?: Record<string, unknown>) {
+  return {
+    content: [{ type: "text" as const, text: t }],
+    structuredContent: structured ?? { ok: true, message: t },
+  };
 }
 
 function errorResult(error: unknown) {
@@ -40,6 +44,7 @@ export function register(server: McpServer): void {
     {
       title: "Find Research Gaps",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: gapsOutput,
       description:
         "Find important work you HAVEN'T saved, for a collection or topic — a 'what am I missing?' analysis. Returns two buckets: foundational_gaps (canonical citation-graph anchors in the niche, not in your library) and frontier_gaps (recent high-novelty work in the niche, not yet saved). Provide exactly one seed: collection_name OR collection_id OR topic. The backend derives the niche, runs lineage + recent-novelty search, and subtracts your saved set. Read-only. Requires SF_API_KEY (it needs your library to subtract) and is a Pro feature — free accounts receive an upgrade prompt.",
       inputSchema: {
@@ -100,7 +105,8 @@ export function register(server: McpServer): void {
           limit: String(limit),
         };
         const result = await client.get<unknown>("/gaps", params);
-        return text(fencePaperContent(result)); // gap analysis over papers = untrusted
+        // gap analysis over papers = untrusted
+        return text(fencePaperContent(result), asStructuredObject(result));
       } catch (error) {
         return errorResult(error);
       }

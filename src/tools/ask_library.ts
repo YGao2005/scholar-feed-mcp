@@ -18,9 +18,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencePaperContent } from "./_untrusted.js";
+import { asStructuredObject, askLibraryOutput } from "./_output.js";
 
-function text(t: string) {
-  return { content: [{ type: "text" as const, text: t }] };
+function text(t: string, structured?: Record<string, unknown>) {
+  return {
+    content: [{ type: "text" as const, text: t }],
+    structuredContent: structured ?? { ok: true, message: t },
+  };
 }
 
 function errorResult(error: unknown) {
@@ -37,6 +41,7 @@ export function register(server: McpServer): void {
     {
       title: "Ask Library",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: askLibraryOutput,
       description:
         "Answer a question using ONLY the papers you've saved — a synthesis over your library (or one collection) with inline [arXiv-ID] citations. The inverse of find_gaps (which finds important work you're MISSING): ask_library reasons over what you HAVE. Optionally scope to one collection (collection_name OR collection_id); omit both to use your whole library. Read-only. Requires SF_API_KEY (it reads your saved set). Free accounts get 1 question/month; Pro raises this to 200/day.",
       inputSchema: {
@@ -87,7 +92,8 @@ export function register(server: McpServer): void {
         if (collection_name) params.collection_name = collection_name;
         if (collection_id) params.collection_id = collection_id;
         const result = await client.get<unknown>("/ask", params);
-        return text(fencePaperContent(result)); // answer synthesised over papers = untrusted
+        // answer synthesised over papers = untrusted
+        return text(fencePaperContent(result), asStructuredObject(result));
       } catch (error) {
         return errorResult(error);
       }

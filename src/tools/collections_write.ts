@@ -26,6 +26,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
+import {
+  collectionsListOutput,
+  statusContent,
+  statusOutput,
+} from "./_output.js";
 
 interface Collection {
   id: string;
@@ -58,8 +63,11 @@ function withNesting(collections: Collection[]) {
   });
 }
 
-function text(t: string) {
-  return { content: [{ type: "text" as const, text: t }] };
+function text(t: string, structured?: Record<string, unknown>) {
+  return {
+    content: [{ type: "text" as const, text: t }],
+    structuredContent: structured ?? statusContent(t),
+  };
 }
 
 function errorResult(error: unknown) {
@@ -111,6 +119,7 @@ export function register(server: McpServer): void {
     {
       title: "List Collections",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: collectionsListOutput,
       description:
         "List the authenticated user's collections (named groups of saved papers) with paper counts. Read-only. Use before add_to_collection to see existing collections. Requires SF_API_KEY.",
       inputSchema: {},
@@ -118,17 +127,12 @@ export function register(server: McpServer): void {
     async () => {
       try {
         const data = await client.get<CollectionList>("/collections");
-        return text(
-          JSON.stringify(
-            {
-              nesting_hint:
-                'A "/" in a name is a folder: "AgentOPA/G1" is collection "G1" in folder "AgentOPA". Folders are derived (not stored) — to nest, just name a collection "Parent/Child".',
-              collections: withNesting(data.collections || []),
-            },
-            null,
-            2,
-          ),
-        );
+        const payload = {
+          nesting_hint:
+            'A "/" in a name is a folder: "AgentOPA/G1" is collection "G1" in folder "AgentOPA". Folders are derived (not stored) — to nest, just name a collection "Parent/Child".',
+          collections: withNesting(data.collections || []),
+        };
+        return text(JSON.stringify(payload, null, 2), payload);
       } catch (error) {
         return errorResult(error);
       }
@@ -140,6 +144,7 @@ export function register(server: McpServer): void {
     {
       title: "Create Collection",
       annotations: { readOnlyHint: false, destructiveHint: false },
+      outputSchema: statusOutput,
       description:
         'Create a new named collection. MUTATES. If a collection with that name already exists, returns the existing one (get-or-create — never errors on duplicate). Use "/" to nest under a folder, e.g. "AgentOPA/Formal" — the folder is derived from the name, so there is no parent to create first. Requires SF_API_KEY.',
       inputSchema: {
@@ -158,12 +163,23 @@ export function register(server: McpServer): void {
         if (existing) {
           return text(
             `Collection already exists: ${JSON.stringify(existing, null, 2)}`,
+            {
+              ok: true,
+              action: "no_change",
+              collection: existing,
+              message: `Collection already exists: ${existing.name}`,
+            },
           );
         }
         const created = await client.post<Collection>("/collections", {
           name: name.trim(),
         });
-        return text(`Created collection: ${JSON.stringify(created, null, 2)}`);
+        return text(`Created collection: ${JSON.stringify(created, null, 2)}`, {
+          ok: true,
+          action: "created",
+          collection: created,
+          message: `Created collection: ${created.name}`,
+        });
       } catch (error) {
         return errorResult(error);
       }
@@ -175,6 +191,7 @@ export function register(server: McpServer): void {
     {
       title: "Add to Collection",
       annotations: { readOnlyHint: false, destructiveHint: false },
+      outputSchema: statusOutput,
       description:
         'Add a paper to a collection, addressed by collection_id OR collection_name (get-or-create by name — no need to look up an id first). Nest with "/": collection_name "AgentOPA/Formal" files the paper under an "AgentOPA" folder. MUTATES: also auto-saves the paper to the library. Idempotent (adding a paper already in the collection is a no-op). Requires SF_API_KEY.',
       inputSchema: {
@@ -207,7 +224,16 @@ export function register(server: McpServer): void {
           paper_id: arxiv_id,
         });
         const where = coll.name ? `"${coll.name}"` : coll.id;
-        return text(`Added ${arxiv_id} to collection ${where} (and saved it).`);
+        return text(
+          `Added ${arxiv_id} to collection ${where} (and saved it).`,
+          {
+            ok: true,
+            action: "added",
+            arxiv_id,
+            collection: coll.name || coll.id,
+            message: `Added ${arxiv_id} to collection ${where} (and saved it).`,
+          },
+        );
       } catch (error) {
         return errorResult(error);
       }
@@ -219,6 +245,7 @@ export function register(server: McpServer): void {
     {
       title: "Remove from Collection",
       annotations: { readOnlyHint: false, destructiveHint: true },
+      outputSchema: statusOutput,
       description:
         "Remove a paper from a collection, addressed by collection_id OR collection_name. MUTATES (the paper stays in your library; it's only removed from this collection). Idempotent. Requires SF_API_KEY.",
       inputSchema: {

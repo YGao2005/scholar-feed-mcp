@@ -18,6 +18,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencePaperContent } from "./_untrusted.js";
+import { asStructuredObject, papersOutput } from "./_output.js";
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -25,6 +26,7 @@ export function register(server: McpServer): void {
     {
       title: "Get Field Orientation",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: papersOutput,
       description:
         "Returns CANDIDATE FOUNDATIONAL PAPERS for a research topic — cheap retrieval only, no synthesis. Ranks papers by a blend of citation count (0.6 weight, captures importance) and semantic similarity to your topic (0.4 weight). Use this to bootstrap a literature survey or get a fast sense of the landscape. For a synthesized orientation report (key concepts, open problems, reading order), use the /field-guide skill which calls this tool internally. Does not require a Pro API key — no LLM calls are made.",
       inputSchema: {
@@ -56,6 +58,7 @@ export function register(server: McpServer): void {
         );
         return {
           content: [{ type: "text" as const, text: fencePaperContent(result) }],
+          structuredContent: asStructuredObject(result),
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

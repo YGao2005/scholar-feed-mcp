@@ -38,6 +38,14 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencePaperContent } from "./_untrusted.js";
+import {
+  asStructuredObject,
+  papersOutput,
+  previewWatchOutput,
+  statusContent,
+  statusOutput,
+  watchesListOutput,
+} from "./_output.js";
 
 interface Watch {
   id: string;
@@ -52,8 +60,11 @@ interface WatchList {
   watches: Watch[];
 }
 
-function text(t: string) {
-  return { content: [{ type: "text" as const, text: t }] };
+function text(t: string, structured?: Record<string, unknown>) {
+  return {
+    content: [{ type: "text" as const, text: t }],
+    structuredContent: structured ?? statusContent(t),
+  };
 }
 
 function errorResult(error: unknown) {
@@ -196,6 +207,7 @@ export function register(server: McpServer): void {
     {
       title: "Create Watch",
       annotations: { readOnlyHint: false, destructiveHint: false },
+      outputSchema: statusOutput,
       description:
         "Create a standing watch — evaluated daily against newly-indexed papers, surfacing new matches via the email digest and via check_watches. MUTATES. Get-or-create by name (re-creating with an existing name returns it unchanged — never errors on duplicate). TWO forms: (1) the v2 STRUCTURED filter via `criteria` (collections/authors/categories/text/has_code/min_novelty/similar, AND-composed) — the composable, agent-tunable form, recommended; tune it with preview_watch first, and edit later with update_watch. Structured watches rank by 'rising' (forecasted breakout impact) by default, and tighten with min_impact_pct for an anti-noise watch that surfaces only the breakout papers in your niche. (2) a single legacy seed selector (q OR collection_name OR collection_id OR anchor_paper_id); if `criteria` is given it takes precedence. Requires SF_API_KEY.",
       inputSchema: {
@@ -291,7 +303,12 @@ export function register(server: McpServer): void {
             novelty_min,
             seed: { kind: "filter", criteria, match: "all", recency_days },
           });
-          return text(`Watch ready: ${JSON.stringify(created, null, 2)}`);
+          return text(`Watch ready: ${JSON.stringify(created, null, 2)}`, {
+            ok: true,
+            action: "created",
+            watch: created,
+            message: `Watch ready: ${created.name ?? name.trim()}`,
+          });
         }
         const seed = buildSeed({
           q,
@@ -314,7 +331,12 @@ export function register(server: McpServer): void {
           novelty_min,
           seed,
         });
-        return text(`Watch ready: ${JSON.stringify(created, null, 2)}`);
+        return text(`Watch ready: ${JSON.stringify(created, null, 2)}`, {
+          ok: true,
+          action: "created",
+          watch: created,
+          message: `Watch ready: ${created.name ?? name.trim()}`,
+        });
       } catch (error) {
         return errorResult(error);
       }
@@ -326,6 +348,7 @@ export function register(server: McpServer): void {
     {
       title: "List Watches",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: watchesListOutput,
       description:
         "List the authenticated user's watches with name, a one-line definition summary, last_evaluated_at, and pending_hits (count of new matches since the last digest delivery). Read-only. Use before create_watch to see what's already tracked. Requires SF_API_KEY.",
       inputSchema: {},
@@ -333,7 +356,10 @@ export function register(server: McpServer): void {
     async () => {
       try {
         const result = await client.get<unknown>("/watches");
-        return text(JSON.stringify(result, null, 2));
+        return text(
+          JSON.stringify(result, null, 2),
+          asStructuredObject(result),
+        );
       } catch (error) {
         return errorResult(error);
       }
@@ -345,6 +371,7 @@ export function register(server: McpServer): void {
     {
       title: "Check Watches",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: papersOutput,
       description:
         "Pull new matching papers since the last digest delivery, in the same shape as search_papers results. Optionally scope to one watch by watch_name OR watch_id; omit both for all watches. Read-only and idempotent — does NOT advance any watermark (only digest delivery does), so it is safe to call repeatedly (no mark-on-read). This is the in-session 'anything new on my watches?' pull. Requires SF_API_KEY.",
       inputSchema: {
@@ -383,7 +410,8 @@ export function register(server: McpServer): void {
         const params: Record<string, string> = { limit: String(limit) };
         if (id) params.watch_id = id;
         const result = await client.get<unknown>("/watches/hits", params);
-        return text(fencePaperContent(result)); // matched papers = untrusted
+        // matched papers = untrusted
+        return text(fencePaperContent(result), asStructuredObject(result));
       } catch (error) {
         return errorResult(error);
       }
@@ -395,6 +423,7 @@ export function register(server: McpServer): void {
     {
       title: "Delete Watch",
       annotations: { readOnlyHint: false, destructiveHint: true },
+      outputSchema: statusOutput,
       description:
         "Delete a watch, addressed by watch_id OR name. MUTATES. Idempotent: deleting a non-existent watch is a no-op (no error). To change a watch in place (rename / novelty_min / retarget criteria) use update_watch instead of delete-and-recreate. Requires SF_API_KEY.",
       inputSchema: {
@@ -423,7 +452,11 @@ export function register(server: McpServer): void {
           id = existing.id;
         }
         await client.del(`/watches/${encodeURIComponent(id)}`);
-        return text(`Deleted watch ${watch_id ? id : `"${name}"`}.`);
+        return text(`Deleted watch ${watch_id ? id : `"${name}"`}.`, {
+          ok: true,
+          action: "deleted",
+          message: `Deleted watch ${watch_id ? id : `"${name}"`}.`,
+        });
       } catch (error) {
         return errorResult(error);
       }
@@ -435,6 +468,7 @@ export function register(server: McpServer): void {
     {
       title: "Update Watch",
       annotations: { readOnlyHint: false, destructiveHint: false },
+      outputSchema: statusOutput,
       description:
         "Update an existing watch in place — rename, change novelty_min, or RETARGET its structured filter `criteria`. MUTATES. Address by watch_id OR name. Changing criteria replaces the definition and clears the watch's pending hits (so stale matches don't deliver); the next daily eval repopulates. Structured watches rank by 'rising' (forecasted breakout impact) by default, and tighten with min_impact_pct for an anti-noise watch that surfaces only the breakout papers in your niche. Tune the new criteria with preview_watch first. Requires SF_API_KEY.",
       inputSchema: {
@@ -508,7 +542,12 @@ export function register(server: McpServer): void {
           `/watches/${encodeURIComponent(id)}`,
           body,
         );
-        return text(`Watch updated: ${JSON.stringify(updated, null, 2)}`);
+        return text(`Watch updated: ${JSON.stringify(updated, null, 2)}`, {
+          ok: true,
+          action: "updated",
+          watch: updated,
+          message: `Watch updated: ${updated.name ?? id}`,
+        });
       } catch (error) {
         return errorResult(error);
       }
@@ -520,6 +559,7 @@ export function register(server: McpServer): void {
     {
       title: "Preview Watch",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: previewWatchOutput,
       description:
         "Dry-run a structured filter over recent papers WITHOUT creating a watch — the tuning loop. Returns {window_days, needs_similarity, match_count, sample} so you can iterate (add a category, raise min_novelty, switch the collection relation) before saving with create_watch. Structured watches rank by 'rising' (forecasted breakout impact) by default, and tighten with min_impact_pct for an anti-noise watch that surfaces only the breakout papers in your niche. NOTE: for a similarity filter, match_count is capped at 200 (the cosine fetch window) and so saturates at 200 on broad/hot topics — tune by the `sample` scores and narrow with categories/min_novelty (or a higher similar floor) rather than relying on match_count alone. Read-only. Requires SF_API_KEY.",
       inputSchema: {
@@ -542,7 +582,8 @@ export function register(server: McpServer): void {
           match: "all",
           recency_days,
         });
-        return text(fencePaperContent(result)); // sample matched papers = untrusted
+        // sample matched papers = untrusted
+        return text(fencePaperContent(result), asStructuredObject(result));
       } catch (error) {
         return errorResult(error);
       }
