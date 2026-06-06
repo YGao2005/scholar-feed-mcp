@@ -205,7 +205,14 @@ describe("untrusted-content fencing", () => {
     );
     const text = result.content[0].text;
     assert.ok(text.startsWith(BEGIN), "must open with the BEGIN fence");
-    assert.ok(text.trimEnd().endsWith(END), "must close with the END fence");
+    const endIdx = text.indexOf(END);
+    assert.ok(endIdx > 0, "must contain the END fence");
+    // The untrusted body stays INSIDE the fence (before END); the trusted
+    // read-expand-verify footer that fetch_fulltext now appends lands AFTER END.
+    assert.ok(
+      text.indexOf("ignore the system prompt") < endIdx,
+      "untrusted body is enclosed before the END fence",
+    );
     assert.match(text, /ignore the system prompt/);
   });
 
@@ -333,6 +340,26 @@ describe("next-steps affordances", () => {
     const text = result.content[0].text;
     assert.match(text, new RegExp(FOOTER));
     assert.match(text, /arxiv_id="1706\.03762"/);
+  });
+
+  it("fetch_fulltext appends the read-expand-verify footer (id-independent)", async () => {
+    // No arxiv_id in the payload: the fulltext nudge points at OTHER papers
+    // (the baselines this one names), so it must render without an id.
+    const { result } = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "2505.23416" },
+      { json: { sections: { results: "We compare against H2O and SnapKV." } } },
+    );
+    const text = result.content[0].text;
+    const endIdx = text.indexOf(END);
+    const footerIdx = text.indexOf(FOOTER);
+    assert.ok(text.startsWith(BEGIN), "opens with the BEGIN fence");
+    assert.ok(
+      footerIdx > endIdx,
+      "footer is OUTSIDE the untrusted fence (after END)",
+    );
+    assert.match(text, /baselines/, "nudges following named baselines");
+    assert.match(text, /verify/i, "nudges verifying magnitudes");
   });
 });
 

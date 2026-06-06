@@ -20,7 +20,12 @@
 import { fencePaperContent } from "./_untrusted.js";
 
 /** Which discovery tool produced the result, picking the right next-step set. */
-export type Affordance = "search" | "paper" | "citations" | "lineage";
+export type Affordance =
+  | "search"
+  | "paper"
+  | "citations"
+  | "lineage"
+  | "fulltext";
 
 const ARXIV_ID_RE = /^\d{4}\.\d{4,5}(v\d+)?$/;
 
@@ -78,6 +83,18 @@ const HEADER =
 
 /** Build the next-step footer for a tool result, or "" if there is nothing to wire to. */
 export function nextStepsFooter(kind: Affordance, result: unknown): string {
+  // fetch_fulltext fires the read -> expand -> verify moves. The nudge points at
+  // OTHER papers (the baselines this one names), so it does not need an id from
+  // the result and must skip the id gate below.
+  if (kind === "fulltext") {
+    const lead = "You just read this paper. Before you cite it:";
+    const bullets = [
+      "note the baselines, benchmarks, and leaderboards it names ('we compare against X', 'SOTA on Y') and look up any you have not covered yet with search_papers or get_paper. The authoritative anchor in a field is often cited as a baseline, not surfaced by recency or novelty, so this is how you catch the paper everyone benchmarks against.",
+      "verify any speedup, accuracy, or percentage number against this text before you state it, and attribute it (the paper reports ...) rather than asserting it as established fact.",
+    ];
+    return `${HEADER}\n${lead}\n` + bullets.map((b) => `- ${b}`).join("\n");
+  }
+
   const [id] = extractTopIds(result, 1);
   if (!id) return "";
 
@@ -95,6 +112,7 @@ export function nextStepsFooter(kind: Affordance, result: unknown): string {
         `get_citations(arxiv_id="${id}", direction="cited_by") for newer work that builds on it (how you reach recent papers a model cannot recall)`,
         `search_papers(sort="trending") for the rising frontier in this area`,
         `fetch_fulltext(arxiv_id="${id}") to read a key paper before you answer`,
+        `scan the top abstracts for the baselines they name ('we compare against X') and look the most-mentioned up directly: semantic search ranks by recency and misses canonical or authoritative anchors. Cover the orthogonal sub-axes of the topic, not just one anchor's lineage.`,
       ];
       break;
     case "paper":
@@ -111,6 +129,7 @@ export function nextStepsFooter(kind: Affordance, result: unknown): string {
         `get_citations(arxiv_id="${id}", direction="cited_by") to crawl another hop toward recent work`,
         `get_foundational_lineage(anchor_paper_id="${id}") to find the niche's canonical roots`,
         `fetch_fulltext(arxiv_id="${id}") to read the most relevant result`,
+        `do not just take the newest results here: also read any result that claims SOTA or names a benchmark or leaderboard. The authoritative anchor is often modestly cited, not the freshest, so fetch_fulltext the most authoritative one, not only the most recent.`,
       ];
       break;
     case "lineage":
