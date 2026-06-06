@@ -8,6 +8,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencedWithNextSteps } from "./_affordances.js";
+import { asStructuredObject, papersOutput } from "./_output.js";
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -15,6 +16,7 @@ export function register(server: McpServer): void {
     {
       title: "Get Citations",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: papersOutput,
       description:
         "Get the citation graph for a paper, sorted by citing-paper rank_score (highest-impact first). 'citing' = outgoing references this paper cites; 'cited_by' = incoming citations from other papers. Default response is a lean 12-field shape per paper — pass verbose=true for the full 28-field shape.",
       inputSchema: {
@@ -74,6 +76,7 @@ export function register(server: McpServer): void {
               text: fencedWithNextSteps(result, "citations"),
             },
           ],
+          structuredContent: asStructuredObject(result),
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

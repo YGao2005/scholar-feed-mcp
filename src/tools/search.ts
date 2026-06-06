@@ -12,6 +12,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencedWithNextSteps } from "./_affordances.js";
+import { asStructuredObject, papersOutput } from "./_output.js";
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -19,6 +20,7 @@ export function register(server: McpServer): void {
     {
       title: "Search Papers",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: papersOutput,
       description:
         "Search Scholar Feed's 600k+ CS/AI/ML paper corpus. Defaults to semantic (embedding) search — finds conceptually related papers even when the user's wording doesn't match the paper's title/abstract. Pass mode='keyword' for exact-string full-text search. CAVEAT: semantic search often misses old high-citation CANONICAL papers (e.g. foundational anchors like H2O for KV eviction, GRIT for unified embedding+generation) because the ranker prefers recent stylistically-matched papers. If you're hunting the canonical anchor for an area, parse the top-5 result abstracts for baseline mentions ('we compare against X, Y, Z'), then look the most-mentioned name up directly. Returns papers with LLM-generated summaries, novelty scores, and structured extraction data. Default response is a lean 12-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score) — pass verbose=true or fields=... for the full 28-field shape with method/task/dataset extraction. Supports filtering by category, novelty, recency, method, task, dataset, and contribution type. v3 ABSORPTIONS: pass sort='trending' to replicate whats_trending; pass anchor_paper_id to replicate find_similar (q is ignored in anchor mode, results carry similarity_score); pass scope_to_citations_of to restrict search to a paper's citation graph (replaces find_citations_about).",
       inputSchema: {
@@ -219,6 +221,7 @@ export function register(server: McpServer): void {
               text: fencedWithNextSteps(result, "search"),
             },
           ],
+          structuredContent: asStructuredObject(result),
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

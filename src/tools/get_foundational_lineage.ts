@@ -15,6 +15,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencedWithNextSteps } from "./_affordances.js";
+import { asStructuredObject, lineageOutput } from "./_output.js";
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -22,6 +23,7 @@ export function register(server: McpServer): void {
     {
       title: "Get Foundational Lineage",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: lineageOutput,
       description:
         "Returns the FOUNDATIONAL WORK FOR A PAPER'S NICHE via the citation graph — the relative question ('what is foundational for THIS paper's specific sub-field', often itself only modestly cited) rather than the obvious global landmarks. Anchors on the paper, takes its embedding neighbourhood as the niche, and ranks what the niche cites into three tiers: `niche_roots` (the niche-specific foundations, ranked by how specifically the neighbourhood builds on them — surfaces canonical anchors that semantic search misses), `field_level` (broader secondary foundations), and `discipline` (universal landmarks like Attention Is All You Need, collapsed out of the way). Each paper carries `cited_by_in_niche` evidence so the claim is grounded, not asserted. Use this to trace prior art / lineage for a paper, or to find the canonical methods a niche is built on. Complements get_field_orientation (which is topic-anchored and retrieval-only). No Pro key and no LLM calls required.",
       inputSchema: {
@@ -74,6 +76,7 @@ export function register(server: McpServer): void {
               text: fencedWithNextSteps(result, "lineage"),
             },
           ],
+          structuredContent: asStructuredObject(result),
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

@@ -8,6 +8,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencedWithNextSteps } from "./_affordances.js";
+import { asStructuredObject, fulltextOutput } from "./_output.js";
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -15,6 +16,7 @@ export function register(server: McpServer): void {
     {
       title: "Fetch Full Text",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: fulltextOutput,
       description:
         "Extract paper content from an arXiv paper's LaTeX source. Two modes: 'results' (default) returns 800 chars of results/experiments + 3 table captions. 'all' returns full paper sections (abstract, introduction, related work, method, results, conclusion) at up to 3000 chars each + 5 table captions. ~62% of arXiv papers have LaTeX source. May take a few seconds.",
       inputSchema: {
@@ -43,6 +45,7 @@ export function register(server: McpServer): void {
               text: fencedWithNextSteps(result, "fulltext"),
             },
           ],
+          structuredContent: asStructuredObject(result),
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

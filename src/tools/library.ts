@@ -24,6 +24,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencePaperContent } from "./_untrusted.js";
+import {
+  asStructuredObject,
+  papersOutput,
+  statusContent,
+  statusOutput,
+} from "./_output.js";
 
 interface ToggleResult {
   success: boolean;
@@ -31,8 +37,11 @@ interface ToggleResult {
   paper_id: string;
 }
 
-function text(t: string) {
-  return { content: [{ type: "text" as const, text: t }] };
+function text(t: string, structured?: Record<string, unknown>) {
+  return {
+    content: [{ type: "text" as const, text: t }],
+    structuredContent: structured ?? statusContent(t),
+  };
 }
 
 function errorResult(error: unknown) {
@@ -49,6 +58,7 @@ export function register(server: McpServer): void {
     {
       title: "Save Paper",
       annotations: { readOnlyHint: false, destructiveHint: false },
+      outputSchema: statusOutput,
       description:
         "Save a paper to the authenticated user's Scholar Feed library (bookmark). MUTATES the library and feeds the user's personalization — saved papers are the strongest signal in the For You feed and the email digest. Idempotent: calling it again on an already-saved paper leaves it saved. Requires SF_API_KEY. To file it into a named collection in one step, use add_to_collection (that also saves).",
       inputSchema: {
@@ -68,9 +78,19 @@ export function register(server: McpServer): void {
           await client.post<ToggleResult>("/interactions/save", {
             paper_id: arxiv_id,
           });
-          return text(`Already in your library (no change): ${arxiv_id}`);
+          return text(`Already in your library (no change): ${arxiv_id}`, {
+            ok: true,
+            action: "no_change",
+            arxiv_id,
+            message: `Already in your library (no change): ${arxiv_id}`,
+          });
         }
-        return text(`Saved to your library: ${arxiv_id}`);
+        return text(`Saved to your library: ${arxiv_id}`, {
+          ok: true,
+          action: "saved",
+          arxiv_id,
+          message: `Saved to your library: ${arxiv_id}`,
+        });
       } catch (error) {
         return errorResult(error);
       }
@@ -82,6 +102,7 @@ export function register(server: McpServer): void {
     {
       title: "Unsave Paper",
       annotations: { readOnlyHint: false, destructiveHint: true },
+      outputSchema: statusOutput,
       description:
         "Remove a paper from the authenticated user's Scholar Feed library. MUTATES the library. Idempotent: removing a paper that isn't saved leaves it unsaved. Note: the saved library is a superset of all collections, so un-saving a paper ALSO removes it from every collection it was in. To keep it filed in a collection, use remove_from_collection instead (that leaves the paper saved). Requires SF_API_KEY.",
       inputSchema: {
@@ -101,9 +122,22 @@ export function register(server: McpServer): void {
           await client.post<ToggleResult>("/interactions/save", {
             paper_id: arxiv_id,
           });
-          return text(`Paper was not in your library (no change): ${arxiv_id}`);
+          return text(
+            `Paper was not in your library (no change): ${arxiv_id}`,
+            {
+              ok: true,
+              action: "no_change",
+              arxiv_id,
+              message: `Paper was not in your library (no change): ${arxiv_id}`,
+            },
+          );
         }
-        return text(`Removed from your library: ${arxiv_id}`);
+        return text(`Removed from your library: ${arxiv_id}`, {
+          ok: true,
+          action: "removed",
+          arxiv_id,
+          message: `Removed from your library: ${arxiv_id}`,
+        });
       } catch (error) {
         return errorResult(error);
       }
@@ -115,6 +149,7 @@ export function register(server: McpServer): void {
     {
       title: "Like Paper",
       annotations: { readOnlyHint: false, destructiveHint: false },
+      outputSchema: statusOutput,
       description:
         "Like a paper — a 'more like this' calibration signal that tunes the user's For You feed toward similar work. INSERT-only and idempotent (liking twice is a no-op, never un-likes). Distinct from save_paper: like expresses taste for ranking; save bookmarks for later reading. Requires SF_API_KEY.",
       inputSchema: {
@@ -126,6 +161,12 @@ export function register(server: McpServer): void {
         await client.post("/interactions/boost", { paper_id: arxiv_id });
         return text(
           `Liked ${arxiv_id} — your feed will lean toward similar papers.`,
+          {
+            ok: true,
+            action: "liked",
+            arxiv_id,
+            message: `Liked ${arxiv_id} — your feed will lean toward similar papers.`,
+          },
         );
       } catch (error) {
         return errorResult(error);
@@ -138,6 +179,7 @@ export function register(server: McpServer): void {
     {
       title: "List Library",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: papersOutput,
       description:
         "List the authenticated user's saved papers (their library), newest first. Read-only. Use this to review a reading list or to see what's already saved before saving more. Requires SF_API_KEY.",
       inputSchema: {
@@ -162,7 +204,8 @@ export function register(server: McpServer): void {
           limit: String(limit),
           page: String(page),
         });
-        return text(fencePaperContent(result)); // saved papers = untrusted content
+        // saved papers = untrusted content
+        return text(fencePaperContent(result), asStructuredObject(result));
       } catch (error) {
         return errorResult(error);
       }
