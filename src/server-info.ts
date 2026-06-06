@@ -25,15 +25,6 @@ export function iconUrl(): string {
 }
 
 /**
- * The brand favicon, hosted on the brand domain. The remote MCP origin
- * (mcp.scholarfeed.org) is a bare API surface with no favicon, so a host that
- * renders the connector icon from the ORIGIN's favicon — claude.ai does this —
- * would otherwise fall back to the hosting platform's logo (e.g. Vercel's). The
- * remote entry points redirect GET /favicon.ico here so the brand logo shows.
- */
-export const BRAND_FAVICON_URL = "https://www.scholarfeed.org/favicon.ico";
-
-/**
  * A minimal branded landing page for GET / on the remote MCP origin. Humans who
  * open the URL in a browser get a pointer to the docs instead of a bare 404, and
  * a host that parses the root HTML gets a `<link rel="icon">` brand signal (a
@@ -46,7 +37,7 @@ export function landingPageHtml(): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scholar Feed MCP</title>
-<link rel="icon" href="${BRAND_FAVICON_URL}">
+<link rel="icon" type="image/png" href="/favicon.ico">
 <link rel="icon" type="image/png" href="${iconUrl()}">
 <meta property="og:title" content="Scholar Feed MCP">
 <meta property="og:image" content="${iconUrl()}">

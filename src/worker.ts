@@ -38,9 +38,9 @@ import { registerAllTools } from "./tools/index.js";
 import {
   buildServerInfo,
   SERVER_INSTRUCTIONS,
-  BRAND_FAVICON_URL,
   landingPageHtml,
 } from "./server-info.js";
+import { faviconArrayBuffer } from "./favicon-asset.js";
 import { runWithCreds } from "./http/credentials.js";
 import { ScholarFeedTokenVerifier } from "./http/oauth/verifier.js";
 import {
@@ -272,7 +272,12 @@ export default {
     // these unrouted the bare origin falls back to the hosting platform's logo.
     // Mirrors the GET / + GET /favicon.ico routes in server-http.ts.
     if (method === "GET" && pathname === "/favicon.ico") {
-      return Response.redirect(BRAND_FAVICON_URL, 302);
+      return new Response(faviconArrayBuffer(), {
+        headers: {
+          "Content-Type": "image/png",
+          "Cache-Control": "public, max-age=86400",
+        },
+      });
     }
     if (method === "GET" && pathname === "/") {
       return new Response(landingPageHtml(), {
