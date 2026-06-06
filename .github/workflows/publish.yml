@@ -1,23 +1,37 @@
 name: Publish
 
-# Tag-triggered npm publish using OIDC trusted publishing — no stored token.
+# Tag-triggered npm publish (OIDC trusted publishing) + MCP Registry publish.
 # Cut a release by bumping package.json, committing, then pushing a matching tag:
 #   npm version <patch|minor|major> && git push --follow-tags
 #
-# One-time setup on npmjs.com (package → Settings → Trusted Publisher):
+# One-time setup on npmjs.com (package -> Settings -> Trusted Publisher):
 #   provider GitHub Actions, organization/user "YGao2005",
 #   repository "scholar-feed-mcp", workflow filename "publish.yml".
-# Auth is then minted per-run via the id-token permission below — no secret.
+# Auth is then minted per-run via the id-token permission below -- no secret.
 #
-# Split into two jobs so the OIDC-privileged runner does as little as possible:
-#   - verify: UNPRIVILEGED (no id-token) — lint/build/test on the tagged commit.
-#   - publish: minimal, the ONLY job with id-token: write — checkout, build,
-#     publish. Both jobs run `npm ci --ignore-scripts` so a malicious transitive
-#     dependency's install script can never run in the privileged runner.
+# Three jobs so the OIDC-privileged runners each do as little as possible:
+#   - verify:   UNPRIVILEGED (no id-token) -- lint/build/test on the tagged commit.
+#   - publish:  npm. id-token: write for npm trusted publishing only; checkout,
+#               build, publish. Runs `npm ci --ignore-scripts` so a malicious
+#               transitive dependency's install script can never run there.
+#   - registry: official MCP Registry (registry.modelcontextprotocol.io). Its own
+#               minimal id-token: write runner -- downloads the official
+#               mcp-publisher, authenticates via GitHub OIDC (no stored secret;
+#               the OIDC identity authorizes the io.github.YGao2005/* namespace),
+#               and publishes server.json. server.json's version is synced from
+#               package.json at publish time, so the registry can never drift
+#               behind npm again -- that drift is what left the registry pinned
+#               to a stale version while npm moved ahead.
+#
+# Manual re-sync: trigger this workflow with "Run workflow" (workflow_dispatch)
+# to (re)publish the CURRENT server.json to the MCP Registry WITHOUT cutting an
+# npm release. npm publish is skipped on dispatch (it cannot republish an
+# existing version); only the registry job runs.
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch: {}
 
 jobs:
   verify:
@@ -32,6 +46,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: Verify tag matches package.json version
+        # Only meaningful on a tag push; a manual dispatch carries no version tag.
+        if: github.event_name == 'push'
         run: |
           PKG_VERSION="v$(node -p "require('./package.json').version")"
           if [ "$PKG_VERSION" != "${GITHUB_REF_NAME}" ]; then
@@ -44,6 +60,8 @@ jobs:
 
   publish:
     needs: verify
+    # npm cannot republish an existing version, so only run on a release tag.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -59,9 +77,55 @@ jobs:
       - run: npm install -g npm@latest
       # --ignore-scripts: no install script runs in the OIDC-privileged runner.
       # The build is invoked explicitly below (prepublishOnly is skipped because
-      # the package is already built — `npm publish --ignore-scripts` is implied
+      # the package is already built -- `npm publish --ignore-scripts` is implied
       # by the build step + files allowlist).
       - run: npm ci --ignore-scripts
       - run: npm run build
-      # Keep --provenance explicit — don't rely on the auto-provenance default.
+      # Keep --provenance explicit -- don't rely on the auto-provenance default.
       - run: npm publish --provenance --access public --ignore-scripts
+
+  registry:
+    # Publish (or re-sync) server.json to the official MCP Registry. Runs after a
+    # successful npm publish on a tag push, OR standalone on a manual dispatch.
+    needs: [publish]
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.publish.result == 'success') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # GitHub OIDC -> MCP Registry; authorizes io.github.YGao2005/*, no stored secret
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # Derive the registry version from package.json (the source of truth that
+      # `npm version` bumps and `verify` ties the tag to) and stamp it onto both
+      # the top-level entry and every package reference, so the registry listing
+      # always matches the npm release. jq is preinstalled on ubuntu runners.
+      - name: Sync server.json version from package.json
+        run: |
+          VERSION="$(jq -r .version package.json)"
+          jq --arg v "$VERSION" '.version = $v | (.packages[]?.version) = $v' server.json > server.tmp
+          mv server.tmp server.json
+          echo "server.json synced to version $VERSION:"
+          jq '{name, version, package_version: .packages[0].version}' server.json
+      # Official MCP Registry publisher CLI. The registry is in preview, so track
+      # the latest release for protocol compatibility rather than pinning a build.
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --version
+      - name: Authenticate to MCP Registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+      - name: Publish server.json to MCP Registry
+        # On a tag release the freshly published npm version can take a few
+        # seconds to propagate before the registry's package-ownership check
+        # sees it; retry briefly so a propagation lag is not a hard failure.
+        run: |
+          for attempt in 1 2 3 4; do
+            if ./mcp-publisher publish; then
+              echo "Published server.json to the MCP Registry."
+              exit 0
+            fi
+            echo "Publish attempt ${attempt} failed; retrying in 20s..."
+            sleep 20
+          done
+          echo "MCP Registry publish failed after retries."
+          exit 1
