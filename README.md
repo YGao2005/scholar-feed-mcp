@@ -339,6 +339,10 @@ v3.0.0 was a hard cutover with no deprecation window: the v1.x surface was conso
 
 </details>
 
+## Privacy
+
+See our [privacy policy](https://www.scholarfeed.org/privacy-policy).
+
 ## License
 
 [MIT](LICENSE)
