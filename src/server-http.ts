@@ -35,10 +35,8 @@ import {
   mountMetadataRoutes,
   unauthorizedResponse,
 } from "./http/oauth/metadata.js";
-import {
-  UnconfiguredCredentialResolver,
-  type CredentialResolver,
-} from "./http/oauth/credential-resolver.js";
+import { type CredentialResolver } from "./http/oauth/credential-resolver.js";
+import { createDefaultCredentialResolver } from "./http/oauth/minted-key-resolver.js";
 import {
   resolveRequestCreds,
   isOriginAllowed,
@@ -86,15 +84,16 @@ const EXPOSED_HEADERS = [
 /**
  * Per-process OAuth primitives (M4). The verifier is AS-agnostic: it reads its
  * audience / issuer / JWKS source from env (see verifier.ts). The default
- * CredentialResolver is the fail-loud UnconfiguredCredentialResolver — it THROWS
- * because the backend credential model (open decision #8) is not yet chosen, so
- * an OAuth-authenticated account call surfaces a clear 501 rather than silently
- * doing the wrong thing. Both are overridable via createApp() options so a later
- * milestone (or a test) can inject a working resolver / a test-keyed verifier.
+ * CredentialResolver is chosen by createDefaultCredentialResolver(): a working
+ * MintedKeyCredentialResolver (credential-bridge "model a") when
+ * SF_MCP_PROVISION_SECRET is set, else the fail-loud
+ * UnconfiguredCredentialResolver so an undeployed / locally-run server surfaces
+ * a clear 501 rather than silently doing the wrong thing. Both are overridable
+ * via createApp() options so a test can inject a test-keyed verifier / resolver.
  */
 const defaultVerifier: OAuthTokenVerifier = new ScholarFeedTokenVerifier();
 const defaultCredentialResolver: CredentialResolver =
-  new UnconfiguredCredentialResolver();
+  createDefaultCredentialResolver();
 
 /**
  * Handle one stateless POST /mcp. A fresh server + transport per request keeps
