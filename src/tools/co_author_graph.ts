@@ -8,6 +8,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
+import { asStructuredObject, coAuthorGraphOutput } from "./_output.js";
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -15,6 +16,7 @@ export function register(server: McpServer): void {
     {
       title: "Co-Author Graph",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: coAuthorGraphOutput,
       description:
         "Find the co-authorship neighborhood of one or more authors. Given a list of author_ids, returns edges {from, to, papers_count, last_collab_year} where 'from' is one of the input authors and 'to' is any co-author appearing on a shared paper within the window. Use for AC reviewer triage (find conflicts), disambiguating researchers (who do they actually work with?), or expanding an author seed into a research community. window_years defaults to 10. Result is capped at 500 edges, sorted by papers_count DESC.",
       inputSchema: {
@@ -50,6 +52,7 @@ export function register(server: McpServer): void {
           content: [
             { type: "text" as const, text: JSON.stringify(result, null, 2) },
           ],
+          structuredContent: asStructuredObject(result),
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

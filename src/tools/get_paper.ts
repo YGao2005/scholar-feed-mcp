@@ -16,6 +16,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencedWithNextSteps } from "./_affordances.js";
+import { asStructuredObject, getPaperOutput } from "./_output.js";
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -23,6 +24,7 @@ export function register(server: McpServer): void {
     {
       title: "Get Paper",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: getPaperOutput,
       description:
         "Get full details for one or more papers by arXiv ID. Pass a single-element array for one paper; pass multiple IDs to batch-fetch up to 50 papers in one call (replaces the removed batch_lookup tool). Pass format='bibtex' to get a .bib citation entry (replaces the removed export_bibtex tool — bibtex is single-paper only; for multi-paper bibtex, call repeatedly). Default returns a lean 12-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score). Pass verbose=true for the full 28-field shape with structured extraction (method_name, contribution_type, task_category, datasets, baselines) and institution_tags. Use fields='arxiv_id,title,abstract' to select an exact subset, or fetch_fulltext with sections='all' for the full paper.",
       inputSchema: {
@@ -67,6 +69,13 @@ export function register(server: McpServer): void {
           const bibText = result.bibtex ?? JSON.stringify(result, null, 2);
           return {
             content: [{ type: "text" as const, text: bibText }],
+            structuredContent: {
+              ok: true,
+              format: "bibtex",
+              bibtex: result.bibtex,
+              count: result.count,
+              not_found: result.not_found,
+            },
           };
         }
 
@@ -91,6 +100,7 @@ export function register(server: McpServer): void {
               text: fencedWithNextSteps(result, "paper"),
             },
           ],
+          structuredContent: asStructuredObject(result),
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

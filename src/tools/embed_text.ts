@@ -8,6 +8,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
+import { asStructuredObject, embedOutput } from "./_output.js";
 
 export function register(server: McpServer): void {
   server.registerTool(
@@ -15,6 +16,7 @@ export function register(server: McpServer): void {
     {
       title: "Embed Text",
       annotations: { readOnlyHint: true, destructiveHint: false },
+      outputSchema: embedOutput,
       description:
         "Embed a text string into a 768-dim Gemini Flash vector. Use for HyDE-style retrieval: (1) write a hypothetical short paper that would perfectly answer the user's query, (2) embed it with task_type='RETRIEVAL_DOCUMENT' (default — matches the corpus embedding side), (3) pass the resulting embedding back through search-style tools to find real papers nearest to the hypothetical. task_type='RETRIEVAL_QUERY' matches the query side and is useful for direct user-query embedding without HyDE. Pro-only — requires an SF_API_KEY on a Pro account; anonymous and free callers get a 403 pro_required. Cost: ~$0.0001/call; rate-limited at 30/minute per API key.",
       inputSchema: {
@@ -44,6 +46,7 @@ export function register(server: McpServer): void {
           content: [
             { type: "text" as const, text: JSON.stringify(result, null, 2) },
           ],
+          structuredContent: asStructuredObject(result),
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

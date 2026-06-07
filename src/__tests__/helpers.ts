@@ -8,6 +8,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 export type ToolResult = {
   content: Array<{ type: string; text: string }>;
+  structuredContent?: Record<string, unknown>;
   isError?: boolean;
 };
 
@@ -25,6 +26,7 @@ export interface CapturedTool {
   title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   annotations?: ToolAnnotations;
   handler: ToolHandler;
 }
@@ -46,6 +48,7 @@ export function makeFakeServer(): {
         title?: string;
         description: string;
         inputSchema: Record<string, unknown>;
+        outputSchema?: Record<string, unknown>;
         annotations?: ToolAnnotations;
       },
       handler: ToolHandler,
@@ -54,6 +57,7 @@ export function makeFakeServer(): {
         title: def.title,
         description: def.description,
         inputSchema: def.inputSchema,
+        outputSchema: def.outputSchema,
         annotations: def.annotations,
         handler,
       });
