@@ -92,35 +92,105 @@ function requestHeaders(extra: Record<string, string>): Record<string, string> {
   };
 }
 
+const SITE_URL = "https://www.scholarfeed.org";
+
+/**
+ * Resolve a backend CTA/upgrade URL to an absolute scholarfeed.org link. The API
+ * returns relative paths (e.g. `upgrade_url: "/pricing"`); absolute URLs pass
+ * through unchanged.
+ */
+function resolveUpgradeUrl(raw: unknown): string | null {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `${SITE_URL}${raw.startsWith("/") ? "" : "/"}${raw}`;
+}
+
+/**
+ * Business-rule codes whose human-facing string is authored FOR the end user (a
+ * conversion / quota / upgrade wall) and is therefore safe and intended to relay
+ * to the model. Explicit set plus the `_required` / `_exceeded` / `_limit`
+ * suffixes, so a new quota code is covered without a client release. Generic
+ * internal codes (e.g. `forbidden`, `internal_error`) are deliberately excluded
+ * so their `detail` falls through to the curated status-based copy below.
+ */
+const BUSINESS_CODES = new Set([
+  "pro_required",
+  "payment_required",
+  "watch_limit",
+  "quota_exceeded",
+  "rate_limited",
+  "free_tier_limit",
+  "monthly_limit",
+]);
+
+function isBusinessCode(code: string): boolean {
+  return (
+    BUSINESS_CODES.has(code) ||
+    code.endsWith("_required") ||
+    code.endsWith("_exceeded") ||
+    code.endsWith("_limit")
+  );
+}
+
 /**
  * Surface a deliberate, user-facing error envelope from the backend.
  *
- * The API returns `{ error, message }` for intentional business-rule walls —
- * e.g. a quota/cap hit that carries an upgrade prompt ("Free tier includes 1
- * watch. Pro lets you track more — scholarfeed.org/upgrade"). We surface
- * `message` verbatim so the agent relays it to the user.
+ * The API marks intentional business-rule walls two ways: the legacy
+ * `{ error, message }` pairing, and the RFC 7807 problem+json shape it actually
+ * emits today — `{ detail, code, upgrade_url, ... }` (e.g. an anonymous caller of
+ * a Pro tool gets `code: "pro_required", detail: "Text embeddings are a Pro
+ * feature. Start a free 14-day Pro trial…", upgrade_url: "/pricing"`). We surface
+ * that human string verbatim — plus the resolved CTA URL — so the agent relays a
+ * real next step to the user instead of a dead end. (Before this, the client only
+ * recognized `{ error, message }`, so every RFC 7807 conversion prompt was
+ * discarded and replaced by the generic "Access denied" copy — the funnel's
+ * worst leak: engaged anonymous users hit a Pro tool and saw no way forward.)
  *
- * Only when BOTH `error` (a machine code) and `message` (the human string) are
- * present: that pairing marks an intentional, safe-to-show envelope. Plain or
- * unstructured error bodies still fall through to the generic status-based
- * messages, so we never leak internal error detail to the model.
+ * A body is treated as a wall ONLY when it carries a recognized business code, an
+ * explicit `upgrade_url`, or the legacy error+message pair. A bare `detail` /
+ * `message` on an internal error is NOT surfaced, so we never leak incidental
+ * internal error strings to the model.
  */
 function structuredBackendMessage(body: string): string | null {
   if (!body) return null;
+  let parsed: unknown;
   try {
-    const parsed: unknown = JSON.parse(body);
-    if (
-      parsed !== null &&
-      typeof parsed === "object" &&
-      typeof (parsed as Record<string, unknown>).error === "string" &&
-      typeof (parsed as Record<string, unknown>).message === "string"
-    ) {
-      return (parsed as { message: string }).message;
-    }
+    parsed = JSON.parse(body);
   } catch {
     // Body isn't JSON — fall through to the status-based messages.
+    return null;
   }
-  return null;
+  if (parsed === null || typeof parsed !== "object") return null;
+  const obj = parsed as Record<string, unknown>;
+
+  // The machine code may live in RFC 7807 `code` or the legacy `error` field.
+  const code =
+    (typeof obj.code === "string" && obj.code) ||
+    (typeof obj.error === "string" && obj.error) ||
+    null;
+  const upgradeUrl = resolveUpgradeUrl(obj.upgrade_url);
+  const legacyPair =
+    typeof obj.error === "string" && typeof obj.message === "string";
+
+  const isWall =
+    legacyPair || upgradeUrl !== null || (code !== null && isBusinessCode(code));
+  if (!isWall) return null;
+
+  // Prefer the legacy `message`, else the RFC 7807 `detail`.
+  const human =
+    typeof obj.message === "string"
+      ? obj.message
+      : typeof obj.detail === "string"
+        ? obj.detail
+        : null;
+  if (!human) return null;
+
+  // Append the CTA URL when the backend gave one and the message doesn't already
+  // point somewhere — so the agent always has a concrete next step.
+  if (upgradeUrl && !human.includes(upgradeUrl) && !/scholarfeed\.org/i.test(human)) {
+    return `${human} (${upgradeUrl})`;
+  }
+  return human;
 }
 
 class ScholarFeedClient {
@@ -298,8 +368,14 @@ class ScholarFeedClient {
             "Check your key at https://www.scholarfeed.org/settings",
         );
       case 403:
+        // The most common 403 is an anonymous caller hitting an account- or
+        // Pro-gated tool — the highest-intent conversion moment. Give a concrete
+        // path forward (account → key → config) rather than a dead end.
         throw new Error(
-          "Access denied. You may need a valid API key for this endpoint.",
+          "This Scholar Feed tool needs an account. Create a free one at " +
+            "https://www.scholarfeed.org/settings — it includes a 14-day Pro " +
+            "trial (no card) plus free daily paper watches — then set the key as " +
+            "SF_API_KEY in your MCP config (or run `npx scholar-feed-mcp@latest init`).",
         );
       case 429:
         throw new Error(

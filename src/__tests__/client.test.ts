@@ -161,24 +161,77 @@ describe("client error mapping", () => {
     await withStub({ status: 403, body }, {}, async () => {
       await assert.rejects(client.get("/watches"), (err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        // The backend's message wins over the generic 403 "Access denied" copy.
+        // The backend's message wins over the generic 403 conversion copy.
         assert.match(msg, /Pro lets you track more/);
-        assert.doesNotMatch(msg, /Access denied/);
+        assert.doesNotMatch(msg, /needs an account/);
         return true;
       });
     });
   });
 
-  it("ignores a half-formed envelope (message without error code → generic copy)", async () => {
-    // message-only is NOT a deliberate envelope; must not surface, to avoid
-    // leaking incidental error strings the backend didn't intend for users.
+  it("surfaces an RFC 7807 pro_required wall (detail + resolved upgrade_url)", async () => {
+    // The shape the backend actually returns today for an anon caller of a Pro
+    // tool. The human string lives in `detail` (not `message`); the relative
+    // upgrade_url must be resolved to an absolute scholarfeed.org link.
+    const body = JSON.stringify({
+      type: "about:blank",
+      title: "Forbidden",
+      status: 403,
+      detail:
+        "Text embeddings are a Pro feature. Start a free 14-day Pro trial or upgrade to keep using them.",
+      code: "pro_required",
+      error: "pro_required",
+      feature: "embeddings",
+      upgrade_url: "/pricing",
+    });
+    await withStub({ status: 403, body }, {}, async () => {
+      await assert.rejects(client.post("/public/embeddings", {}), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.match(msg, /Pro feature/);
+        assert.match(msg, /14-day Pro trial/);
+        // Relative "/pricing" resolved to an absolute link.
+        assert.match(msg, /https:\/\/www\.scholarfeed\.org\/pricing/);
+        assert.doesNotMatch(msg, /needs an account/);
+        return true;
+      });
+    });
+  });
+
+  it("gives a bare 403 (Not authenticated / forbidden) a real conversion CTA", async () => {
+    // gaps/ask anon return code:"forbidden", detail:"Not authenticated" — NOT a
+    // value-carrying wall, so we suppress the weak detail and emit the curated
+    // account CTA instead (signup URL + how to wire the key).
+    const body = JSON.stringify({
+      status: 403,
+      detail: "Not authenticated",
+      code: "forbidden",
+    });
+    await withStub({ status: 403, body }, {}, async () => {
+      await assert.rejects(client.get("/gaps"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.match(msg, /needs an account/);
+        assert.match(msg, /scholarfeed\.org\/settings/);
+        assert.match(msg, /SF_API_KEY/);
+        // Don't relay the weak/internal "Not authenticated" detail verbatim.
+        assert.doesNotMatch(msg, /Not authenticated/);
+        return true;
+      });
+    });
+  });
+
+  it("does NOT surface a bare detail on an internal error (no business code)", async () => {
+    // A JSON 500 with a detail but no business code / upgrade_url must fall
+    // through to the generic copy — never leak the internal string.
     await withStub(
-      { status: 403, body: JSON.stringify({ message: "raw internal detail" }) },
+      {
+        status: 500,
+        body: JSON.stringify({ detail: "raw internal detail", code: "internal_error" }),
+      },
       {},
       async () => {
         await assert.rejects(client.get("/x"), (err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
-          assert.match(msg, /Access denied/);
+          assert.match(msg, /HTTP 500/);
           assert.doesNotMatch(msg, /raw internal detail/);
           return true;
         });

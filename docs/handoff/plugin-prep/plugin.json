@@ -1,0 +1,34 @@
+{
+  "name": "scholar-feed",
+  "displayName": "Scholar Feed",
+  "version": "3.7.1",
+  "description": "Search 600,000+ CS/AI/ML papers with LLM novelty analysis, citation graph, full-text extraction, and BibTeX, without leaving Claude Code. Built for literature reviews.",
+  "author": {
+    "name": "Scholar Feed",
+    "email": "hello@scholarfeed.org",
+    "url": "https://www.scholarfeed.org"
+  },
+  "homepage": "https://www.scholarfeed.org",
+  "repository": "https://github.com/YGao2005/scholar-feed-mcp",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "research",
+    "research-papers",
+    "arxiv",
+    "citations",
+    "citation-graph",
+    "semantic-search",
+    "literature-review",
+    "embeddings",
+    "bibtex",
+    "ai",
+    "machine-learning"
+  ],
+  "mcpServers": {
+    "scholar-feed": {
+      "command": "npx",
+      "args": ["-y", "scholar-feed-mcp"]
+    }
+  }
+}
