@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.YGao2005/scholar-feed-mcp",
   "title": "Scholar Feed",
-  "description": "Search 600,000+ CS/AI/ML papers with citation graph, full text, embeddings, and BibTeX.",
-  "version": "3.8.0",
+  "description": "600,000+ CS/AI/ML papers in your AI assistant: search, novelty scores, citations, daily watches.",
+  "version": "3.9.1",
   "websiteUrl": "https://www.scholarfeed.org",
   "repository": {
     "url": "https://github.com/YGao2005/scholar-feed-mcp",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "scholar-feed-mcp",
-      "version": "3.8.0",
+      "version": "3.9.1",
       "transport": { "type": "stdio" },
       "environmentVariables": [
         {
