@@ -101,6 +101,26 @@ describe("search_papers handler", () => {
     assert.strictEqual(url?.searchParams.get("sort"), "trending");
   });
 
+  it("passes sort=impactful through", async () => {
+    const { url } = await invoke("search_papers", {
+      q: "x",
+      sort: "impactful",
+      page: 1,
+      limit: 20,
+    });
+    assert.strictEqual(url?.searchParams.get("sort"), "impactful");
+  });
+
+  it("passes impact_min through", async () => {
+    const { url } = await invoke("search_papers", {
+      q: "x",
+      impact_min: 80,
+      page: 1,
+      limit: 20,
+    });
+    assert.strictEqual(url?.searchParams.get("impact_min"), "80");
+  });
+
   it("anchor mode forwards anchor_paper_id", async () => {
     const { url } = await invoke("search_papers", {
       anchor_paper_id: "2407.15831",
