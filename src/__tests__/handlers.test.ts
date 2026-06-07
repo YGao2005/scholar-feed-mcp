@@ -101,6 +101,16 @@ describe("search_papers handler", () => {
     assert.strictEqual(url?.searchParams.get("sort"), "trending");
   });
 
+  it("passes sort=impactful through", async () => {
+    const { url } = await invoke("search_papers", {
+      q: "x",
+      sort: "impactful",
+      page: 1,
+      limit: 20,
+    });
+    assert.strictEqual(url?.searchParams.get("sort"), "impactful");
+  });
+
   it("passes impact_min through", async () => {
     const { url } = await invoke("search_papers", {
       q: "x",
