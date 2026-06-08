@@ -319,7 +319,7 @@ Use `"command": "cmd"` with `"args": ["/c", "npx", "-y", "scholar-feed-mcp@lates
 
 ## About Scholar Feed
 
-[Scholar Feed](https://www.scholarfeed.org) is a research-discovery engine for computer science and AI/ML papers, founded in 2025. It indexes 600,000+ papers from arXiv, ranked by novelty, citation velocity, and relevance. Each paper has an LLM-generated summary, a novelty score, and a citation graph. This package (`scholar-feed-mcp`) is Scholar Feed's open-source MCP server — it exposes the corpus as tools that AI agents can call directly inside Claude Code, Cursor, and other MCP clients.
+[Scholar Feed](https://www.scholarfeed.org) is a research-discovery engine for computer science and AI/ML papers, founded in 2025. It indexes 600,000+ papers from arXiv — ranked by novelty, citation velocity, and relevance — with LLM-generated summaries, a citation graph, author profiles, and full-text extraction. It is available as a website, a public REST API, and a Model Context Protocol (MCP) server that AI agents can call directly. This package (`scholar-feed-mcp`) is the open-source MCP server.
 
 - Website: <https://www.scholarfeed.org>
 - npm: <https://www.npmjs.com/package/scholar-feed-mcp>
