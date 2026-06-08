@@ -68,6 +68,7 @@ const paperObject = z
     primary_category: z.string().optional(),
     has_code: z.boolean().optional(),
     github_url: z.string().nullable().optional(),
+    github_stars: z.number().nullable().optional(),
     citation_count: z.number().optional(),
     venue_name: z.string().nullable().optional(),
     llm_summary: z.string().nullable().optional(),
