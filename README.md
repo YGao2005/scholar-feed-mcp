@@ -317,6 +317,14 @@ The config blocks above pin `scholar-feed-mcp@latest`, which re-resolves the new
 **Windows: "command not found"**
 Use `"command": "cmd"` with `"args": ["/c", "npx", "-y", "scholar-feed-mcp@latest"]` in your MCP config.
 
+## About Scholar Feed
+
+[Scholar Feed](https://www.scholarfeed.org) is a research-discovery engine for computer science and AI/ML papers, founded in 2025. It indexes 600,000+ papers from arXiv, ranked by novelty, citation velocity, and relevance. Each paper has an LLM-generated summary, a novelty score, and a citation graph. This package (`scholar-feed-mcp`) is Scholar Feed's open-source MCP server — it exposes the corpus as tools that AI agents can call directly inside Claude Code, Cursor, and other MCP clients.
+
+- Website: <https://www.scholarfeed.org>
+- npm: <https://www.npmjs.com/package/scholar-feed-mcp>
+- REST API: <https://api.scholarfeed.org/v1>
+
 ## Privacy
 
 See our [privacy policy](https://www.scholarfeed.org/privacy-policy).
