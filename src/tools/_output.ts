@@ -203,13 +203,17 @@ const authorObject = z
   .object({
     id: z.number().optional(),
     name: z.string().optional(),
-    h_index: z.number().optional(),
-    total_papers: z.number().optional(),
-    primary_field: z.string().optional(),
+    // Bibliometrics + computed scores are NULLABLE: after the 2026-06 OpenAlex
+    // identity rebuild, unresolved (arxiv_only) authors carry NULL h_index/papers,
+    // and authors below the scoring threshold carry NULL primary_field/rank score.
+    // zod .optional() accepts undefined but NOT null, so these must be .nullable().
+    h_index: z.number().nullable().optional(),
+    total_papers: z.number().nullable().optional(),
+    primary_field: z.string().nullable().optional(),
     research_topics: z.array(z.string()).optional(),
-    author_rank_score: z.number().optional(),
+    author_rank_score: z.number().nullable().optional(),
     semantic_scholar_id: z.string().nullable().optional(),
-    years_active: z.number().optional(),
+    years_active: z.number().nullable().optional(),
   })
   .catchall(z.unknown());
 
@@ -223,15 +227,15 @@ export const authorOutput = {
     .array(authorObject)
     .optional()
     .describe("Matching authors (q-mode)."),
-  // id-mode flat profile
+  // id-mode flat profile (bibliometrics/rank nullable — see authorObject note)
   id: z.number().optional(),
   name: z.string().optional(),
-  h_index: z.number().optional(),
-  total_papers: z.number().optional(),
-  total_citations: z.number().optional(),
-  primary_field: z.string().optional(),
+  h_index: z.number().nullable().optional(),
+  total_papers: z.number().nullable().optional(),
+  total_citations: z.number().nullable().optional(),
+  primary_field: z.string().nullable().optional(),
   research_topics: z.array(z.string()).optional(),
-  rank: z.number().optional(),
+  rank: z.number().nullable().optional(),
   top_papers: z
     .array(paperObject)
     .optional()

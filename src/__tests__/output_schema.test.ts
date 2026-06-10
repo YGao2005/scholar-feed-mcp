@@ -189,6 +189,58 @@ const CASES: Array<{
     },
   },
   {
+    // Regression: after the 2026-06 OpenAlex identity rebuild, name search can
+    // surface unresolved/unscored namesakes whose bibliometrics + scores are
+    // explicit JSON null. zod .optional() rejects null, so this exact shape threw
+    // "Output validation error" until the author fields became .nullable().
+    label: "find_author q-mode with NULL bibliometrics/scores (unscored namesake)",
+    name: "find_author",
+    args: { q: "Friston", limit: 20 },
+    opts: {
+      json: {
+        query: "Friston",
+        search_type: "name",
+        authors: [
+          {
+            id: 1,
+            name: "K. Friston",
+            h_index: 261,
+            total_papers: 900,
+            primary_field: "q-bio.NC",
+            author_rank_score: 0.7,
+          },
+          {
+            id: 2,
+            name: "K. Friston",
+            h_index: null,
+            total_papers: null,
+            primary_field: null,
+            author_rank_score: null,
+            years_active: null,
+          },
+        ],
+        total: 2,
+      },
+    },
+  },
+  {
+    label: "find_author id-mode, unscored author (NULL bibliometrics/rank)",
+    name: "find_author",
+    args: { id: 99 },
+    opts: {
+      json: {
+        id: 99,
+        name: "Sparse Author",
+        h_index: null,
+        total_papers: null,
+        total_citations: null,
+        primary_field: null,
+        rank: null,
+        top_papers: [],
+      },
+    },
+  },
+  {
     label: "co_author_graph",
     name: "co_author_graph",
     args: { author_ids: [1], window_years: 10 },
