@@ -49,6 +49,8 @@ const EXPECTED_TOOLS = [
   "find_gaps",
   // v3.6 ask-my-library (read-only; free 1/mo, Pro 200/day; requires SF_API_KEY)
   "ask_library",
+  // DriftKB supersession check (read-only, anonymous-capable)
+  "check_drift",
 ];
 
 /** Active tool source files that must never use console.log (corrupts stdio). */
@@ -67,6 +69,7 @@ const ACTIVE_TOOL_FILES = [
   "watches",
   "gaps",
   "ask_library",
+  "check_drift",
 ];
 
 describe("package.json", () => {

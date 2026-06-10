@@ -6,7 +6,7 @@
  * goal is to prove the stateless transport is mounted and serves the full MCP
  * tool surface end to end:
  *   1. POST /mcp initialize -> a successful JSON-RPC result
- *   2. POST /mcp tools/list -> all 25 tools (this does NOT call the backend, so
+ *   2. POST /mcp tools/list -> all 26 tools (this does NOT call the backend, so
  *      no network is needed)
  *   3. GET /mcp -> 405 (stateless)
  *
@@ -129,7 +129,7 @@ describe("remote HTTP transport (Streamable HTTP, stateless)", () => {
     );
   });
 
-  it("lists all 25 tools over POST /mcp tools/list", async () => {
+  it("lists all 26 tools over POST /mcp tools/list", async () => {
     const { status, envelope } = await postMcp(baseUrl, {
       jsonrpc: "2.0",
       id: 2,
@@ -145,8 +145,8 @@ describe("remote HTTP transport (Streamable HTTP, stateless)", () => {
     );
     assert.strictEqual(
       result.tools.length,
-      25,
-      `expected 25 tools, got ${result.tools.length}: ${result.tools
+      26,
+      `expected 26 tools, got ${result.tools.length}: ${result.tools
         .map((t) => t.name)
         .join(", ")}`,
     );
