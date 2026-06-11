@@ -4,7 +4,7 @@
  * Directory submission (Anthropic Connectors / OpenAI) REQUIRES every tool to
  * carry a human-readable `title` plus `readOnlyHint`/`destructiveHint`
  * annotations. These tests register the real tools on the fake server and assert
- * that all 25 are present, each has a non-empty title, the hints match the
+ * that all 26 are present, each has a non-empty title, the hints match the
  * locked M2 table (spec §6 / DECISIONS), and every tool name is within the MCP
  * 64-char name budget.
  */
@@ -27,6 +27,7 @@ const READ_ONLY_TOOLS = [
   "get_foundational_lineage",
   "find_gaps",
   "ask_library",
+  "check_drift",
   "list_library",
   "list_collections",
   "list_watches",
@@ -70,9 +71,9 @@ function toolFor(name: string): CapturedTool {
 }
 
 describe("tool registry surface", () => {
-  it("registers exactly the 25 expected tools", () => {
-    assert.strictEqual(TOOLS.size, 25);
-    assert.strictEqual(ALL_TOOLS.length, 25);
+  it("registers exactly the 26 expected tools", () => {
+    assert.strictEqual(TOOLS.size, 26);
+    assert.strictEqual(ALL_TOOLS.length, 26);
     for (const name of ALL_TOOLS) {
       assert.ok(TOOLS.has(name), `expected tool "${name}" to be registered`);
     }
