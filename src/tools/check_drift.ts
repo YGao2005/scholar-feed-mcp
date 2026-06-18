@@ -47,6 +47,7 @@ const driftOutput = {
   sub_problems: z.array(z.unknown()).optional(),
   frontier: z.array(z.unknown()).optional(),
   suggestions: z.array(z.string()).optional(),
+  available_families: z.array(z.unknown()).optional(),
   stats: z.record(z.string(), z.unknown()).optional(),
   message: z.string().optional(),
   note: z.string().optional(),
@@ -60,14 +61,14 @@ export function register(server: McpServer): void {
       annotations: { readOnlyHint: true, destructiveHint: false },
       outputSchema: driftOutput,
       description:
-        "Answers 'for my problem, is the method I use superseded — and by what?' over a grounded, entity-resolved knowledge base of textual critique receipts + benchmark-dominance edges (~90% precision, no LLM call). Call with a `family` (e.g. 'kvcache') and a `method` (e.g. 'SnapKV') to get a verdict: how superseded it is, WHO critiques it (verbatim quotes + the citing paper), WHO beats it on benchmarks (winner, numbers, condition, source paper), and the not-yet-superseded alternatives in the same sub-problem. Omit `method` to get the whole-family map: most-superseded baselines, competition sub-problems, and the live frontier. Method names are matched case- and spacing-insensitively, with did-you-mean suggestions on a miss. Use this when choosing or reviewing a technique for a known problem area, or to check whether a baseline a paper relies on has been beaten. Does not require a Pro API key. (Currently covers the KV-cache compression family; more families are being added.)",
+        "Answers 'for my problem, is the method I use superseded — and by what?' over a grounded, entity-resolved knowledge base of textual critique receipts + benchmark-dominance edges (~90% precision, no LLM call). Call with a `family` (e.g. 'rag', 'peft', 'kvcache') and a `method` (e.g. 'SnapKV', 'LoRA') to get a verdict: how superseded it is, WHO critiques it (verbatim quotes + the citing paper), WHO beats it on benchmarks (winner, numbers, condition, source paper), and the not-yet-superseded alternatives in the same sub-problem. Omit `method` to get the whole-family map: most-superseded baselines, competition sub-problems, and the live frontier. Method names are matched case- and spacing-insensitively, with did-you-mean suggestions on a miss. Use this when choosing or reviewing a technique for a known problem area, or to check whether a baseline a paper relies on has been beaten. Does not require a Pro API key. Covers ~10 LLM builder-problem families — retrieval-augmented generation (rag), parameter-efficient fine-tuning (peft), mixture-of-experts (moe), reasoning/chain-of-thought (reasoning), KV-cache compression (kvcache), speculative decoding (specdec), quantization (quant), agent memory (agentmemory), long-context (longcontext), and tool use (tooluse) — and growing. Query with an unknown `family` (e.g. family='list') to get the live list of available families.",
       inputSchema: {
         family: z
           .string()
           .min(1)
           .max(60)
           .describe(
-            "Builder-problem family to query, e.g. 'kvcache' (KV-cache compression). Query with an unknown family to get the list of available families.",
+            "Builder-problem family to query, e.g. 'rag' (retrieval-augmented generation), 'peft' (parameter-efficient fine-tuning), 'kvcache' (KV-cache compression). Query with an unknown family (e.g. 'list') to get the live list of available families.",
           ),
         method: z
           .string()
