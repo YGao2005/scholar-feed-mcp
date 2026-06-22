@@ -83,7 +83,9 @@ export function register(server: McpServer): void {
           .min(3)
           .max(50)
           .default(12)
-          .describe("Max items per list — receipts, dominance edges, frontier (3–50, default 12)."),
+          .describe(
+            "Max items per list — receipts, dominance edges, frontier (3–50, default 12).",
+          ),
       },
     },
     async ({ family, method, limit }) => {
