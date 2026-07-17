@@ -118,9 +118,15 @@ const CASES: Array<{
   {
     label: "search_papers",
     name: "search_papers",
-    args: { q: "x", page: 1, limit: 20 },
+    args: { q: "x", page: 1, limit: 20, sort: "trending" },
     opts: {
-      json: { papers: [PAPER], total: 1, next_cursor: null, mode: "semantic" },
+      json: {
+        papers: [PAPER],
+        total: 1,
+        next_cursor: null,
+        mode: "semantic",
+        sort: "trending",
+      },
     },
   },
   {
@@ -193,7 +199,8 @@ const CASES: Array<{
     // surface unresolved/unscored namesakes whose bibliometrics + scores are
     // explicit JSON null. zod .optional() rejects null, so this exact shape threw
     // "Output validation error" until the author fields became .nullable().
-    label: "find_author q-mode with NULL bibliometrics/scores (unscored namesake)",
+    label:
+      "find_author q-mode with NULL bibliometrics/scores (unscored namesake)",
     name: "find_author",
     args: { q: "Friston", limit: 20 },
     opts: {

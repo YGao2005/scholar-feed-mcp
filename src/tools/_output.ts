@@ -105,6 +105,7 @@ export const papersOutput = {
   page: z.number().optional(),
   limit: z.number().optional(),
   mode: z.string().optional().describe("Search mode actually applied."),
+  sort: z.string().optional().describe("Search sort order actually applied."),
   direction: z
     .string()
     .optional()
