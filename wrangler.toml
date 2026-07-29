@@ -24,6 +24,16 @@ main = "src/worker.ts"
 compatibility_date = "2026-06-02"
 compatibility_flags = ["nodejs_compat"]
 
+# Keep the *.workers.dev URL alive. Declaring `routes` (below) otherwise disables
+# it by default, which removes the only way to exercise the Worker while the
+# custom domain's certificate provisions — it answers HTTP 000 until then. Also
+# stays useful afterwards to verify a deploy independently of DNS and cache.
+#
+# MUST live here, in the top-level section: TOML assigns a bare key to whatever
+# table header precedes it, so putting this after [vars] silently makes it an env
+# var (`env.workers_dev`) and after [[routes]] makes wrangler reject the config.
+workers_dev = true
+
 # Static, non-secret CONFIG vars the runtime modules read. worker.ts bridges
 # these from `env` into process.env at the top of fetch() (idempotent, race-free)
 # as a safety net; with nodejs_compat they should also appear on process.env
@@ -32,31 +42,41 @@ compatibility_flags = ["nodejs_compat"]
 # own from its Authorization header. A server-level key is a latent cross-tenant
 # leak (the stdio package is the ONLY surface that uses SF_API_KEY).
 #
-# [vars]
-# # Backend API base + per-request fetch timeout (ms). Defaults baked into
-# # client.ts (https://api.scholarfeed.org/api/v1, 30000) if unset.
-# SF_API_BASE_URL = "https://api.scholarfeed.org/api/v1"
-# SF_API_TIMEOUT_MS = "30000"
-#
-# # DNS-rebinding guards. SF_MCP_ALLOWED_HOSTS is REQUIRED for any non-loopback
-# # deploy (unset = loopback-only, which rejects every real request). Set it to
-# # the public host this Worker answers on. SF_MCP_ALLOWED_ORIGINS is the
-# # browser-Origin allowlist (comma-separated) for web hosts like claude.ai.
-# SF_MCP_ALLOWED_HOSTS = "mcp.scholarfeed.org"
-# SF_MCP_ALLOWED_ORIGINS = "https://claude.ai"
-#
-# # OAuth Resource Server (M4). Resource URI = the token `aud`; AUDIENCE overrides
-# # it for the verifier if they ever diverge. JWKS_URL / ISSUER point at the AS
-# # (Supabase: {SUPABASE_URL}/auth/v1 and .../auth/v1/.well-known/jwks.json).
-# # Set ENFORCE_ISSUER = "true" before opening OAuth to real tokens.
-# SF_MCP_RESOURCE_URI = "https://mcp.scholarfeed.org/mcp"
-# SF_MCP_AUDIENCE = "https://mcp.scholarfeed.org/mcp"
-# SF_OAUTH_ISSUER = "https://<project>.supabase.co/auth/v1"
-# SF_OAUTH_JWKS_URL = "https://<project>.supabase.co/auth/v1/.well-known/jwks.json"
-# SF_OAUTH_ENFORCE_ISSUER = "false"
-#
-# # Connector logo a host renders (defaults to the branded icon on GitHub raw).
-# SF_MCP_ICON_URL = "https://www.scholarfeed.org/icon.png"
+[vars]
+# Backend API base + per-request fetch timeout (ms). Defaults baked into
+# client.ts (https://api.scholarfeed.org/api/v1, 30000) if unset.
+SF_API_BASE_URL = "https://api.scholarfeed.org/api/v1"
+SF_API_TIMEOUT_MS = "30000"
+
+# DNS-rebinding guards. SF_MCP_ALLOWED_HOSTS is REQUIRED for any non-loopback
+# deploy (unset = loopback-only, which rejects every real request). Set it to
+# the public host this Worker answers on. SF_MCP_ALLOWED_ORIGINS is the
+# browser-Origin allowlist (comma-separated) for web hosts like claude.ai.
+# workers.dev is included so the deploy can be verified before/independently of
+# the custom domain.
+SF_MCP_ALLOWED_HOSTS = "mcp.scholarfeed.org,scholar-feed-mcp.yangg40.workers.dev"
+SF_MCP_ALLOWED_ORIGINS = "https://claude.ai"
+
+# OAuth Resource Server (M4). Resource URI = the token `aud`; AUDIENCE overrides
+# it for the verifier if they ever diverge. JWKS_URL / ISSUER point at the AS
+# (Supabase: {SUPABASE_URL}/auth/v1 and .../auth/v1/.well-known/jwks.json).
+# ENFORCE_ISSUER stays "false" until real OAuth tokens are cut over.
+SF_MCP_RESOURCE_URI = "https://mcp.scholarfeed.org/mcp"
+SF_MCP_AUDIENCE = "https://mcp.scholarfeed.org/mcp"
+SF_OAUTH_ISSUER = "https://axqpptygcrgyxftzaeka.supabase.co/auth/v1"
+SF_OAUTH_JWKS_URL = "https://axqpptygcrgyxftzaeka.supabase.co/auth/v1/.well-known/jwks.json"
+SF_OAUTH_ENFORCE_ISSUER = "false"
+
+# Connector logo a host renders (defaults to the branded icon on GitHub raw).
+SF_MCP_ICON_URL = "https://www.scholarfeed.org/icon.png"
+
+# Serve the public endpoint. custom_domain lets Cloudflare manage the DNS record
+# and certificate; mcp.scholarfeed.org was previously served by Vercel (via the
+# `*.scholarfeed.org` wildcard) and went NXDOMAIN when that wildcard was removed
+# during the 2026-07-29 cutover, so this route is what restores it.
+[[routes]]
+pattern = "mcp.scholarfeed.org"
+custom_domain = true
 
 # No Durable Objects, KV, R2, or D1: the server is fully stateless (a fresh
 # McpServer + transport per request; per-request creds live in AsyncLocalStorage
