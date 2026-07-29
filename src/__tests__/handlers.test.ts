@@ -217,6 +217,39 @@ describe("untrusted-content fencing", () => {
     assert.strictEqual(result.content[0].text, "@article{x}");
   });
 
+  // The default mode is the one step 5 of the deep-research loop uses, and it was
+  // broken on the wire: with `sections` omitted the tool sent NO sections param, so
+  // the documented default was never actually exercised as a request. Assert the
+  // outgoing query string, not just the parsed result — a green result-shape test
+  // could not catch this class of bug.
+  it("fetch_fulltext sends sections=results explicitly when the arg is omitted", async () => {
+    const { url } = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "1706.03762" },
+      {
+        json: {
+          arxiv_id: "1706.03762",
+          results_text: "28.4 BLEU",
+          source: "pdf",
+        },
+      },
+    );
+    assert.strictEqual(
+      url?.searchParams.get("sections"),
+      "results",
+      "default mode must be explicit on the wire, not left to a backend fallback",
+    );
+  });
+
+  it("fetch_fulltext forwards an explicit sections=all", async () => {
+    const { url } = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "1706.03762", sections: "all" },
+      { json: { arxiv_id: "1706.03762", full_text: "…", source: "pdf" } },
+    );
+    assert.strictEqual(url?.searchParams.get("sections"), "all");
+  });
+
   it("fetch_fulltext wraps the result body in the untrusted fence", async () => {
     const { result } = await invoke(
       "fetch_fulltext",
