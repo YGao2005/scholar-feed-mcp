@@ -29,7 +29,7 @@ export function register(server: McpServer): void {
           .min(1)
           .optional()
           .describe(
-            "Search query keywords. Optional when anchor_paper_id is set (anchor mode ignores q and returns papers similar to the anchor).",
+            "Search query keywords. REQUIRED unless anchor_paper_id or scope_to_citations_of is set (anchor mode ignores q and returns papers similar to the anchor). sort= alone is NOT a substitute: it reranks the matches for q, so a sort without q is an error, not a topic-free feed. For 'what's hot in AI right now', pass a broad q (e.g. 'machine learning') plus sort='trending'.",
           ),
         sort: z
           .enum([
