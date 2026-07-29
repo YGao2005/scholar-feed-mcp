@@ -193,7 +193,8 @@ const CASES: Array<{
     // surface unresolved/unscored namesakes whose bibliometrics + scores are
     // explicit JSON null. zod .optional() rejects null, so this exact shape threw
     // "Output validation error" until the author fields became .nullable().
-    label: "find_author q-mode with NULL bibliometrics/scores (unscored namesake)",
+    label:
+      "find_author q-mode with NULL bibliometrics/scores (unscored namesake)",
     name: "find_author",
     args: { q: "Friston", limit: 20 },
     opts: {
