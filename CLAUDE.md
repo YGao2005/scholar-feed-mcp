@@ -37,14 +37,24 @@ Tools live in `src/tools/` (one file per tool, registered in `src/tools/index.ts
 - **Keep the package self-contained: `dependencies` must stay `{}`.** tsup bundles everything
   (deps → devDeps) so cold-start `npx` is ~1 pkg / 0 transitive installs. Adding a runtime dep
   re-introduces the cold-start timeout that shipped as a silent "failed to connect".
-- **The remote HTTP deploy needs `vercel.json` to pin the Express entry.** Vercel zero-config once
-  auto-detected the **stdio** bin and 500'd the whole endpoint for two days. The pin routes to the
-  HTTP server; don't remove it.
+- **The remote endpoint is `src/worker.ts` (Cloudflare), not the Express server.** The historical
+  trap here was Vercel zero-config auto-detecting the **stdio** bin and 500'ing the endpoint for two
+  days, which `vercel.json` existed to prevent. Vercel is gone as of 2026-07-29, so `vercel.json` is
+  now dead config (kept, unused). `src/server.ts` / `src/server-http.ts` still back `npm run
+  dev:http` for local HTTP testing — don't delete them, but don't expect them to serve prod.
+  `SF_MCP_ALLOWED_HOSTS` is **required** for any non-loopback deploy: unset = loopback-only, which
+  rejects every real request. Never set `SF_API_KEY` on the remote surface (cross-tenant leak — each
+  request derives its own key from the Authorization header).
 
 ## Deploy
 
-- **Remote endpoint:** Vercel auto-deploys `main` → `mcp.scholarfeed.org`. `main` is the prod
-  branch; a `test` status check is required (docs-only changes need `gh pr merge --admin`).
+- **Remote endpoint: Cloudflare Workers** — `npm run worker:deploy` from this repo (deploys
+  `src/worker.ts` → `mcp.scholarfeed.org`). This is a **manual** deploy, NOT auto-on-push: pushing
+  `main` no longer ships the endpoint. Was Vercel until 2026-07-29, when the account was cancelled
+  (see `../scholar-feed` CLAUDE.md). `main` is still the prod branch and the `test` status check is
+  still required (docs-only changes need `gh pr merge --admin`).
+  Needs Node ≥22 for wrangler 4 — use `mise exec node@24 -- npm run worker:deploy` if your shell
+  default is older. `npm run worker:dryrun` bundles without auth to prove it compiles.
 - **npm:** tag-triggered (above). **MCP Registry:** `server.json` is auto-synced to the npm version
   by the release workflow (keep them from drifting).
 
