@@ -219,6 +219,28 @@ const CASES: Array<{
     },
   },
   {
+    // Query-less browse: the backend returns an EXPLICIT `total: null` (the
+    // best-effort count is skipped), not an omitted key. A non-nullable
+    // `total: z.number().optional()` therefore failed output validation on every
+    // browse call and surfaced as an opaque MCP -32602 rather than results. The
+    // fixture above uses total: 1, which is why a number-only schema passed CI
+    // while the live browse path was broken. Keep BOTH shapes covered.
+    label: "search_papers query-less browse (total: null)",
+    name: "search_papers",
+    args: { page: 1, limit: 20, sort: "trending" },
+    opts: {
+      json: {
+        papers: [PAPER],
+        total: null,
+        next_cursor: null,
+        mode: "keyword",
+        sort: "trending",
+        page: 1,
+        limit: 20,
+      },
+    },
+  },
+  {
     label: "get_paper json",
     name: "get_paper",
     args: { arxiv_ids: ["A"] },

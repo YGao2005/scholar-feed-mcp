@@ -127,10 +127,19 @@ const papersShape = {
     .array(paperObject)
     .optional()
     .describe("Matched / returned papers."),
+  // NULLABLE, not just optional: the backend returns an explicit `total: null`
+  // whenever the count is skipped rather than omitting the key — the query-less
+  // browse path (sort=trending/recent/impactful) and any search whose count query
+  // hits its 3s statement_timeout both do this. A non-nullable number therefore
+  // failed output validation on every browse call ("expected number, received
+  // null") and surfaced as an opaque MCP -32602 instead of results.
   total: z
     .number()
+    .nullable()
     .optional()
-    .describe("Total results available for the query."),
+    .describe(
+      "Total results available for the query. null when the count was skipped (query-less browse, or the count query timed out).",
+    ),
   page: z.number().optional(),
   limit: z.number().optional(),
   mode: z.string().optional().describe("Search mode actually applied."),
