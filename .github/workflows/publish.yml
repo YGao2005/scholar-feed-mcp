@@ -70,11 +70,17 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: 20
+          # Trusted publishing requires npm >= 11.5.1 and Node 20 ships npm 10, so
+          # this job needs a newer Node than the `verify` matrix (which tests the
+          # package's own >=18 support floor). Node 24 ships npm 11.13, clearing
+          # the floor without installing anything.
+          #
+          # Do NOT go back to `npm install -g npm@latest` on Node 20: that is a
+          # time bomb. It broke the 3.13.0 publish when npm@latest became npm 12,
+          # which requires Node >=22 and refused to install with EBADENGINE.
+          node-version: 24
           registry-url: "https://registry.npmjs.org"
           cache: npm
-      # Trusted publishing requires npm >= 11.5.1; Node 20 ships npm 10.
-      - run: npm install -g npm@latest
       # --ignore-scripts: no install script runs in the OIDC-privileged runner.
       # The build is invoked explicitly below (prepublishOnly is skipped because
       # the package is already built -- `npm publish --ignore-scripts` is implied
