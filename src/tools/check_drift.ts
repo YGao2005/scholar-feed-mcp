@@ -20,11 +20,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { client } from "../client.js";
 import { fencePaperContent } from "./_untrusted.js";
-import { asStructuredObject } from "./_output.js";
+import { asStructuredObject, looseObject } from "./_output.js";
 
-// Permissive output shape (all-optional, loose) covering both modes — unknown
-// keys are stripped, never rejected, so a backend addition can't hard-fail.
-const driftOutput = {
+// Permissive output shape (all-optional, loose) covering both modes. looseObject
+// keeps unknown keys out of the PUBLISHED schema's additionalProperties, so a
+// backend addition can't hard-fail a validating client (see _output.ts / #42).
+const driftOutput = looseObject({
   family: z.string().optional(),
   label: z.string().optional(),
   description: z.string().optional(),
@@ -51,7 +52,7 @@ const driftOutput = {
   stats: z.record(z.string(), z.unknown()).optional(),
   message: z.string().optional(),
   note: z.string().optional(),
-};
+});
 
 export function register(server: McpServer): void {
   server.registerTool(
