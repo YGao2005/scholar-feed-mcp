@@ -7,24 +7,51 @@
  * because the backend response shape is owned by a separate service and evolves
  * (lean vs verbose paper shapes, new extraction fields, paginated envelopes).
  *
- * Why permissive matters: the MCP SDK validates `structuredContent` against the
- * declared schema on every SUCCESSFUL call (server/mcp.js `validateToolOutput`)
- * and THROWS on a mismatch. Zod objects strip unknown keys instead of rejecting
- * them, so the only way to fail is a DECLARED field present with the wrong type.
- * Keeping every field optional + loosely typed means a benign backend addition
- * can never turn into a hard tool error. The original `structuredContent` is sent
- * on the wire unchanged (validation does not mutate it), so the stripping is a
- * gate, not a filter — extra fields still reach the client.
+ * Why permissive matters: the declared schema is validated on every SUCCESSFUL
+ * call, in TWO places that behave DIFFERENTLY on an unknown key:
+ *
+ *   - SERVER (mcp.js `validateToolOutput`) runs `safeParseAsync`, and a zod
+ *     object STRIPS unknown keys — so an extra key passes here.
+ *   - CLIENT (client/index.js `callTool`, and the Python SDK's
+ *     `_validate_tool_result`) validates against the PUBLISHED JSON SCHEMA with
+ *     a jsonschema validator. `z.object()` emits `additionalProperties: false`,
+ *     so an extra key is REJECTED there and the whole call fails.
+ *
+ * That asymmetry is why issue #42 shipped: the backend started echoing `sort`
+ * on every search response, the server-side strip hid it, and every strict
+ * client broke. A schema that merely lists today's keys is therefore not enough
+ * — the ENVELOPE ITSELF must accept unknown keys, because the backend response
+ * shape is owned by a separate service and adds fields without notice.
+ *
+ * So every exported shape below is wrapped in `looseObject()`, which emits
+ * `additionalProperties: {}`. Declared fields still carry types + descriptions
+ * (that is the machine-readable contract); undeclared ones ride along instead of
+ * turning a successful search into a client-side hard error. Keep every declared
+ * field optional + loosely typed for the same reason.
  *
  * The text `content` is unchanged, so clients that ignore `structuredContent`
  * see no difference; clients that read it get typed, machine-usable output.
  *
- * Shapes are exported as raw Zod shapes (plain objects of validators) — the same
- * form `inputSchema` uses, and the form `registerTool` expects for `outputSchema`
- * (mcp.js `getZodSchemaObject` → `objectFromShape`).
+ * `registerTool` accepts either a raw shape or a full Zod schema for
+ * `outputSchema` (mcp.js `getZodSchemaObject`), so passing the wrapped objects
+ * is a drop-in. Do NOT "simplify" these back to bare `{...}` shapes — that
+ * silently restores `additionalProperties: false` and re-opens #42. The
+ * output_schema contract test asserts this and will fail if you do.
  */
 
 import { z } from "zod";
+
+/**
+ * Wrap a raw shape so the emitted JSON Schema allows unknown top-level keys
+ * (`additionalProperties: {}`) instead of forbidding them. See the file header:
+ * a bare `z.object()` is what broke #42 for every validating client.
+ *
+ * Exported so a tool that declares its own output shape locally (check_drift)
+ * gets the same guarantee — pass every `outputSchema` through this.
+ */
+export function looseObject<T extends z.ZodRawShape>(shape: T) {
+  return z.object(shape).catchall(z.unknown());
+}
 
 /**
  * Coerce an arbitrary backend payload into a JSON object for `structuredContent`
@@ -90,10 +117,13 @@ const paperObject = z
 /**
  * Shared envelope for every tool that returns a `papers` array:
  * search_papers, get_citations, get_field_orientation, list_library,
- * check_watches. Unknown top-level keys (e.g. an endpoint's own wrapper) are
- * stripped, not rejected, so this fits all of them.
+ * check_watches. Unknown top-level keys (e.g. an endpoint's own wrapper) ride
+ * along rather than failing the call, so this fits all of them.
+ *
+ * Kept as a raw shape so `getPaperOutput` can spread it; the wrapped export is
+ * `papersOutput` below.
  */
-export const papersOutput = {
+const papersShape = {
   papers: z
     .array(paperObject)
     .optional()
@@ -128,18 +158,20 @@ export const papersOutput = {
   results: z.array(paperObject).optional(),
 };
 
+export const papersOutput = looseObject(papersShape);
+
 /** get_paper: the papers envelope, plus the bibtex / status keys for format='bibtex'. */
-export const getPaperOutput = {
-  ...papersOutput,
+export const getPaperOutput = looseObject({
+  ...papersShape,
   bibtex: z.string().optional().describe("BibTeX entry (format='bibtex')."),
   count: z.number().optional(),
   format: z.string().optional(),
   ok: z.boolean().optional(),
   message: z.string().optional(),
-};
+});
 
 /** fetch_fulltext: lean `results_text` mode and the full `sections` object mode. */
-export const fulltextOutput = {
+export const fulltextOutput = looseObject({
   source: z
     .string()
     .optional()
@@ -163,7 +195,7 @@ export const fulltextOutput = {
     .optional()
     .describe("Per-section text (sections='all')."),
   table_captions: z.array(z.string()).optional(),
-};
+});
 
 const lineagePaper = z
   .object({
@@ -180,7 +212,7 @@ const lineagePaper = z
   .catchall(z.unknown());
 
 /** get_foundational_lineage: the three citation-graph tiers (nested under `tiers`). */
-export const lineageOutput = {
+export const lineageOutput = looseObject({
   anchor: z.string().optional(),
   scope: z.string().optional(),
   niche_size: z.number().optional(),
@@ -198,7 +230,7 @@ export const lineageOutput = {
   field_level: z.array(lineagePaper).optional(),
   discipline: z.array(lineagePaper).optional(),
   note: z.string().nullable().optional(),
-};
+});
 
 const authorObject = z
   .object({
@@ -219,7 +251,7 @@ const authorObject = z
   .catchall(z.unknown());
 
 /** find_author: polymorphic — q-mode list envelope OR id-mode flat profile. */
-export const authorOutput = {
+export const authorOutput = looseObject({
   // q-mode envelope
   query: z.string().optional(),
   search_type: z.string().optional(),
@@ -241,10 +273,10 @@ export const authorOutput = {
     .array(paperObject)
     .optional()
     .describe("Top papers by rank (id-mode profile)."),
-};
+});
 
 /** co_author_graph: co-authorship edges. */
-export const coAuthorGraphOutput = {
+export const coAuthorGraphOutput = looseObject({
   queried_author_ids: z.array(z.number()).optional(),
   window_years: z.number().optional(),
   edge_count: z.number().optional(),
@@ -263,10 +295,10 @@ export const coAuthorGraphOutput = {
     .describe(
       "Co-authorship edges {from, to, papers_count, last_collab_year}.",
     ),
-};
+});
 
 /** embed_text: the embedding vector + model metadata. */
-export const embedOutput = {
+export const embedOutput = looseObject({
   embedding: z
     .array(z.number())
     .optional()
@@ -275,10 +307,10 @@ export const embedOutput = {
   task_type: z.string().optional(),
   dimensions: z.number().optional(),
   dims: z.number().optional(),
-};
+});
 
 /** preview_watch: dry-run summary of a structured filter. */
-export const previewWatchOutput = {
+export const previewWatchOutput = looseObject({
   window_days: z.number().optional(),
   needs_similarity: z.boolean().optional(),
   match_count: z.number().optional(),
@@ -288,10 +320,10 @@ export const previewWatchOutput = {
     .describe("A sample of matching papers."),
   ok: z.boolean().optional(),
   message: z.string().optional(),
-};
+});
 
 /** list_collections: the user's named collections. */
-export const collectionsListOutput = {
+export const collectionsListOutput = looseObject({
   collections: z
     .array(
       z
@@ -305,10 +337,10 @@ export const collectionsListOutput = {
     .optional(),
   ok: z.boolean().optional(),
   message: z.string().optional(),
-};
+});
 
 /** list_watches: the user's standing watches. */
-export const watchesListOutput = {
+export const watchesListOutput = looseObject({
   watches: z
     .array(
       z
@@ -325,10 +357,10 @@ export const watchesListOutput = {
     .optional(),
   ok: z.boolean().optional(),
   message: z.string().optional(),
-};
+});
 
 /** find_gaps: the two gap buckets. */
-export const gapsOutput = {
+export const gapsOutput = looseObject({
   foundational_gaps: z
     .array(paperObject)
     .optional()
@@ -339,10 +371,10 @@ export const gapsOutput = {
     .describe("Recent high-novelty work you haven't saved."),
   ok: z.boolean().optional(),
   message: z.string().optional(),
-};
+});
 
 /** ask_library: the synthesized answer + grounding. */
-export const askLibraryOutput = {
+export const askLibraryOutput = looseObject({
   answer: z
     .string()
     .optional()
@@ -351,10 +383,10 @@ export const askLibraryOutput = {
   papers: z.array(paperObject).optional(),
   ok: z.boolean().optional(),
   message: z.string().optional(),
-};
+});
 
 /** Shared shape for the status / mutation tools (save, like, watch/collection writes). */
-export const statusOutput = {
+export const statusOutput = looseObject({
   ok: z.boolean().optional().describe("True when the operation succeeded."),
   message: z
     .string()
@@ -375,4 +407,4 @@ export const statusOutput = {
     .unknown()
     .optional()
     .describe("The created/affected watch, when applicable."),
-};
+});
