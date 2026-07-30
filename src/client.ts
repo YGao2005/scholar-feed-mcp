@@ -93,34 +93,134 @@ function requestHeaders(extra: Record<string, string>): Record<string, string> {
 }
 
 /**
+ * RFC-9457 `code` values whose `detail` is deliberate, user-facing copy that a
+ * handler chose on purpose — the gate's own explanation of how to proceed.
+ *
+ * This is an ALLOWLIST, deliberately. A denylist of status-derived codes would be
+ * fail-OPEN: any code not yet listed would pass its `detail` through verbatim, and
+ * the backend is a separate repo, so nothing here enforces that coupling. That is a
+ * live hazard, not a hypothetical one — health.py raises 503 with
+ * detail={"error":"db_unavailable","message":str(e)}, which stringifies a raw
+ * connection error (host, port, DSN) and would leak the moment anyone promotes it
+ * to a named code, exactly as pro_required was promoted. Unknown codes must stay
+ * opaque and fall through to the status-based messages below.
+ */
+const ACTIONABLE_PROBLEM_CODES = new Set([
+  "pro_required",
+  "quota_exceeded",
+  "anon_daily_limit",
+]);
+
+/** The subset of the above that means "authenticated fine, but this needs Pro". */
+const PRO_GATE_CODES = new Set(["pro_required"]);
+
+/**
  * Surface a deliberate, user-facing error envelope from the backend.
  *
- * The API returns `{ error, message }` for intentional business-rule walls —
- * e.g. a quota/cap hit that carries an upgrade prompt ("Free tier includes 1
- * watch. Pro lets you track more — scholarfeed.org/upgrade"). We surface
- * `message` verbatim so the agent relays it to the user.
+ * Two shapes count as deliberate:
  *
- * Only when BOTH `error` (a machine code) and `message` (the human string) are
- * present: that pairing marks an intentional, safe-to-show envelope. Plain or
- * unstructured error bodies still fall through to the generic status-based
- * messages, so we never leak internal error detail to the model.
+ *  1. `{ error, message }` — a raw JSONResponse business-rule wall, e.g. a
+ *     quota/cap hit that carries an upgrade prompt ("Free tier includes 1
+ *     watch. Pro lets you track more — scholarfeed.org/upgrade").
+ *  2. `{ code, detail }` — the backend's RFC-9457 problem+json envelope, which
+ *     every `HTTPException` is re-rendered into: the raiser's `message` becomes
+ *     `detail`. Without this case those gates (embed_text's `pro_required`, and
+ *     any future coded gate) went opaque, because the shape-1 keys are gone by
+ *     the time the body reaches us.
+ *
+ * In both cases a machine code must accompany the human string — that pairing
+ * is what marks an intentional, safe-to-show envelope. For shape 2 the code must
+ * also be on the ACTIONABLE_PROBLEM_CODES allowlist. Plain or unstructured error
+ * bodies, and any code we do not recognise, fall through to the generic
+ * status-based messages, so we never leak internal error detail to the model.
  */
 function structuredBackendMessage(body: string): string | null {
   if (!body) return null;
   try {
     const parsed: unknown = JSON.parse(body);
+    if (parsed === null || typeof parsed !== "object") return null;
+    const rec = parsed as Record<string, unknown>;
+    if (typeof rec.error === "string" && typeof rec.message === "string") {
+      return rec.message;
+    }
     if (
-      parsed !== null &&
-      typeof parsed === "object" &&
-      typeof (parsed as Record<string, unknown>).error === "string" &&
-      typeof (parsed as Record<string, unknown>).message === "string"
+      typeof rec.code === "string" &&
+      typeof rec.detail === "string" &&
+      ACTIONABLE_PROBLEM_CODES.has(rec.code)
     ) {
-      return (parsed as { message: string }).message;
+      return rec.detail;
     }
   } catch {
     // Body isn't JSON — fall through to the status-based messages.
   }
   return null;
+}
+
+/**
+ * Does this 403 mean "no credentials were sent" rather than "not allowed"?
+ *
+ * FastAPI's `HTTPBearer(auto_error=True)` answers a MISSING Authorization
+ * header with 403 "Not authenticated" — not 401 — so an unconfigured client
+ * lands here, never in the 401 branch.
+ *
+ * Decided on the LOCAL FACT that we sent no key, not on the body text. Substring-
+ * matching the raw body was a false-positive machine: a legitimately-keyed caller
+ * hitting a 403 whose detail merely CONTAINS the phrase (e.g. "Repo owner is not
+ * authenticated with GitHub") would be told its key was missing, paired with "do
+ * not retry" — stranding a working client. The local fact is also strictly more
+ * reliable: it covers a bare bodyless 403 or an HTML proxy/WAF page, where there
+ * is no phrase to match at all.
+ */
+function isMissingCredentials(): boolean {
+  return getApiKey() === null;
+}
+
+/**
+ * Did the backend actually say "this needs Pro"?
+ *
+ * Only claim a Pro gate on the backend's own evidence — `code: "pro_required"` in
+ * the problem+json envelope, or `error: "pro_required"` in the raw-JSONResponse
+ * shape. Treating every keyed 403 as a Pro gate asserted "your key is valid" with
+ * no evidence and sent the caller to a pricing page, which is wrong (and costly)
+ * for a revoked key, an admin-only route, or a WAF block.
+ */
+function isProGate(body: string): boolean {
+  if (!body) return false;
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (parsed === null || typeof parsed !== "object") return false;
+    const rec = parsed as Record<string, unknown>;
+    return (
+      (typeof rec.code === "string" && PRO_GATE_CODES.has(rec.code)) ||
+      (typeof rec.error === "string" && PRO_GATE_CODES.has(rec.error))
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * How the caller of THIS process supplies a key — the remedy differs per
+ * transport, so a single "set SF_API_KEY" line would be wrong half the time.
+ * An active creds context means we are the remote (Streamable HTTP) endpoint,
+ * where each request carries its own key in the Authorization header and
+ * SF_API_KEY must never be set server-side (it would leak across tenants).
+ */
+function missingKeyRemedy(): string {
+  if (getCurrentCreds()) {
+    return (
+      "This request was sent without a Scholar Feed API key. Get one at " +
+      "https://www.scholarfeed.org/settings and send it as an `Authorization: Bearer sf_...` " +
+      "header to this MCP endpoint. Do NOT retry this call until the key is attached — " +
+      "it will keep failing."
+    );
+  }
+  return (
+    "No API key was sent, so this endpoint refused the request. Set SF_API_KEY " +
+    "to a key from https://www.scholarfeed.org/settings in your MCP server config " +
+    "(the `env` block), then restart the MCP server. Do NOT retry this call until " +
+    "the key is set — it will keep failing."
+  );
 }
 
 class ScholarFeedClient {
@@ -286,8 +386,9 @@ class ScholarFeedClient {
     const body = await response.text();
     console.error(`[client] API error ${response.status}:`, body.slice(0, 500));
 
-    // A deliberate { error, message } envelope (e.g. a quota/cap wall with an
-    // upgrade prompt) wins over the generic status-based copy below.
+    // A deliberate envelope ({ error, message } or a coded problem+json detail —
+    // e.g. a quota/cap wall with an upgrade prompt) wins over the generic
+    // status-based copy below.
     const structured = structuredBackendMessage(body);
     if (structured) throw new Error(structured);
 
@@ -298,8 +399,30 @@ class ScholarFeedClient {
             "Check your key at https://www.scholarfeed.org/settings",
         );
       case 403:
+        // Two very different 403s, and an agent must be able to tell them apart:
+        // no credentials sent at all (fix = set a key) vs a valid key that lacks
+        // Pro (fix = upgrade, or fall back to a free tool). The old single copy
+        // ("You may need a valid API key") named neither, and its "may" invited
+        // a retry that cannot succeed.
+        if (isMissingCredentials()) {
+          throw new Error(missingKeyRemedy());
+        }
+        if (isProGate(body)) {
+          throw new Error(
+            "This feature requires a Scholar Feed Pro plan. Start a free trial or " +
+              "upgrade at https://www.scholarfeed.org/pricing. In the meantime, " +
+              "search_papers / get_paper / get_citations / check_drift work without Pro.",
+          );
+        }
+        // A key WAS sent and the backend did not say "pro_required". We cannot tell
+        // why from here — a revoked key, an admin-only route, or a Cloudflare WAF
+        // block all land in this branch — so do not assert that the key is valid and
+        // do not send the caller to a pricing page for a problem money cannot fix.
         throw new Error(
-          "Access denied. You may need a valid API key for this endpoint.",
+          "Request forbidden (HTTP 403). A key was sent, so this is not a missing-key " +
+            "error: the key may be revoked, the endpoint may require a plan or role your " +
+            "account lacks, or an edge/WAF rule may have blocked the request. Check the " +
+            "key at https://www.scholarfeed.org/settings; retrying unchanged will not help.",
         );
       case 429:
         throw new Error(

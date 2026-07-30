@@ -6,6 +6,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { client } from "../client.js";
+import { runWithCreds } from "../http/credentials.js";
 import { stubFetch, headerOf, type CapturedRequest } from "./helpers.js";
 
 const ENV_KEYS = ["SF_API_KEY", "SF_API_BASE_URL", "SF_API_TIMEOUT_MS"];
@@ -136,6 +137,44 @@ describe("client error mapping", () => {
     });
   });
 
+  it("keeps the generic copy for status-derived 429 codes, but surfaces the anon-cap one", async () => {
+    // rate_limited / too_many_requests are derived from the status, so their detail
+    // adds nothing — keep the actionable generic copy. anon_daily_limit is a
+    // hand-authored detail that names the actual cap, so it should win.
+    await withStub(
+      {
+        status: 429,
+        body: JSON.stringify({
+          status: 429,
+          detail: "Rate limit exceeded: 30 per 1 minute",
+          code: "rate_limited",
+        }),
+      },
+      {},
+      async () => {
+        await assert.rejects(
+          client.get("/x"),
+          /Add an API key for higher limits/,
+        );
+      },
+    );
+    await withStub(
+      {
+        status: 429,
+        body: JSON.stringify({
+          status: 429,
+          detail:
+            "Anonymous daily limit (100) exceeded. Add an API key for higher limits — get one free at https://www.scholarfeed.org/settings",
+          code: "anon_daily_limit",
+        }),
+      },
+      {},
+      async () => {
+        await assert.rejects(client.get("/x"), /Anonymous daily limit \(100\)/);
+      },
+    );
+  });
+
   it("hides the response body on other errors (no internal leak)", async () => {
     await withStub(
       { status: 500, body: "SECRET_INTERNAL_TRACE" },
@@ -178,8 +217,183 @@ describe("client error mapping", () => {
       async () => {
         await assert.rejects(client.get("/x"), (err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
-          assert.match(msg, /Access denied/);
+          assert.match(msg, /SF_API_KEY/); // the generic status-based 403 copy
           assert.doesNotMatch(msg, /raw internal detail/);
+          return true;
+        });
+      },
+    );
+  });
+
+  it("surfaces the RFC-9457 { code, detail } envelope (HTTPException gates)", async () => {
+    // The backend re-renders every HTTPException as problem+json, so a gate's
+    // `message` arrives as `detail` under a deliberate `code` — e.g. embed_text's
+    // Pro gate. Without this the signal was dropped and the gate went opaque.
+    const body = JSON.stringify({
+      type: "about:blank",
+      title: "Forbidden",
+      status: 403,
+      detail:
+        "Text embeddings are a Pro feature. Start a free 14-day Pro trial or upgrade to keep using them.",
+      code: "pro_required",
+      upgrade_url: "/pricing",
+    });
+    await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
+      await assert.rejects(client.get("/public/embed"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.match(msg, /Text embeddings are a Pro feature/);
+        return true;
+      });
+    });
+  });
+
+  it("does not let a generic problem+json code displace the actionable copy", async () => {
+    // code='forbidden' is derived from the status alone and its detail is
+    // FastAPI's bare "Not authenticated" — surfacing that would bury the
+    // SF_API_KEY guidance the agent actually needs.
+    const body = JSON.stringify({
+      status: 403,
+      detail: "Not authenticated",
+      code: "forbidden",
+    });
+    await withStub({ status: 403, body }, {}, async () => {
+      await assert.rejects(client.get("/x"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.match(msg, /SF_API_KEY/);
+        return true;
+      });
+    });
+  });
+
+  it("tells a missing key (403 'Not authenticated') to set SF_API_KEY and not retry", async () => {
+    // HTTPBearer(auto_error=True) answers an ABSENT Authorization header with
+    // 403, not 401, so this — not the 401 branch — is the unconfigured path.
+    await withStub(
+      { status: 403, body: JSON.stringify({ detail: "Not authenticated" }) },
+      {},
+      async () => {
+        await assert.rejects(client.get("/library"), (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          assert.match(msg, /SF_API_KEY/);
+          assert.match(msg, /scholarfeed\.org\/settings/);
+          assert.match(msg, /restart/i);
+          assert.match(msg, /Do NOT retry/);
+          return true;
+        });
+      },
+    );
+  });
+
+  it("tells an anonymous REMOTE request to send an Authorization header, not to set SF_API_KEY", async () => {
+    // On the remote transport each request carries its own key and SF_API_KEY must
+    // never be set server-side (cross-tenant leak), so the stdio remedy is wrong there.
+    await withStub(
+      { status: 403, body: JSON.stringify({ detail: "Not authenticated" }) },
+      {},
+      async () => {
+        await runWithCreds({ apiKey: null, sessionId: "s1" }, async () => {
+          await assert.rejects(client.get("/library"), (err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            assert.match(msg, /Authorization: Bearer sf_/);
+            assert.match(msg, /Do NOT retry/);
+            assert.doesNotMatch(msg, /SF_API_KEY/);
+            return true;
+          });
+        });
+      },
+    );
+  });
+
+  it("claims a Pro gate only when the backend said pro_required", async () => {
+    await withStub(
+      {
+        status: 403,
+        body: JSON.stringify({ code: "pro_required", detail: "" }),
+      },
+      { SF_API_KEY: "sf_valid_key" },
+      async () => {
+        await assert.rejects(client.get("/public/embed"), (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          assert.match(msg, /requires a Scholar Feed Pro plan/);
+          assert.match(msg, /scholarfeed\.org\/pricing/);
+          // Names a concrete non-Pro fallback so the agent can keep working.
+          assert.match(msg, /search_papers/);
+          // Must NOT tell a correctly-configured caller to go set a key.
+          assert.doesNotMatch(msg, /No API key was sent/);
+          return true;
+        });
+      },
+    );
+  });
+
+  it("does not assert key validity or upsell on an unexplained keyed 403", async () => {
+    // A revoked key, an admin-only route, and a Cloudflare WAF block all land here.
+    // The old copy said "Your SF_API_KEY is valid" and linked pricing — a confident
+    // false claim plus a spend prompt for a problem money cannot fix.
+    for (const body of [
+      "",
+      "<html><body>Attention Required! | Cloudflare</body></html>",
+      JSON.stringify({ detail: "Admin access required", code: "forbidden" }),
+    ]) {
+      await withStub(
+        { status: 403, body },
+        { SF_API_KEY: "sf_revoked_or_blocked" },
+        async () => {
+          await assert.rejects(client.get("/public/embed"), (err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            assert.doesNotMatch(msg, /is valid/);
+            assert.doesNotMatch(msg, /pricing/);
+            assert.doesNotMatch(msg, /No API key was sent/);
+            assert.match(msg, /revoked|plan or role|WAF/);
+            return true;
+          });
+        },
+      );
+    }
+  });
+
+  it("does not mistake an unrelated 'not authenticated' detail for a missing key", async () => {
+    // Substring-matching the raw body stranded a working client: this 403 is about a
+    // third-party integration, not our credentials.
+    await withStub(
+      {
+        status: 403,
+        body: JSON.stringify({
+          detail: "Repo owner is not authenticated with GitHub",
+          code: "forbidden",
+        }),
+      },
+      { SF_API_KEY: "sf_valid_key" },
+      async () => {
+        await assert.rejects(client.get("/public/papers"), (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          assert.doesNotMatch(msg, /No API key was sent/);
+          assert.doesNotMatch(msg, /Set SF_API_KEY/);
+          return true;
+        });
+      },
+    );
+  });
+
+  it("keeps an unrecognised problem code opaque (allowlist, not denylist)", async () => {
+    // health.py raises 503 with detail={"error":"db_unavailable","message":str(e)},
+    // which stringifies host/port/DSN. A denylist of status-derived codes would pass
+    // any newly-named code straight through; the allowlist must fail closed.
+    await withStub(
+      {
+        status: 503,
+        body: JSON.stringify({
+          detail:
+            "psycopg2.OperationalError: could not connect to 10.0.3.14:5432 (pw=hunter2)",
+          code: "db_unavailable",
+        }),
+      },
+      {},
+      async () => {
+        await assert.rejects(client.get("/public/papers"), (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          assert.doesNotMatch(msg, /psycopg2|10\.0\.3\.14|hunter2/);
+          assert.match(msg, /HTTP 503/);
           return true;
         });
       },
