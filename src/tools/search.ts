@@ -29,7 +29,7 @@ export function register(server: McpServer): void {
           .min(1)
           .optional()
           .describe(
-            "Search query keywords. REQUIRED unless anchor_paper_id or scope_to_citations_of is set (anchor mode ignores q and returns papers similar to the anchor). sort= alone is NOT a substitute: it reranks the matches for q, so a sort without q is an error, not a topic-free feed. For 'what's hot in AI right now', pass a broad q (e.g. 'machine learning') plus sort='trending'.",
+            "Search query keywords. REQUIRED unless (a) anchor_paper_id or scope_to_citations_of is set (anchor mode ignores q and returns papers similar to the anchor), or (b) sort is one of 'trending' / 'recent' / 'impactful' — the query-less 'browse the frontier' feed, which is capped to the FIRST 200 RESULTS (paging past offset 200 is a 422; narrow with q= or filters instead). Any other q-less call is a 422, INCLUDING a q-less call with only filters (category/days/...) and a q-less sort='community'. Filters alone do NOT substitute for q — pair them with a browse sort (e.g. category='cs.AI' + sort='recent') or pass q. For 'what's hot in AI right now', either sort='trending' alone or a broad q plus sort='trending' works.",
           ),
         sort: z
           .enum([
@@ -244,6 +244,42 @@ export function register(server: McpServer): void {
       exclude_ids,
     }) => {
       try {
+        // Fail fast on the q-less shapes the backend 422s, with a message that says
+        // what to do instead. 275 such 422s in 14d of prod MCP traffic (40 distinct
+        // clients) — the model spends a round-trip to learn a rule we already know.
+        // Mirrors public.py's _BROWSE_SORTS / _BROWSE_MAX_OFFSET; keep in sync.
+        const BROWSE_SORTS = ["trending", "recent", "impactful"];
+        const browseMode =
+          !q && sort !== undefined && BROWSE_SORTS.includes(sort);
+        if (!q && anchor_paper_id === undefined && !browseMode) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text:
+                  `Error: q is required here. Pass q=<keywords>, or for a topic-free feed use ` +
+                  `sort=one of ${BROWSE_SORTS.join("/")} (capped to the first 200 results). ` +
+                  `Note: filters alone (category/days/...) and sort='community' do NOT allow a ` +
+                  `q-less call — combine them with q or a browse sort.`,
+              },
+            ],
+            isError: true,
+          };
+        }
+        if (browseMode && (page - 1) * limit > 200) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text:
+                  `Error: query-less browse is capped at the first 200 results ` +
+                  `(page ${page} x limit ${limit} exceeds it). Pass q= or narrow with filters to page deeper.`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
         const params: Record<string, string> = {};
         if (q !== undefined) params.q = q;
         if (sort !== undefined) params.sort = sort;

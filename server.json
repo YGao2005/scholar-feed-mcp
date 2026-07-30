@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.YGao2005/scholar-feed-mcp",
   "title": "Scholar Feed",
-  "description": "600,000+ CS/AI/ML papers in your AI assistant: search, novelty scores, citations, daily watches.",
+  "description": "Search 600k+ CS/AI/ML papers with ranking and citation tracking over 22M+ citation edges.",
   "version": "3.9.1",
   "websiteUrl": "https://www.scholarfeed.org",
   "repository": {
