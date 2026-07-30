@@ -13,9 +13,11 @@
 [![License: MIT](https://img.shields.io/npm/l/scholar-feed-mcp.svg)](./LICENSE)
 [![smithery badge](https://smithery.ai/badge/yangg40/scholar-feed)](https://smithery.ai/servers/yangg40/scholar-feed)
 
-Search 600,000+ CS/AI/ML research papers with LLM-generated novelty analysis, without leaving Claude Code, Cursor, or any MCP client. Built for researchers running a literature review where they already work: search, trace citations, pull full text, and export BibTeX in the same session.
+Research paper search with ranking and citation tracking, for LLM engineering and academic research, without leaving Claude Code, Cursor, or any MCP client.
 
-[Scholar Feed](https://www.scholarfeed.org) indexes arXiv papers daily and ranks them using a multi-signal scoring system (recency, citation velocity, institutional reputation, code availability). Each paper has an LLM-generated summary and novelty score.
+Most paper tools hand back a flat list. Scholar Feed ranks it: sort by relevance, by proven citation count, or by rising impact, then trace any paper's citation lineage forward and backward across 22M+ edges. 600k+ CS/AI/ML papers, updated daily, each with an LLM-generated summary and novelty score.
+
+[Scholar Feed](https://www.scholarfeed.org) indexes arXiv papers daily and ranks them on recency, citation velocity, institutional reputation, and code availability.
 
 ## Quick Start
 

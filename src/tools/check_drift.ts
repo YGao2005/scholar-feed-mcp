@@ -68,8 +68,9 @@ export function register(server: McpServer): void {
           .string()
           .min(1)
           .max(60)
+          .optional()
           .describe(
-            "Builder-problem family to query, e.g. 'rag' (retrieval-augmented generation), 'peft' (parameter-efficient fine-tuning), 'kvcache' (KV-cache compression). Query with an unknown family (e.g. 'list') to get the live list of available families.",
+            "Builder-problem family to query, e.g. 'rag' (retrieval-augmented generation), 'peft' (parameter-efficient fine-tuning), 'kvcache' (KV-cache compression). Omit it (or pass an unknown family like 'list') to get the live list of available families to pick from — start here if you don't know the family for a method.",
           ),
         method: z
           .string()
@@ -91,8 +92,12 @@ export function register(server: McpServer): void {
     },
     async ({ family, method, limit }) => {
       try {
+        // family is optional: when omitted, send the "list" sentinel the backend
+        // already answers with the available-families list (a graceful 200, same as
+        // an unknown family) instead of a 422. An agent that knows a method but not
+        // its family can call with method alone and get the picker, not an error.
         const params: Record<string, string> = {
-          family,
+          family: family && family.trim() ? family.trim() : "list",
           limit: String(limit),
         };
         if (method && method.trim()) {

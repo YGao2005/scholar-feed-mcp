@@ -133,6 +133,83 @@ describe("search_papers handler", () => {
   it("no longer exposes has_results in its schema", () => {
     assert.ok(!("has_results" in schemaFor("search_papers")));
   });
+
+  // The backend 422s these shapes (public.py _BROWSE_SORTS / _BROWSE_MAX_OFFSET).
+  // Guard them client-side so the model gets an actionable message, not a round-trip.
+  it("q-less browse sorts are allowed through (trending/recent/impactful)", async () => {
+    for (const sort of ["trending", "recent", "impactful"]) {
+      const { url, result } = await invoke("search_papers", {
+        sort,
+        page: 1,
+        limit: 20,
+      });
+      assert.ok(url, `${sort} should reach the backend`);
+      assert.notStrictEqual(result.isError, true);
+      assert.strictEqual(url.searchParams.get("sort"), sort);
+    }
+  });
+
+  it("q-less with no sort errors locally without calling the backend", async () => {
+    const { calls, result } = await invoke("search_papers", {
+      page: 1,
+      limit: 20,
+    });
+    assert.strictEqual(result.isError, true);
+    assert.strictEqual(calls.length, 0, "must not round-trip a known-422");
+    assert.match(String(result.content[0].text), /q is required/);
+  });
+
+  it("q-less sort=community errors locally (not a browse sort)", async () => {
+    const { calls, result } = await invoke("search_papers", {
+      sort: "community",
+      page: 1,
+      limit: 20,
+    });
+    assert.strictEqual(result.isError, true);
+    assert.strictEqual(calls.length, 0);
+  });
+
+  it("q-less with filters only errors locally (filters don't substitute for q)", async () => {
+    const { calls, result } = await invoke("search_papers", {
+      category: "cs.AI",
+      days: 7,
+      page: 1,
+      limit: 20,
+    });
+    assert.strictEqual(result.isError, true);
+    assert.strictEqual(calls.length, 0);
+  });
+
+  it("q-less browse past offset 200 errors locally", async () => {
+    const { calls, result } = await invoke("search_papers", {
+      sort: "trending",
+      page: 12,
+      limit: 20,
+    });
+    assert.strictEqual(result.isError, true);
+    assert.strictEqual(calls.length, 0);
+    assert.match(String(result.content[0].text), /200 results/);
+  });
+
+  it("q-less browse AT the offset-200 boundary is allowed", async () => {
+    const { url, result } = await invoke("search_papers", {
+      sort: "trending",
+      page: 11,
+      limit: 20,
+    });
+    assert.ok(url, "offset exactly 200 must still reach the backend");
+    assert.notStrictEqual(result.isError, true);
+  });
+
+  it("anchor mode still works without q", async () => {
+    const { url, result } = await invoke("search_papers", {
+      anchor_paper_id: "2407.15831",
+      page: 1,
+      limit: 20,
+    });
+    assert.ok(url);
+    assert.notStrictEqual(result.isError, true);
+  });
 });
 
 describe("get_paper handler", () => {

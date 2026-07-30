@@ -1,0 +1,13 @@
+# Node for THIS package only (mise applies it on cd into this directory).
+#
+# Why 24 when the published package supports >=18: `wrangler` — the Cloudflare
+# Workers CLI used by `npm run worker:dev|dryrun|deploy` — refuses to start on
+# anything below Node 22. The machine default is node 20, so a worker deploy
+# failed with "Wrangler requires at least Node.js v22.0.0" until this pin.
+#
+# This does NOT change what the npm package supports. package.json `engines` stays
+# ">=18.0.0" and CI still tests the 18/20/22 matrix (.github/workflows/ci.yml) —
+# the stdio build is what npm ships, and it targets node18 via tsup. This pin only
+# governs the local toolchain in this directory.
+[tools]
+node = "24"
