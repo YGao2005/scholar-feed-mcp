@@ -103,7 +103,7 @@ describe("package.json", () => {
 });
 
 describe("tool registry", () => {
-  it("registers exactly the 25 tools", () => {
+  it("registers exactly the 26 tools", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     assert.deepStrictEqual(

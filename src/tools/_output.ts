@@ -75,7 +75,6 @@ const paperObject = z
     llm_significance: z.string().nullable().optional(),
     llm_novelty_score: z.number().nullable().optional(),
     impact_pct: z.number().nullable().optional(),
-    impact_tier: z.string().nullable().optional(),
     similarity: z.number().optional(),
     rank_score: z.number().optional(),
     arxiv_url: z.string().optional(),

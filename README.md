@@ -152,7 +152,7 @@ mcpServers:
 
 Scholar Feed is a standard stdio MCP server, so any other MCP-compatible client works with the standard block too.
 
-## Available Tools (25)
+## Available Tools (26)
 
 ### Core Search & Discovery
 
@@ -182,6 +182,7 @@ Scholar Feed is a standard stdio MCP server, so any other MCP-compatible client 
 |------|-------------|----------------|
 | `get_field_orientation` | Cheap retrieval orientation for a research area: top papers, subfields, open problems. No Pro quota. | `topic`, `limit` |
 | `get_foundational_lineage` | Foundational work for a *paper's niche* via the citation graph (consensus-then-lift): niche_roots → field_level → discipline, with `cited_by_in_niche` evidence. Surfaces canonical anchors semantic search misses. No Pro quota. | `anchor_paper_id`, `scope`, `generality_ceiling`, `limit` |
+| `check_drift` | "Is the method I use superseded — and by what?" Critique receipts + benchmark-dominance edges over ~10 LLM builder-problem families. No Pro quota. | `family`, `method`, `limit` |
 
 ### Library, Collections, Watches & Gap Analysis (require `SF_API_KEY`)
 

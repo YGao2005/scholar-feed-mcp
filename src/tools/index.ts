@@ -44,9 +44,10 @@ import { register as registerCheckDrift } from "./check_drift.js";
 /**
  * Register all Scholar Feed MCP tools on the provided server instance.
  *
- * v3.7 surface (25 tools):
+ * v3.7 surface (26 tools):
  *   9 read/search tools (anonymous-capable, except embed_text which is Pro) +
- *   find_gaps (read-only gap analysis, Pro) + ask_library (cited synthesis over
+ *   check_drift (DriftKB supersession check, anonymous-capable) + find_gaps
+ *   (read-only gap analysis, Pro) + ask_library (cited synthesis over
  *   your saved set) + 14 library/collection/watch tools that operate on the
  *   authenticated user's account and require an SF_API_KEY:
  *     library (4):     save_paper, unsave_paper, like_paper, list_library
