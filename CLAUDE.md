@@ -3,8 +3,12 @@
 The official MCP server for Scholar Feed (600k+ CS/AI/ML papers). Published to npm as
 `scholar-feed-mcp` and hosted remotely at `https://mcp.scholarfeed.org/mcp`.
 
-> Deep dev/release detail lives in `CONTRIBUTING.md` and `docs/` — this file is the load-bearing
-> guardrails. When they conflict, fix the drift.
+> Deep dev/release detail lives in `CONTRIBUTING.md` and `.local-docs/` — this file is the
+> load-bearing guardrails. When they conflict, fix the drift.
+>
+> **This repo is PUBLIC.** Internal specs, handoffs, runbooks, and launch/distribution material
+> go in `.local-docs/` (gitignored), never in a tracked path. Only user-facing docs — `README.md`,
+> `CONTRIBUTING.md` — are published.
 
 ## What this repo is (and isn't)
 
@@ -90,5 +94,6 @@ npm run format                    # prettier — fixes the format:check CI gate
 ## Pointers
 
 - `CONTRIBUTING.md` — full dev loop, project structure, adding tools, releasing.
-- `docs/` — handoffs, deploy runbooks, AEO/distribution playbooks.
+- `.local-docs/` — handoffs, deploy runbooks, AEO/distribution playbooks. Gitignored: this repo
+  is public, so these stay local. Do not move them back into a tracked path.
 - Backend + frontend + planning all live in `../scholar-feed` (see its `CLAUDE.md`).

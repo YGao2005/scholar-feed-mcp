@@ -16,3 +16,9 @@ coverage/
 !.env.*.example
 *.mcpb
 .vercel
+
+# Internal working docs (specs, handoffs, runbooks, launch/distribution material).
+# This repo is PUBLIC — anything here is untracked so planning notes, pricing
+# thinking, and operator runbooks stay local. Nothing in the shipped package or CI
+# reads from here; user-facing docs belong in README.md / CONTRIBUTING.md instead.
+.local-docs/
