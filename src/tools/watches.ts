@@ -11,7 +11,7 @@
  *   scope_to_citations_of | author_id | category
  * plus a novelty_min floor (default 0.5). The seed is passed THROUGH to the backend;
  * the backend resolves collection_name → collection_id and replays the query in its
- * daily eval job (see docs/watches-backend-spec.md §3).
+ * daily eval job (see .local-docs/watches-backend-spec.md §3).
  *
  * Idempotency:
  *   create_watch — get-or-create by name (backend returns the existing watch on a
@@ -20,7 +20,7 @@
  *     watermark (only digest delivery does), so it is safe to call repeatedly.
  *   delete_watch — idempotent; deleting a missing watch is a no-op.
  *
- * v2 (docs/watch-v2-structured-spec.md): a watch can instead be a STRUCTURED filter
+ * v2 (.local-docs/watch-v2-structured-spec.md): a watch can instead be a STRUCTURED filter
  * (seed.kind="filter", seed.criteria={collections|authors|categories|text|has_code|
  * min_novelty|similar}, AND-composed) — the composable, agent-tunable form. preview_watch
  * dry-runs a criteria spec; update_watch retargets a watch in place.
@@ -118,7 +118,7 @@ function buildSeed(args: {
  * v2 structured filter — the composable, agent-tunable watch definition. Passed
  * THROUGH to the backend, which validates it (api/watch_filter.py) and returns a
  * clean {error, message} on anything invalid. A paper must satisfy ALL provided
- * groups (AND). See docs/watch-v2-structured-spec.md.
+ * groups (AND). See .local-docs/watch-v2-structured-spec.md.
  */
 const filterCriteria = z
   .object({

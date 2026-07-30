@@ -197,7 +197,7 @@ export class ScholarFeedTokenVerifier implements OAuthTokenVerifier {
             "unset) while verifying against a live JWKS. Token-to-resource binding " +
             "then rests only on the JWKS signature + audience. Before opening OAuth " +
             "to real tokens set SF_OAUTH_ENFORCE_ISSUER=true and SF_OAUTH_ISSUER " +
-            "(see docs/plans/2026-06-04-remote-mcp-DECISIONS.md).",
+            "(see .local-docs/plans/2026-06-04-remote-mcp-DECISIONS.md).",
         );
       }
     }
