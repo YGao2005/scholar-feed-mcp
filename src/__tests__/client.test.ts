@@ -247,6 +247,82 @@ describe("client error mapping", () => {
     });
   });
 
+  it("relays watch_limit, a wall the backend emits but the client ignored", async () => {
+    // api/routers/watches.py raises 403 code="watch_limit" with user-facing copy.
+    // It was absent from ACTIONABLE_PROBLEM_CODES, so create_watch's wall fell
+    // through to the generic status message and the agent lost the next step.
+    const body = JSON.stringify({
+      status: 403,
+      detail: "Free accounts can keep 1 watch. Upgrade to track up to 50.",
+      code: "watch_limit",
+      upgrade_url: "/pricing",
+    });
+    await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
+      await assert.rejects(client.get("/watches"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.match(msg, /Free accounts can keep 1 watch/);
+        return true;
+      });
+    });
+  });
+
+  it("appends the backend's upgrade_url as an ABSOLUTE link", async () => {
+    // The backend sends relative CTAs ("/pricing") from five sites. A bare path is
+    // useless to a model with no origin, and it was being dropped entirely.
+    const body = JSON.stringify({
+      status: 403,
+      detail: "Daily limit reached.",
+      code: "quota_exceeded",
+      upgrade_url: "/pricing",
+    });
+    await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
+      await assert.rejects(client.get("/x"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.match(msg, /https:\/\/www\.scholarfeed\.org\/pricing/);
+        return true;
+      });
+    });
+  });
+
+  it("does not double-append when the copy already carries a link", async () => {
+    const body = JSON.stringify({
+      status: 403,
+      detail: "Upgrade at https://www.scholarfeed.org/pricing to continue.",
+      code: "quota_exceeded",
+      upgrade_url: "/pricing",
+    });
+    await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
+      await assert.rejects(client.get("/x"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.strictEqual(
+          (msg.match(/scholarfeed\.org\/pricing/g) ?? []).length,
+          1,
+          "CTA must appear exactly once",
+        );
+        return true;
+      });
+    });
+  });
+
+  it("does NOT admit an unlisted *_limit code (the allowlist stays fail-closed)", async () => {
+    // A suffix rule (code.endsWith("_limit")) would auto-admit future codes,
+    // including one whose detail carries internals — e.g. health.py's 503 stringifies
+    // a raw connection error. New codes must be added explicitly, not matched.
+    const body = JSON.stringify({
+      status: 503,
+      detail:
+        "connection to host db.internal:5432 failed: password authentication",
+      code: "db_connection_limit",
+    });
+    await withStub({ status: 503, body }, { SF_API_KEY: "sf_ok" }, async () => {
+      await assert.rejects(client.get("/x"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.doesNotMatch(msg, /db\.internal|password/);
+        return true;
+      });
+    });
+  });
+
   it("does not let a generic problem+json code displace the actionable copy", async () => {
     // code='forbidden' is derived from the status alone and its detail is
     // FastAPI's bare "Not authenticated" — surfacing that would bury the
