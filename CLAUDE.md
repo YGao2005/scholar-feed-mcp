@@ -39,8 +39,11 @@ Tools live in `src/tools/` (one file per tool, registered in `src/tools/index.ts
   re-introduces the cold-start timeout that shipped as a silent "failed to connect".
 - **The remote endpoint is `src/worker.ts` (Cloudflare), not the Express server.** The historical
   trap here was Vercel zero-config auto-detecting the **stdio** bin and 500'ing the endpoint for two
-  days, which `vercel.json` existed to prevent. Vercel is gone as of 2026-07-29, so `vercel.json` is
-  now dead config (kept, unused). `src/server.ts` / `src/server-http.ts` still back `npm run
+  days, which `vercel.json` existed to prevent. Vercel is fully gone as of 2026-07-30: the account
+  was cancelled, `vercel.json` is deleted, and the GitHub integration is uninstalled (it had been
+  red-failing every PR with "deployment blocked"). If a `Vercel` check ever reappears on a PR, the
+  app got reinstalled — uninstall it rather than re-adding config. `src/server.ts` /
+  `src/server-http.ts` still back `npm run
   dev:http` for local HTTP testing — don't delete them, but don't expect them to serve prod.
   `SF_MCP_ALLOWED_HOSTS` is **required** for any non-loopback deploy: unset = loopback-only, which
   rejects every real request. Never set `SF_API_KEY` on the remote surface (cross-tenant leak — each
