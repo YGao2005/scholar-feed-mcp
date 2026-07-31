@@ -278,7 +278,14 @@ describe("client error mapping", () => {
     await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
       await assert.rejects(client.get("/x"), (err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        assert.match(msg, /https:\/\/www\.scholarfeed\.org\/pricing/);
+        // Plain substring check, not a regex: this asserts the CTA is PRESENT in an
+        // error string, and an unanchored host pattern trips CodeQL's
+        // js/regex/missing-regexp-anchor (a fair rule — it would be wrong for URL
+        // validation, and includes() says what we actually mean here).
+        assert.ok(
+          msg.includes("https://www.scholarfeed.org/pricing"),
+          `expected the absolute CTA in: ${msg}`,
+        );
         return true;
       });
     });
@@ -294,10 +301,12 @@ describe("client error mapping", () => {
     await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
       await assert.rejects(client.get("/x"), (err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
+        // Count occurrences by splitting on the literal rather than a global regex
+        // (same CodeQL anchor rule as above; this is substring counting, not matching).
         assert.strictEqual(
-          (msg.match(/scholarfeed\.org\/pricing/g) ?? []).length,
+          msg.split("scholarfeed.org/pricing").length - 1,
           1,
-          "CTA must appear exactly once",
+          `CTA must appear exactly once, got: ${msg}`,
         );
         return true;
       });
