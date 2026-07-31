@@ -105,11 +105,28 @@ function requestHeaders(extra: Record<string, string>): Record<string, string> {
  * to a named code, exactly as pro_required was promoted. Unknown codes must stay
  * opaque and fall through to the status-based messages below.
  */
+/**
+ * The ONLY origin a backend-supplied CTA link may resolve to. Compared with exact
+ * origin equality (not a substring test) in withUpgradeUrl below, so a lookalike host
+ * like evil-scholarfeed.org or scholarfeed.org.attacker.test cannot slip through.
+ */
+const SITE_ORIGIN = "https://www.scholarfeed.org";
+
 const ACTIONABLE_PROBLEM_CODES = new Set([
   "pro_required",
   "quota_exceeded",
   "anon_daily_limit",
+  // watches.py raises 403 code="watch_limit" with user-facing copy ("Free accounts
+  // can keep N watches..."). It was missing here, so create_watch's wall fell through
+  // to the generic status copy and the agent lost the one message that says how to
+  // proceed. Verified present in the backend: api/routers/watches.py.
+  "watch_limit",
 ]);
+
+// NOTE: deliberately NOT a suffix rule (`code.endsWith("_limit")` etc.). A pattern
+// match is fail-OPEN for exactly the reason the allowlist exists — it would auto-admit
+// any future *_limit/*_exceeded code, including one whose detail carries internals.
+// New codes get added here explicitly, after checking what the backend puts in detail.
 
 /** The subset of the above that means "authenticated fine, but this needs Pro". */
 const PRO_GATE_CODES = new Set(["pro_required"]);
@@ -141,19 +158,56 @@ function structuredBackendMessage(body: string): string | null {
     if (parsed === null || typeof parsed !== "object") return null;
     const rec = parsed as Record<string, unknown>;
     if (typeof rec.error === "string" && typeof rec.message === "string") {
-      return rec.message;
+      return withUpgradeUrl(rec.message, rec.upgrade_url);
     }
     if (
       typeof rec.code === "string" &&
       typeof rec.detail === "string" &&
       ACTIONABLE_PROBLEM_CODES.has(rec.code)
     ) {
-      return rec.detail;
+      return withUpgradeUrl(rec.detail, rec.upgrade_url);
     }
   } catch {
     // Body isn't JSON — fall through to the status-based messages.
   }
   return null;
+}
+
+/**
+ * Append the backend's own CTA link to a wall message, as an absolute URL.
+ *
+ * Five backend sites send `upgrade_url` alongside the wall (public.py, auth.py,
+ * alerts.py, billing.py, following.py) and it was being dropped on the floor, so the
+ * agent got the explanation without the one thing it can act on. Most are RELATIVE
+ * ("/pricing"), which is useless to a model with no origin — hence the absolute-ising.
+ *
+ * Only ever called on a body that already qualified as a deliberate wall above, so
+ * this cannot promote an internal error envelope into user-facing copy.
+ */
+function withUpgradeUrl(human: string, raw: unknown): string {
+  if (typeof raw !== "string" || raw.length === 0) return human;
+
+  // Resolve against our own origin and then require that origin EXACTLY. The value
+  // arrives in an HTTP response body and ends up in text the model relays to a user
+  // as the next step to click, so an arbitrary absolute URL here is a phishing
+  // vector — the same reason paper content gets fenced in this codebase. A substring
+  // test (`/scholarfeed\.org/`) is not sufficient: evil-scholarfeed.org and
+  // scholarfeed.org.attacker.test both contain it. new URL() + origin equality is
+  // exact, and resolution makes the common relative case ("/pricing") absolute,
+  // which a model with no origin cannot otherwise use.
+  let url: string;
+  try {
+    const parsed = new URL(raw, SITE_ORIGIN);
+    if (parsed.origin !== SITE_ORIGIN) return human;
+    url = parsed.toString();
+  } catch {
+    return human; // unparseable — drop the CTA rather than emit garbage
+  }
+
+  // Skip when the copy already carries this link; several backend strings embed
+  // their own, and a duplicate CTA reads as a formatting bug to the model.
+  if (human.includes(url)) return human;
+  return `${human} (${url})`;
 }
 
 /**

@@ -247,6 +247,131 @@ describe("client error mapping", () => {
     });
   });
 
+  it("relays watch_limit, a wall the backend emits but the client ignored", async () => {
+    // api/routers/watches.py raises 403 code="watch_limit" with user-facing copy.
+    // It was absent from ACTIONABLE_PROBLEM_CODES, so create_watch's wall fell
+    // through to the generic status message and the agent lost the next step.
+    const body = JSON.stringify({
+      status: 403,
+      detail: "Free accounts can keep 1 watch. Upgrade to track up to 50.",
+      code: "watch_limit",
+      upgrade_url: "/pricing",
+    });
+    await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
+      await assert.rejects(client.get("/watches"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.match(msg, /Free accounts can keep 1 watch/);
+        return true;
+      });
+    });
+  });
+
+  it("appends the backend's upgrade_url as an ABSOLUTE link", async () => {
+    // The backend sends relative CTAs ("/pricing") from five sites. A bare path is
+    // useless to a model with no origin, and it was being dropped entirely.
+    const body = JSON.stringify({
+      status: 403,
+      detail: "Daily limit reached.",
+      code: "quota_exceeded",
+      upgrade_url: "/pricing",
+    });
+    await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
+      await assert.rejects(client.get("/x"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        // Assert the exact suffix rather than "contains a URL": CodeQL flags both an
+        // unanchored host regex and a bare includes() on a URL (js/regex/missing-
+        // regexp-anchor, js/incomplete-url-substring-sanitization) because neither
+        // proves WHICH host matched. The message ends with " (<cta>)", so an endsWith
+        // on the full parenthesised form is both stricter and alert-free.
+        assert.ok(
+          msg.endsWith("(https://www.scholarfeed.org/pricing)"),
+          `expected the absolute CTA at the end of: ${msg}`,
+        );
+        return true;
+      });
+    });
+  });
+
+  it("refuses an off-origin upgrade_url (phishing vector)", async () => {
+    // upgrade_url arrives in an HTTP response body and lands in text the model relays
+    // to a user as the thing to click, so an arbitrary absolute URL would be a
+    // phishing vector — the same threat model that makes this codebase fence paper
+    // content. Lookalike hosts must be rejected too: a substring check for
+    // "scholarfeed.org" passes evil-scholarfeed.org and scholarfeed.org.attacker.test,
+    // which is why withUpgradeUrl compares origins exactly.
+    for (const evil of [
+      "https://evil.test/pricing",
+      "https://evil-scholarfeed.org/pricing",
+      "https://www.scholarfeed.org.attacker.test/pricing",
+      "http://www.scholarfeed.org/pricing", // wrong scheme -> different origin
+      "javascript:alert(1)",
+    ]) {
+      const body = JSON.stringify({
+        status: 403,
+        detail: "Daily limit reached.",
+        code: "quota_exceeded",
+        upgrade_url: evil,
+      });
+      await withStub(
+        { status: 403, body },
+        { SF_API_KEY: "sf_ok" },
+        async () => {
+          await assert.rejects(client.get("/x"), (err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            assert.ok(
+              !msg.includes(evil),
+              `off-origin CTA must be dropped, but message carried it: ${msg}`,
+            );
+            // The wall's own copy still reaches the agent; only the link is dropped.
+            assert.ok(msg.includes("Daily limit reached."));
+            return true;
+          });
+        },
+      );
+    }
+  });
+
+  it("does not double-append when the copy already carries a link", async () => {
+    const body = JSON.stringify({
+      status: 403,
+      detail: "Upgrade at https://www.scholarfeed.org/pricing to continue.",
+      code: "quota_exceeded",
+      upgrade_url: "/pricing",
+    });
+    await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
+      await assert.rejects(client.get("/x"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        // Count occurrences by splitting on the literal rather than a global regex
+        // (same CodeQL anchor rule as above; this is substring counting, not matching).
+        assert.strictEqual(
+          msg.split("scholarfeed.org/pricing").length - 1,
+          1,
+          `CTA must appear exactly once, got: ${msg}`,
+        );
+        return true;
+      });
+    });
+  });
+
+  it("does NOT admit an unlisted *_limit code (the allowlist stays fail-closed)", async () => {
+    // A suffix rule (code.endsWith("_limit")) would auto-admit future codes,
+    // including one whose detail carries internals — e.g. health.py's 503 stringifies
+    // a raw connection error. New codes must be added explicitly, not matched.
+    const body = JSON.stringify({
+      status: 503,
+      detail:
+        "connection to host db.internal:5432 failed: password authentication",
+      code: "db_connection_limit",
+    });
+    await withStub({ status: 503, body }, { SF_API_KEY: "sf_ok" }, async () => {
+      await assert.rejects(client.get("/x"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.doesNotMatch(msg, /db\.internal|password/);
+        return true;
+      });
+    });
+  });
+
   it("does not let a generic problem+json code displace the actionable copy", async () => {
     // code='forbidden' is derived from the status alone and its detail is
     // FastAPI's bare "Not authenticated" — surfacing that would bury the
