@@ -278,17 +278,57 @@ describe("client error mapping", () => {
     await withStub({ status: 403, body }, { SF_API_KEY: "sf_ok" }, async () => {
       await assert.rejects(client.get("/x"), (err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        // Plain substring check, not a regex: this asserts the CTA is PRESENT in an
-        // error string, and an unanchored host pattern trips CodeQL's
-        // js/regex/missing-regexp-anchor (a fair rule — it would be wrong for URL
-        // validation, and includes() says what we actually mean here).
+        // Assert the exact suffix rather than "contains a URL": CodeQL flags both an
+        // unanchored host regex and a bare includes() on a URL (js/regex/missing-
+        // regexp-anchor, js/incomplete-url-substring-sanitization) because neither
+        // proves WHICH host matched. The message ends with " (<cta>)", so an endsWith
+        // on the full parenthesised form is both stricter and alert-free.
         assert.ok(
-          msg.includes("https://www.scholarfeed.org/pricing"),
-          `expected the absolute CTA in: ${msg}`,
+          msg.endsWith("(https://www.scholarfeed.org/pricing)"),
+          `expected the absolute CTA at the end of: ${msg}`,
         );
         return true;
       });
     });
+  });
+
+  it("refuses an off-origin upgrade_url (phishing vector)", async () => {
+    // upgrade_url arrives in an HTTP response body and lands in text the model relays
+    // to a user as the thing to click, so an arbitrary absolute URL would be a
+    // phishing vector — the same threat model that makes this codebase fence paper
+    // content. Lookalike hosts must be rejected too: a substring check for
+    // "scholarfeed.org" passes evil-scholarfeed.org and scholarfeed.org.attacker.test,
+    // which is why withUpgradeUrl compares origins exactly.
+    for (const evil of [
+      "https://evil.test/pricing",
+      "https://evil-scholarfeed.org/pricing",
+      "https://www.scholarfeed.org.attacker.test/pricing",
+      "http://www.scholarfeed.org/pricing", // wrong scheme -> different origin
+      "javascript:alert(1)",
+    ]) {
+      const body = JSON.stringify({
+        status: 403,
+        detail: "Daily limit reached.",
+        code: "quota_exceeded",
+        upgrade_url: evil,
+      });
+      await withStub(
+        { status: 403, body },
+        { SF_API_KEY: "sf_ok" },
+        async () => {
+          await assert.rejects(client.get("/x"), (err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            assert.ok(
+              !msg.includes(evil),
+              `off-origin CTA must be dropped, but message carried it: ${msg}`,
+            );
+            // The wall's own copy still reaches the agent; only the link is dropped.
+            assert.ok(msg.includes("Daily limit reached."));
+            return true;
+          });
+        },
+      );
+    }
   });
 
   it("does not double-append when the copy already carries a link", async () => {

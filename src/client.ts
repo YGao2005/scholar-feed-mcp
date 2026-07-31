@@ -105,6 +105,13 @@ function requestHeaders(extra: Record<string, string>): Record<string, string> {
  * to a named code, exactly as pro_required was promoted. Unknown codes must stay
  * opaque and fall through to the status-based messages below.
  */
+/**
+ * The ONLY origin a backend-supplied CTA link may resolve to. Compared with exact
+ * origin equality (not a substring test) in withUpgradeUrl below, so a lookalike host
+ * like evil-scholarfeed.org or scholarfeed.org.attacker.test cannot slip through.
+ */
+const SITE_ORIGIN = "https://www.scholarfeed.org";
+
 const ACTIONABLE_PROBLEM_CODES = new Set([
   "pro_required",
   "quota_exceeded",
@@ -179,12 +186,27 @@ function structuredBackendMessage(body: string): string | null {
  */
 function withUpgradeUrl(human: string, raw: unknown): string {
   if (typeof raw !== "string" || raw.length === 0) return human;
-  const url = /^https?:\/\//i.test(raw)
-    ? raw
-    : `https://www.scholarfeed.org${raw.startsWith("/") ? "" : "/"}${raw}`;
-  // Skip when the copy already points somewhere — several backend strings embed
-  // their own link, and a duplicate CTA reads as a formatting bug to the model.
-  if (human.includes(url) || /scholarfeed\.org/i.test(human)) return human;
+
+  // Resolve against our own origin and then require that origin EXACTLY. The value
+  // arrives in an HTTP response body and ends up in text the model relays to a user
+  // as the next step to click, so an arbitrary absolute URL here is a phishing
+  // vector — the same reason paper content gets fenced in this codebase. A substring
+  // test (`/scholarfeed\.org/`) is not sufficient: evil-scholarfeed.org and
+  // scholarfeed.org.attacker.test both contain it. new URL() + origin equality is
+  // exact, and resolution makes the common relative case ("/pricing") absolute,
+  // which a model with no origin cannot otherwise use.
+  let url: string;
+  try {
+    const parsed = new URL(raw, SITE_ORIGIN);
+    if (parsed.origin !== SITE_ORIGIN) return human;
+    url = parsed.toString();
+  } catch {
+    return human; // unparseable — drop the CTA rather than emit garbage
+  }
+
+  // Skip when the copy already carries this link; several backend strings embed
+  // their own, and a duplicate CTA reads as a formatting bug to the model.
+  if (human.includes(url)) return human;
   return `${human} (${url})`;
 }
 
