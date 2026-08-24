@@ -86,6 +86,13 @@ const version: string =
 const CONFIG_ENV_KEYS = [
   "SF_API_BASE_URL",
   "SF_API_TIMEOUT_MS",
+  // The shared secret that lets the backend TRUST our X-Real-Client-IP header
+  // (it compares against PROXY_SECRET before honoring the IP, else it falls back
+  // to X-Forwarded-For). This is a secret, yet unlike SF_API_KEY it is CORRECT at
+  // process level: it identifies THIS SERVER to the backend, and is identical for
+  // every tenant. SF_API_KEY is per-tenant, which is why bridging it would be a
+  // cross-tenant leak. Do not use this distinction to justify adding any other key.
+  "SF_PROXY_SECRET",
   "SF_MCP_ALLOWED_HOSTS",
   "SF_MCP_ALLOWED_ORIGINS",
   "SF_MCP_RESOURCE_URI",
@@ -233,8 +240,17 @@ async function handleMcpPost(
     // Bind the per-request creds for the whole handleRequest -> tool -> client
     // chain via AsyncLocalStorage, then let the transport drive the Response.
     // handleRequest reads the body off the Request itself (no parsedBody passed).
-    response = await runWithCreds(resolution.creds, () =>
-      transport.handleRequest(request),
+    // Forward the END CALLER's IP so the backend keys anonymous rate limits and
+    // analytics per caller. CF-Connecting-IP is set by Cloudflare at the edge and
+    // cannot be spoofed by the client, so it is safe to trust here; the backend
+    // additionally requires a matching X-Proxy-Secret before honoring it, and
+    // client.ts sends neither header unless BOTH are present.
+    response = await runWithCreds(
+      {
+        ...resolution.creds,
+        clientIp: request.headers.get("CF-Connecting-IP"),
+      },
+      () => transport.handleRequest(request),
     );
   } catch (err) {
     console.error("[worker] error handling POST /mcp:", err);

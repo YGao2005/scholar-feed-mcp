@@ -30,10 +30,19 @@ import { AsyncLocalStorage } from "node:async_hooks";
  * - `sessionId`: an opaque per-request id stamped as `X-SF-Session` so the
  *   backend can stitch one request's fan-out together. Generated fresh per
  *   request by the HTTP entry point (unlike the stdio path's per-process id).
+ * - `clientIp`: the END CALLER's IP, forwarded so the backend can key rate
+ *   limits and anonymous analytics per caller instead of per Worker egress.
+ *   Without it EVERY anonymous remote caller collapses into one bucket keyed to
+ *   our egress IP, which both shares one rate limit across all tenants and makes
+ *   `usage_events.client_hash` a count of egress IPs rather than of clients.
+ *   Optional: absent on the stdio path (which reaches the backend directly, so
+ *   Heroku's X-Forwarded-For already carries the real IP) and absent whenever no
+ *   proxy secret is configured.
  */
 export interface RequestCreds {
   apiKey: string | null;
   sessionId: string;
+  clientIp?: string | null;
 }
 
 /**
