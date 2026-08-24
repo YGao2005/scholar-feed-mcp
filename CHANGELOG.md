@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.11.0] - 2026-06-11
+
+### Added
+
+- `check_drift`: "is the method I use superseded, and by what?" Returns critique receipts and
+  benchmark-dominance edges over ~10 LLM builder-problem families. Read-only, anonymous-capable,
+  and outside the Pro quota.
+
+Surface is now **26 tools** (was 25 at 3.7.0): adds `check_drift`. This is the only tool-surface
+change between 3.8.0 and 3.13.2.
+
 ## [3.8.0] - 2026-06-04
 
 ### Changed (install reliability — fixes silent cold-start failures)
