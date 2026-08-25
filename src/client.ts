@@ -80,14 +80,34 @@ function getSessionId(): string {
 }
 
 /**
- * Headers shared by every request: auth (when keyed), the session id, then the
- * caller's Accept/Content-Type. Centralizing them keeps the per-verb methods
- * from each re-implementing the common set.
+ * Forward the end caller's IP to the backend, but ONLY as a matched pair with the
+ * shared proxy secret. The backend trusts X-Real-Client-IP only when
+ * X-Proxy-Secret matches, so sending the IP alone is inert; we omit both rather
+ * than emit a header that reads as meaningful and is silently ignored.
+ *
+ * Empty on the stdio path: there is no ALS context there, and a stdio client
+ * reaches the backend directly so Heroku's X-Forwarded-For already carries its
+ * real IP. Empty whenever SF_PROXY_SECRET is unconfigured, which keeps this a
+ * no-op until the secret is deployed.
+ */
+function proxyHeaders(): Record<string, string> {
+  const clientIp = getCurrentCreds()?.clientIp;
+  const secret = process.env.SF_PROXY_SECRET;
+  if (!clientIp || !secret) return {};
+  return { "X-Real-Client-IP": clientIp, "X-Proxy-Secret": secret };
+}
+
+/**
+ * Headers shared by every request: auth (when keyed), the session id, the
+ * forwarded client IP when configured, then the caller's Accept/Content-Type.
+ * Centralizing them keeps the per-verb methods from each re-implementing the
+ * common set. `extra` is spread LAST so a caller can still override.
  */
 function requestHeaders(extra: Record<string, string>): Record<string, string> {
   return {
     ...authHeaders(),
     "X-SF-Session": getSessionId(),
+    ...proxyHeaders(),
     ...extra,
   };
 }

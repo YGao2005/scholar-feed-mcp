@@ -26,7 +26,7 @@ startCommand:
     |-
     (config) => ({
       command: 'npx',
-      args: ['-y', 'scholar-feed-mcp'],
+      args: ['-y', 'scholar-feed-mcp@latest'],
       env: config && config.SF_API_KEY ? { SF_API_KEY: config.SF_API_KEY } : {}
     })
   exampleConfig:
