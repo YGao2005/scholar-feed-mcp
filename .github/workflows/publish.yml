@@ -120,10 +120,42 @@ jobs:
           ./mcp-publisher --version
       - name: Authenticate to MCP Registry (GitHub OIDC)
         run: ./mcp-publisher login github-oidc
+      - name: Wait for the npm version to be readable
+        # The registry validates package ownership by FETCHING the version from npm, and
+        # npm's publish is asynchronous — `npm publish` prints "Your package is being
+        # processed and may take a few minutes to become available" and returns success
+        # long before a GET succeeds.
+        #
+        # MEASURED on the 3.14.0 release (2026-08-26): npm publish succeeded at 09:01,
+        # and GET /scholar-feed-mcp/3.14.0 returned 404 until ~09:22 — 21 MINUTES. The
+        # old retry budget here was 4 x 20s = 82s, so the registry job failed while the
+        # npm release itself was perfectly fine. That is a confusing failure: a red
+        # workflow on a release that shipped.
+        #
+        # Poll the version endpoint directly (not the packument, which is CDN-cached)
+        # before attempting to publish, so a slow npm shows up as waiting rather than as
+        # four identical validation errors.
+        run: |
+          VERSION="$(jq -r .version package.json)"
+          for i in $(seq 1 60); do    # 60 x 30s = 30 min
+            CODE="$(curl -s -o /dev/null -w '%{http_code}' \
+              -H 'Cache-Control: no-cache' \
+              "https://registry.npmjs.org/scholar-feed-mcp/${VERSION}")"
+            if [ "$CODE" = "200" ]; then
+              echo "npm has ${VERSION} (after $(( (i - 1) * 30 ))s)."
+              exit 0
+            fi
+            echo "npm does not serve ${VERSION} yet (HTTP ${CODE}); waiting 30s (${i}/60)..."
+            sleep 30
+          done
+          echo "::error::npm never served ${VERSION} within 30 minutes."
+          echo "The npm publish itself may still have SUCCEEDED — check the publish job."
+          echo "If so, do NOT re-tag ${VERSION} (npm refuses to republish a version);"
+          echo "re-run this workflow via workflow_dispatch once npm serves it."
+          exit 1
       - name: Publish server.json to MCP Registry
-        # On a tag release the freshly published npm version can take a few
-        # seconds to propagate before the registry's package-ownership check
-        # sees it; retry briefly so a propagation lag is not a hard failure.
+        # Retries kept as a thin backstop for a transient registry-side error. The npm
+        # propagation race — which is what actually bit us — is handled by the wait above.
         run: |
           for attempt in 1 2 3 4; do
             if ./mcp-publisher publish; then
