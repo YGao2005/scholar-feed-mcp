@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.14.0] - 2026-08-25
+
+### Added
+
+- **The remote endpoint now forwards the calling client's IP to the backend**, as
+  `X-Real-Client-IP` paired with `X-Proxy-Secret` (emitted only when both are available, so
+  an unconfigured deployment sends neither header rather than an unauthenticated claim).
+  Previously every anonymous caller of `mcp.scholarfeed.org` was keyed to the Worker's own
+  egress IP, which shared one anonymous rate limit across all tenants and made per-client
+  usage counts a count of egress IPs. **stdio users are unaffected** — that path reaches the
+  backend directly, so the real IP was already visible.
+
+### Changed
+
+- **`create_watch` now relays the backend's watch-limit wall and its upgrade link.**
+  `watch_limit` was missing from the actionable-problem allowlist, so hitting the free-tier
+  watch cap produced a generic status message and dropped the one string that says how to
+  proceed. The backend's `upgrade_url` was also read by nothing; it is now surfaced, and
+  made absolute (the backend sends relative paths like `/pricing`, which are useless to an
+  agent without an origin). Copy that already carries a link is left alone.
+- Install snippets pin `scholar-feed-mcp@latest` in the three places that still lacked it
+  (`.mcp.json`, the Claude Code plugin manifest, `smithery.yaml`), matching the README.
+- Registry/discovery copy leads with what the server is actually for — ranking, impact
+  forecasting, and citation-graph traversal — instead of restating "search papers".
+- **Tool count corrected to 26** in the README, CHANGELOG, tool barrel, and marketplace
+  metadata, which variously claimed 22, 24, and 25. The surface itself did not change.
+
+### Internal
+
+- Internal planning and spec documents moved out of this public repository.
+- CI: `codeql-action` v4.37.3, `actions/checkout` v7.0.1, `actions/setup-node` v7.0.0.
+
 ## [3.11.0] - 2026-06-11
 
 ### Added
