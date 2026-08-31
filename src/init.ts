@@ -13,6 +13,7 @@
  *     CLI, LM Studio) — handled by mergeMcpServersConfig.
  *   - VS Code uses a `servers` key with an explicit `type: "stdio"`.
  *   - Zed uses a `context_servers` key with a required `source: "custom"`.
+ *   - Codex is TOML, not JSON — appended as a `[mcp_servers.scholar-feed]` table.
  *   - Continue (YAML), JetBrains (UI), and Cline/Roo (UI) can't be safely
  *     written for the user, so we print the snippet to paste instead.
  *
@@ -26,11 +27,23 @@ import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir, platform } from "os";
 
-const rl = createInterface({ input: process.stdin, output: process.stderr });
+/**
+ * The readline interface, created on first use rather than at module scope.
+ *
+ * Attaching to process.stdin eagerly resumes the stream and keeps the event loop
+ * alive, which hangs any test that merely imports this module to exercise a
+ * config writer. Lazy creation keeps `init.ts` importable.
+ */
+let rl: ReturnType<typeof createInterface> | undefined;
+
+function prompt(): ReturnType<typeof createInterface> {
+  rl ??= createInterface({ input: process.stdin, output: process.stderr });
+  return rl;
+}
 
 function ask(question: string): Promise<string> {
   return new Promise((resolve) => {
-    rl.question(question, (answer) => resolve(answer.trim()));
+    prompt().question(question, (answer) => resolve(answer.trim()));
   });
 }
 
@@ -155,6 +168,62 @@ function standardJsonSnippet(hasKey: boolean): string {
 }`;
 }
 
+/**
+ * Codex's `[mcp_servers.<name>]` TOML table. `env` is an inline table, which is
+ * what Codex's own docs use.
+ */
+function codexTomlBlock(apiKey: string): string {
+  const envLine = apiKey ? `\nenv = { SF_API_KEY = "${apiKey}" }` : "";
+  return `[mcp_servers.scholar-feed]
+command = "npx"
+args = ["-y", "scholar-feed-mcp@latest"]${envLine}`;
+}
+
+/**
+ * Add the Codex server table to `~/.codex/config.toml`, appending rather than
+ * rewriting.
+ *
+ * We APPEND instead of parse-merge on purpose: bundling a TOML parser would break
+ * the `dependencies: {}` rule (CLAUDE.md), and hand-rolling one to rewrite a
+ * user's whole editor config is a far worse failure mode than a duplicate table.
+ * Opening a new `[table]` header always closes the previous one, so appending is
+ * valid TOML for any well-formed input.
+ *
+ * Idempotency matters here because Codex REJECTS a duplicate key outright: a
+ * second `[mcp_servers.scholar-feed]` is a parse error that would take down the
+ * user's other servers too. So if the table is already present we touch nothing
+ * and say so.
+ *
+ * @returns 'written' | 'already-present'
+ */
+export function appendCodexConfig(
+  filePath: string,
+  apiKey: string,
+): "written" | "already-present" {
+  let existing = "";
+  try {
+    existing = readFileSync(filePath, "utf-8");
+  } catch {
+    // Missing — we create it below.
+  }
+
+  // Match the table header allowing TOML's permitted whitespace and the quoted
+  // key form (`["scholar-feed"]`), so we do not double-write a config the user
+  // (or a previous run) already has.
+  if (/^\s*\[\s*mcp_servers\s*\.\s*"?scholar-feed"?\s*\]/m.test(existing)) {
+    return "already-present";
+  }
+
+  const dir = dirname(filePath);
+  if (dir) mkdirSync(dir, { recursive: true });
+  const separator = existing === "" || existing.endsWith("\n") ? "" : "\n";
+  writeFileSync(
+    filePath,
+    `${existing}${separator}\n${codexTomlBlock(apiKey)}\n`,
+  );
+  return "written";
+}
+
 function continueYamlSnippet(hasKey: boolean): string {
   const envBlock = hasKey ? `\n    env:\n      SF_API_KEY: <your-key>` : "";
   return `mcpServers:
@@ -181,7 +250,7 @@ export async function runInit(): Promise<void> {
     console.error(
       "  Error: API key must start with 'sf_'. Get one at https://www.scholarfeed.org/settings",
     );
-    rl.close();
+    prompt().close();
     process.exit(1);
   }
 
@@ -196,11 +265,12 @@ export async function runInit(): Promise<void> {
   console.error("   6) Zed");
   console.error("   7) Gemini CLI");
   console.error("   8) LM Studio");
+  console.error("   9) OpenAI Codex");
   console.error("  Print snippet to paste:");
-  console.error("   9) Continue");
-  console.error("  10) JetBrains / PyCharm");
-  console.error("  11) Cline / Roo Code");
-  const choice = await ask("  Choice (1-11): ");
+  console.error("  10) Continue");
+  console.error("  11) JetBrains / PyCharm");
+  console.error("  12) Cline / Roo Code");
+  const choice = await ask("  Choice (1-12): ");
 
   // Step 3: Configure
   printStep(3, 3, "Configuring...");
@@ -334,6 +404,33 @@ export async function runInit(): Promise<void> {
       break;
     }
     case "9": {
+      // OpenAI Codex — ~/.codex/config.toml, shared by the Codex CLI and the IDE
+      // extension. TOML, not JSON: pasting any of the other snippets here fails.
+      const filePath = join(homedir(), ".codex", "config.toml");
+      const outcome = appendCodexConfig(filePath, apiKey);
+      if (outcome === "already-present") {
+        console.error(
+          `  ${filePath} already has a [mcp_servers.scholar-feed] table — left unchanged.`,
+        );
+        console.error(
+          "  Edit it by hand if you need to update the key (a duplicate table would",
+        );
+        console.error("  make Codex reject the whole file).");
+      } else {
+        console.error(`  Appended to ${filePath}`);
+        console.error("  Restart Codex, then ask it to search for papers.");
+      }
+      if (platform() === "win32") {
+        console.error(
+          '  On Windows, if Codex cannot launch the server, change command to "cmd"',
+        );
+        console.error(
+          '  and args to ["/c", "npx", "-y", "scholar-feed-mcp@latest"].',
+        );
+      }
+      break;
+    }
+    case "10": {
       // Continue — YAML config; print rather than risk corrupting the file.
       console.error(
         "  Add this to ~/.continue/config.yaml (global) or .continue/config.yaml (workspace):\n",
@@ -344,7 +441,7 @@ export async function runInit(): Promise<void> {
       }
       break;
     }
-    case "10": {
+    case "11": {
       // JetBrains AI Assistant — configured through the IDE UI.
       console.error(
         "  In your JetBrains IDE: Settings -> Tools -> AI Assistant ->",
@@ -358,7 +455,7 @@ export async function runInit(): Promise<void> {
       }
       break;
     }
-    case "11": {
+    case "12": {
       // Cline / Roo Code — configured through the extension UI.
       console.error(
         "  In Cline or Roo Code: click the MCP Servers icon -> Configure / Edit,",
@@ -374,7 +471,7 @@ export async function runInit(): Promise<void> {
       console.error(
         "  Invalid choice. Run 'npx scholar-feed-mcp@latest init' again.",
       );
-      rl.close();
+      prompt().close();
       process.exit(1);
     }
   }
@@ -383,7 +480,7 @@ export async function runInit(): Promise<void> {
   console.error("\n  Verifying connection...");
   await verifyKey(apiKey);
 
-  rl.close();
+  prompt().close();
   console.error(
     '\nDone! Try asking: "Search for papers on test-time compute scaling"',
   );

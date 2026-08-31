@@ -168,6 +168,58 @@ describe("remote HTTP transport (Streamable HTTP, stateless)", () => {
     const res = await fetch(`${baseUrl}/mcp`, { method: "DELETE" });
     assert.strictEqual(res.status, 405);
   });
+
+  // A browser navigation to GET /mcp gets the setup page instead of a bare JSON
+  // error. This is the regression that cost a paying customer: they pasted the
+  // endpoint into Chrome, read the JSON-RPC 405 as an outage, and never returned.
+  it("serves the HTML setup page for a browser GET /mcp", async () => {
+    const res = await fetch(`${baseUrl}/mcp`, {
+      method: "GET",
+      headers: {
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+    });
+    // Still 405 — the method really was wrong, and a 200 would let a broken
+    // client read failure as success.
+    assert.strictEqual(res.status, 405);
+    assert.match(res.headers.get("content-type") ?? "", /text\/html/);
+    const body = await res.text();
+    assert.match(body, /This endpoint is working/);
+    // The page must carry the Codex TOML: Codex was the missing client, and
+    // pasting the JSON block into config.toml is exactly the failure being fixed.
+    assert.match(body, /\[mcp_servers\.scholar-feed\]/);
+    assert.match(body, /~\/\.codex\/config\.toml/);
+  });
+
+  // The negotiation must not leak HTML into the protocol: an MCP client sends
+  // application/json and/or text/event-stream and must keep the JSON-RPC body.
+  it("keeps the JSON-RPC 405 body for non-browser Accept headers", async () => {
+    for (const accept of [MCP_ACCEPT, "application/json", "*/*"]) {
+      const res = await fetch(`${baseUrl}/mcp`, {
+        method: "GET",
+        headers: { Accept: accept },
+      });
+      assert.strictEqual(res.status, 405, `status for Accept: ${accept}`);
+      assert.match(
+        res.headers.get("content-type") ?? "",
+        /application\/json/,
+        `content-type for Accept: ${accept}`,
+      );
+      const body = (await res.json()) as JsonRpcEnvelope;
+      assert.strictEqual(body.error?.code, -32000);
+    }
+  });
+
+  // No Accept header at all (curl, a bare socket) must also stay JSON-RPC.
+  it("keeps the JSON-RPC 405 body when Accept is absent", async () => {
+    const res = await fetch(`${baseUrl}/mcp`, {
+      method: "GET",
+      headers: { Accept: "" },
+    });
+    assert.strictEqual(res.status, 405);
+    assert.match(res.headers.get("content-type") ?? "", /application\/json/);
+  });
 });
 
 describe("DNS-rebinding guards (Origin + Host)", () => {

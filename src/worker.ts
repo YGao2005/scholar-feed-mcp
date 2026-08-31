@@ -39,6 +39,8 @@ import {
   buildServerInfo,
   SERVER_INSTRUCTIONS,
   landingPageHtml,
+  mcpEndpointHtml,
+  prefersHtml,
 } from "./server-info.js";
 import { faviconArrayBuffer } from "./favicon-asset.js";
 import { runWithCreds } from "./http/credentials.js";
@@ -326,6 +328,15 @@ export default {
     if (pathname === "/mcp") {
       if (method === "POST") {
         return handleMcpPost(request, getVerifier(), defaultCredentialResolver);
+      }
+      // A person pasted the endpoint into a browser. Serve the setup page rather
+      // than a bare JSON error they will read as an outage (see mcpEndpointHtml).
+      // Status stays 405 so no client can mistake this for a successful call.
+      if (method === "GET" && prefersHtml(request.headers.get("accept"))) {
+        return new Response(mcpEndpointHtml(), {
+          status: 405,
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
       }
       // GET/DELETE /mcp in stateless mode: no session to stream or delete.
       return jsonRpcError(

@@ -53,6 +53,107 @@ export function landingPageHtml(): string {
 }
 
 /**
+ * The human-facing page for `GET /mcp`.
+ *
+ * `GET /mcp` is protocol-correct as a JSON-RPC 405 (stateless mode has no session
+ * to resume), but a person who pastes the endpoint into a browser — which is the
+ * first thing someone does when a client config will not connect — sees a bare
+ * JSON error and reads it as "the server is broken". That happened to a paying
+ * customer on 2026-08-27: two requests, `GET /mcp` -> 405 then `/favicon.ico`,
+ * and they never returned. The endpoint was healthy the whole time.
+ *
+ * So: content-negotiate. A browser navigation (`Accept: text/html`) gets this
+ * page; every real MCP client — which sends `Accept: application/json` and/or
+ * `text/event-stream`, never `text/html` — still gets the JSON-RPC 405 body
+ * unchanged. The status stays 405 either way: the request genuinely was the wrong
+ * method, and a 200 here would let a misconfigured client read failure as success.
+ *
+ * Kept dependency-free and inline (see the `dependencies: {}` rule in CLAUDE.md).
+ */
+export function mcpEndpointHtml(): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scholar Feed MCP — you found the right endpoint</title>
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="icon" type="image/png" href="${iconUrl()}">
+<meta property="og:title" content="Scholar Feed MCP endpoint">
+<meta property="og:image" content="${iconUrl()}">
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;max-width:44rem;margin:3rem auto;padding:0 1.25rem;line-height:1.6;color:#1c1917;background:#f7f6f3}
+h1{font-size:1.4rem;margin:0 0 .5rem}
+h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:#0d5c63;margin:2rem 0 .5rem}
+.ok{background:#e7f1f1;border-left:3px solid #0d5c63;padding:.75rem 1rem;margin:0 0 1.5rem;border-radius:0 .25rem .25rem 0}
+pre{background:#1c1917;color:#f7f6f3;padding:.9rem 1rem;border-radius:.4rem;overflow-x:auto;font-size:.82rem;line-height:1.5}
+code{font-size:.9em}
+p code,li code{background:#eae8e3;padding:.1rem .35rem;border-radius:.25rem}
+a{color:#0d5c63}
+ul{padding-left:1.1rem}
+footer{margin-top:2.5rem;font-size:.85rem;color:#6b6660}
+</style>
+</head>
+<body>
+<h1>Scholar Feed MCP</h1>
+<div class="ok">
+<strong>This endpoint is working.</strong> You reached it with a browser, which sends
+<code>GET</code> — the MCP protocol only speaks <code>POST</code> here, so you got a 405.
+Nothing is broken. Point an MCP client at this URL instead of opening it directly.
+</div>
+
+<h2>Claude Code</h2>
+<pre><code>claude mcp add scholar-feed -- npx -y scholar-feed-mcp</code></pre>
+
+<h2>OpenAI Codex</h2>
+<p>Codex uses TOML, not JSON. Add to <code>~/.codex/config.toml</code>:</p>
+<pre><code>[mcp_servers.scholar-feed]
+command = "npx"
+args = ["-y", "scholar-feed-mcp"]
+env = { SF_API_KEY = "sf_your_key_here" }</code></pre>
+
+<h2>Cursor, Claude Desktop, Windsurf, and most others</h2>
+<pre><code>{
+  "mcpServers": {
+    "scholar-feed": {
+      "command": "npx",
+      "args": ["-y", "scholar-feed-mcp"],
+      "env": { "SF_API_KEY": "sf_your_key_here" }
+    }
+  }
+}</code></pre>
+
+<h2>Or let the wizard do it</h2>
+<pre><code>npx scholar-feed-mcp init</code></pre>
+<p>It detects your client, writes the config file, and verifies the connection.</p>
+
+<h2>Using this URL directly</h2>
+<p>If your client supports remote streamable HTTP, use <code>POST</code> to this
+endpoint with <code>Authorization: Bearer sf_your_key_here</code>. Without a key you
+get 100 calls/day; a free key raises it to 1,000/day.</p>
+
+<footer>
+Full setup for every client, the tool reference, and free API keys:
+<a href="https://www.scholarfeed.org/developers">scholarfeed.org/developers</a>.
+</footer>
+</body>
+</html>
+`;
+}
+
+/**
+ * Does this request look like a person in a browser rather than an MCP client?
+ *
+ * Deliberately narrow: `text/html` must be explicitly present. MCP clients send
+ * `application/json` and/or `text/event-stream`; curl and other CLI tools send a
+ * wildcard Accept or none at all. Only a real browser navigation asks for HTML, so
+ * nothing that speaks the protocol can be diverted to the HTML page by accident.
+ */
+export function prefersHtml(acceptHeader: string | null | undefined): boolean {
+  return (acceptHeader ?? "").toLowerCase().includes("text/html");
+}
+
+/**
  * Server-level usage instructions, surfaced to the host model on initialize and
  * shared by all entry points (stdio, HTTP, worker). A fresh agent's reflex is
  * "research = search", so without this it calls search_papers once and never

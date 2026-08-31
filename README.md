@@ -92,7 +92,18 @@ Drop that block into the right config file:
 A few clients need a different wrapper key or file format:
 
 <details>
-<summary><strong>VS Code (GitHub Copilot), Zed, Continue, and project-scoped configs</strong></summary>
+<summary><strong>OpenAI Codex, VS Code (GitHub Copilot), Zed, Continue, and project-scoped configs</strong></summary>
+
+**OpenAI Codex** (`~/.codex/config.toml`) uses TOML, not JSON — the block above will not work. One file serves both the Codex CLI and the IDE extension.
+
+```toml
+[mcp_servers.scholar-feed]
+command = "npx"
+args = ["-y", "scholar-feed-mcp@latest"]
+env = { SF_API_KEY = "sf_your_key_here" }
+```
+
+Drop the `env` line to run keyless at 100 calls/day. On Windows, if Codex cannot launch the server, use `command = "cmd"` with `args = ["/c", "npx", "-y", "scholar-feed-mcp@latest"]`.
 
 **VS Code: GitHub Copilot** (`.vscode/mcp.json`) uses a `servers` key and an explicit `type`, and needs Copilot agent mode. You can also run `MCP: Add Server` from the Command Palette.
 
