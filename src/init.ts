@@ -220,15 +220,25 @@ args = ["-y", "scholar-feed-mcp@latest"]${envLine}`;
 /**
  * The PRINTABLE Codex block — placeholder only, never a real key.
  *
- * Takes a boolean rather than the key itself, matching standardJsonSnippet and
- * continueYamlSnippet. The key must not reach this path at all: stderr ends up in
- * scrollback, screen-shares and bug reports. Threading `apiKey` in and relying on
- * a ternary to swap in a placeholder also tripped CodeQL's clear-text-logging rule
- * (js/clear-text-logging), which cannot see that the ternary discards it — and a
- * rule that has to be argued with about a secret is a rule worth just satisfying.
+ * Deliberately does NOT delegate to codexTomlBlock, even though the template is
+ * the same. codexTomlBlock is the function that embeds the real key (for the file
+ * we write at 0600); sharing it with a path that reaches `console.error` means the
+ * only thing standing between a secret and stderr is which argument a caller
+ * happened to pass. CodeQL says so too: its summary of codexTomlBlock is
+ * context-insensitive, so `console.error(shared(placeholder))` still reported
+ * js/clear-text-logging because a DIFFERENT caller passes apiKey.
+ *
+ * So the two paths share no code. This one has no parameter a key could enter
+ * through, which makes the invariant structural rather than a matter of reviewer
+ * attention. The duplicated template is pinned by a test that fails if the two
+ * blocks drift apart; that is the cost of the separation and it is worth paying,
+ * because stderr ends up in scrollback, screen-shares and bug reports.
  */
 export function codexTomlSnippet(hasKey: boolean): string {
-  return codexTomlBlock(hasKey ? "<your-key>" : "");
+  const envLine = hasKey ? `\nenv = { SF_API_KEY = "<your-key>" }` : "";
+  return `[mcp_servers.scholar-feed]
+command = "npx"
+args = ["-y", "scholar-feed-mcp@latest"]${envLine}`;
 }
 
 /**

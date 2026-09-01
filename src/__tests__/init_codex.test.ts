@@ -240,6 +240,28 @@ describe("init: printed Codex snippet never contains a real key", () => {
     const snippet = codexTomlSnippet(true);
     assert.ok(!snippet.includes("true"));
   });
+
+  // codexTomlSnippet deliberately duplicates the template instead of delegating to
+  // the key-embedding codexTomlBlock, so the printed and written paths share no
+  // code. This pins the duplication: if the written block gains a line (a new
+  // Codex key, a changed package spec) and the printed one does not, the snippet we
+  // hand users stops matching what we write, and this fails.
+  it("stays in sync with the block that gets written to disk", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "sf-codex-sync-"));
+    const target = join(tmp, "config.toml");
+    appendCodexConfig(target, "sf_synccheck");
+    const written = readFileSync(target, "utf-8").trim();
+    rmSync(tmp, { recursive: true, force: true });
+    const printed = codexTomlSnippet(true);
+
+    const normalize = (s: string) =>
+      s.replace(/SF_API_KEY = "[^"]*"/, 'SF_API_KEY = "REDACTED"');
+    assert.strictEqual(
+      normalize(printed),
+      normalize(written),
+      "printed snippet and written block have drifted apart",
+    );
+  });
 });
 
 describe("init: codexConfigPath", () => {
