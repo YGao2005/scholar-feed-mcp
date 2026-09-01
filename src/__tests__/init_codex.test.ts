@@ -25,7 +25,11 @@ import {
 } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir, homedir } from "node:os";
-import { appendCodexConfig, codexConfigPath } from "../init.js";
+import {
+  appendCodexConfig,
+  codexConfigPath,
+  codexTomlSnippet,
+} from "../init.js";
 
 /** Count `[mcp_servers.scholar-feed]` table headers in a TOML string. */
 function countTables(toml: string): number {
@@ -206,6 +210,35 @@ args = ["some-other-mcp"]
       f.includes(".tmp"),
     );
     assert.deepStrictEqual(leftovers, []);
+  });
+});
+
+// stderr lands in scrollback, screen-shares and bug reports, so the PRINTED
+// snippet must never carry a real key — the same rule the other snippet helpers in
+// init.ts already follow. CodeQL flagged the earlier form (js/clear-text-logging)
+// because it threaded the key in and relied on a ternary to discard it.
+describe("init: printed Codex snippet never contains a real key", () => {
+  it("emits the placeholder, not the key, when a key is present", () => {
+    const snippet = codexTomlSnippet(true);
+    assert.match(snippet, /SF_API_KEY = "<your-key>"/);
+    assert.ok(
+      !snippet.includes("sf_"),
+      `printed snippet must contain no sf_ key: ${snippet}`,
+    );
+  });
+
+  it("omits env entirely when there is no key", () => {
+    const snippet = codexTomlSnippet(false);
+    assert.ok(!snippet.includes("env"), snippet);
+    assert.match(snippet, /^\[mcp_servers\.scholar-feed\]$/m);
+  });
+
+  // The function must not be able to receive a key at all — it takes a boolean.
+  it("takes a boolean, so a key cannot be passed in", () => {
+    assert.strictEqual(codexTomlSnippet.length, 1);
+    // A truthy non-boolean still yields the placeholder, never its own value.
+    const snippet = codexTomlSnippet(true);
+    assert.ok(!snippet.includes("true"));
   });
 });
 

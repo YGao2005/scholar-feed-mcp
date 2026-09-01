@@ -218,6 +218,20 @@ args = ["-y", "scholar-feed-mcp@latest"]${envLine}`;
 }
 
 /**
+ * The PRINTABLE Codex block — placeholder only, never a real key.
+ *
+ * Takes a boolean rather than the key itself, matching standardJsonSnippet and
+ * continueYamlSnippet. The key must not reach this path at all: stderr ends up in
+ * scrollback, screen-shares and bug reports. Threading `apiKey` in and relying on
+ * a ternary to swap in a placeholder also tripped CodeQL's clear-text-logging rule
+ * (js/clear-text-logging), which cannot see that the ternary discards it — and a
+ * rule that has to be argued with about a secret is a rule worth just satisfying.
+ */
+export function codexTomlSnippet(hasKey: boolean): string {
+  return codexTomlBlock(hasKey ? "<your-key>" : "");
+}
+
+/**
  * Every way a Codex config can already define `mcp_servers.scholar-feed`.
  *
  * The table-header form is not the only one, and appending a second definition in
@@ -507,7 +521,7 @@ export async function runInit(): Promise<void> {
           `  Could not safely edit ${filePath}, so nothing was changed.`,
         );
         console.error("  Add this to it yourself:\n");
-        console.error(codexTomlBlock(apiKey ? "<your-key>" : ""));
+        console.error(codexTomlSnippet(hasKey));
         console.error(
           "\n  (Either it already sets mcp_servers inline, or the key you entered has",
         );
