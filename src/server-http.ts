@@ -27,6 +27,8 @@ import {
   buildServerInfo,
   SERVER_INSTRUCTIONS,
   landingPageHtml,
+  mcpEndpointHtml,
+  prefersHtml,
 } from "./server-info.js";
 import { faviconBytes } from "./favicon-asset.js";
 import { runWithCreds } from "./http/credentials.js";
@@ -194,7 +196,21 @@ async function handleMcpPost(
 }
 
 /** GET/DELETE /mcp in stateless mode: there is no session to stream or delete. */
-function methodNotAllowed(_req: Request, res: Response): void {
+function methodNotAllowed(req: Request, res: Response): void {
+  // `Vary: Accept` is load-bearing now that this route has two representations —
+  // without it a shared cache can replay the browser HTML to a protocol GET.
+  // `Allow` is required on a 405 by RFC 9110. Both apply to either branch.
+  res.setHeader("Allow", "POST");
+  res.setHeader("Vary", "Accept");
+
+  // A person pasted the endpoint into a browser. Serve the setup page rather than
+  // a bare JSON error they will read as an outage (see mcpEndpointHtml). Status
+  // stays 405 so no client can mistake this for a successful call. Mirrors the
+  // same branch in worker.ts — keep the two entry points in sync.
+  if (req.method.toUpperCase() === "GET" && prefersHtml(req.headers.accept)) {
+    res.status(405).type("html").send(mcpEndpointHtml());
+    return;
+  }
   res.status(405).json({
     jsonrpc: "2.0",
     error: {

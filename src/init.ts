@@ -13,6 +13,7 @@
  *     CLI, LM Studio) — handled by mergeMcpServersConfig.
  *   - VS Code uses a `servers` key with an explicit `type: "stdio"`.
  *   - Zed uses a `context_servers` key with a required `source: "custom"`.
+ *   - Codex is TOML, not JSON — appended as a `[mcp_servers.scholar-feed]` table.
  *   - Continue (YAML), JetBrains (UI), and Cline/Roo (UI) can't be safely
  *     written for the user, so we print the snippet to paste instead.
  *
@@ -22,15 +23,34 @@
 
 import { createInterface } from "readline";
 import { execFileSync } from "child_process";
-import { readFileSync, writeFileSync, mkdirSync } from "fs";
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  statSync,
+  renameSync,
+  rmSync,
+} from "fs";
 import { join, dirname } from "path";
 import { homedir, platform } from "os";
 
-const rl = createInterface({ input: process.stdin, output: process.stderr });
+/**
+ * The readline interface, created on first use rather than at module scope.
+ *
+ * Attaching to process.stdin eagerly resumes the stream and keeps the event loop
+ * alive, which hangs any test that merely imports this module to exercise a
+ * config writer. Lazy creation keeps `init.ts` importable.
+ */
+let rl: ReturnType<typeof createInterface> | undefined;
+
+function prompt(): ReturnType<typeof createInterface> {
+  rl ??= createInterface({ input: process.stdin, output: process.stderr });
+  return rl;
+}
 
 function ask(question: string): Promise<string> {
   return new Promise((resolve) => {
-    rl.question(question, (answer) => resolve(answer.trim()));
+    prompt().question(question, (answer) => resolve(answer.trim()));
   });
 }
 
@@ -155,6 +175,162 @@ function standardJsonSnippet(hasKey: boolean): string {
 }`;
 }
 
+/**
+ * Codex's config directory. `CODEX_HOME` overrides `~/.codex`, and Codex itself
+ * honours it — verified against codex-cli 0.146.1, which read a config from
+ * `$CODEX_HOME/config.toml` and listed the server. Writing to `~/.codex`
+ * unconditionally meant the wizard reported success while Codex never saw the
+ * server at all.
+ */
+export function codexConfigPath(): string {
+  const home = process.env.CODEX_HOME;
+  return home
+    ? join(home, "config.toml")
+    : join(homedir(), ".codex", "config.toml");
+}
+
+/**
+ * Is this safe to embed in a TOML basic string?
+ *
+ * Only the prefix was validated before, so a mistyped paste like `sf_bad"key`
+ * was written straight into `SF_API_KEY = "..."` and made the user's whole Codex
+ * config unparseable. Real keys are `sf_` + hex, so restricting the charset costs
+ * nothing and removes the escaping question entirely.
+ */
+function isSafeApiKey(apiKey: string): boolean {
+  return /^sf_[A-Za-z0-9_-]+$/.test(apiKey);
+}
+
+/**
+ * Codex's `[mcp_servers.<name>]` TOML table.
+ *
+ * `env` is written as an inline table. Codex's published example uses a
+ * `[mcp_servers.<name>.env]` sub-table instead, but both are the same construct in
+ * TOML and codex-cli 0.146.1 accepts the inline form (verified: `codex mcp list`
+ * showed SF_API_KEY set from an inline-table config). Inline keeps the whole server
+ * definition in one appendable block, which the append strategy below depends on.
+ */
+function codexTomlBlock(apiKey: string): string {
+  const envLine = apiKey ? `\nenv = { SF_API_KEY = "${apiKey}" }` : "";
+  return `[mcp_servers.scholar-feed]
+command = "npx"
+args = ["-y", "scholar-feed-mcp@latest"]${envLine}`;
+}
+
+/**
+ * The PRINTABLE Codex block — placeholder only, never a real key.
+ *
+ * Deliberately does NOT delegate to codexTomlBlock, even though the template is
+ * the same. codexTomlBlock is the function that embeds the real key (for the file
+ * we write at 0600); sharing it with a path that reaches `console.error` means the
+ * only thing standing between a secret and stderr is which argument a caller
+ * happened to pass. CodeQL says so too: its summary of codexTomlBlock is
+ * context-insensitive, so `console.error(shared(placeholder))` still reported
+ * js/clear-text-logging because a DIFFERENT caller passes apiKey.
+ *
+ * So the two paths share no code. This one has no parameter a key could enter
+ * through, which makes the invariant structural rather than a matter of reviewer
+ * attention. The duplicated template is pinned by a test that fails if the two
+ * blocks drift apart; that is the cost of the separation and it is worth paying,
+ * because stderr ends up in scrollback, screen-shares and bug reports.
+ */
+export function codexTomlSnippet(hasKey: boolean): string {
+  const envLine = hasKey ? `\nenv = { SF_API_KEY = "<your-key>" }` : "";
+  return `[mcp_servers.scholar-feed]
+command = "npx"
+args = ["-y", "scholar-feed-mcp@latest"]${envLine}`;
+}
+
+/**
+ * Every way a Codex config can already define `mcp_servers.scholar-feed`.
+ *
+ * The table-header form is not the only one, and appending a second definition in
+ * ANY of these cases is a TOML duplicate-key error that takes down the user's other
+ * servers along with ours:
+ *   - `[mcp_servers.scholar-feed]`      / `[mcp_servers."scholar-feed"]`
+ *   - `["mcp_servers"."scholar-feed"]`  (fully quoted)
+ *   - `mcp_servers.scholar-feed.command = "..."`  (dotted key, no header)
+ *   - `mcp_servers = { scholar-feed = ... }`      (inline table at the root)
+ */
+const CODEX_TABLE_HEADER =
+  /^[ \t]*\[[ \t]*"?mcp_servers"?[ \t]*\.[ \t]*"?scholar-feed"?[ \t]*\]/m;
+const CODEX_DOTTED_KEY =
+  /^[ \t]*"?mcp_servers"?[ \t]*\.[ \t]*"?scholar-feed"?[ \t]*\./m;
+const CODEX_INLINE_ROOT = /^[ \t]*"?mcp_servers"?[ \t]*=/m;
+
+/**
+ * Add the Codex server table to Codex's config.toml, appending rather than
+ * rewriting.
+ *
+ * We APPEND instead of parse-merge on purpose: bundling a TOML parser would break
+ * the `dependencies: {}` rule (CLAUDE.md), and hand-rolling one to rewrite a
+ * user's whole editor config is a far worse failure mode than declining to write.
+ * Opening a new `[table]` header always closes the previous one, so appending is
+ * valid TOML for any input we accept.
+ *
+ * Because a duplicate definition breaks the ENTIRE file (Codex refuses to parse it,
+ * so every other server the user configured stops working), this fails SAFE: if any
+ * form of an existing definition is detected — or anything we cannot reason about,
+ * like a `mcp_servers = {...}` root — we write nothing and return 'manual' so the
+ * caller prints the snippet for the user to place by hand. Refusing to write is a
+ * mild inconvenience; corrupting a config is not.
+ *
+ * The write is atomic (temp file + rename) because the target holds the user's whole
+ * Codex configuration: a crash midway through a plain truncating write would destroy
+ * it. A newly created file gets mode 0600 — it can contain an API key, and Node's
+ * default under a 022 umask would be world-readable 0644. An existing file keeps its
+ * own mode, since rename preserves the temp file's; we set it explicitly to match.
+ *
+ * @returns 'written'         — the table was appended
+ *          'already-present' — a definition already exists; nothing changed
+ *          'manual'          — cannot append safely; caller must print the snippet
+ */
+export function appendCodexConfig(
+  filePath: string,
+  apiKey: string,
+): "written" | "already-present" | "manual" {
+  if (apiKey && !isSafeApiKey(apiKey)) return "manual";
+
+  let existing = "";
+  let existingMode: number | undefined;
+  try {
+    existing = readFileSync(filePath, "utf-8");
+    existingMode = statSync(filePath).mode & 0o777;
+  } catch {
+    // Missing — we create it below.
+  }
+
+  if (CODEX_TABLE_HEADER.test(existing) || CODEX_DOTTED_KEY.test(existing)) {
+    return "already-present";
+  }
+  // A root-level `mcp_servers = {...}` inline table may or may not contain our
+  // key, and appending a header for a table already defined inline is a duplicate
+  // either way. Hand it to the user rather than guess.
+  if (CODEX_INLINE_ROOT.test(existing)) return "manual";
+
+  const dir = dirname(filePath);
+  if (dir) mkdirSync(dir, { recursive: true });
+  const separator = existing === "" || existing.endsWith("\n") ? "" : "\n";
+  const next = `${existing}${separator}\n${codexTomlBlock(apiKey)}\n`;
+
+  // 0600 on create: this file can hold an API key. Preserve the mode of a file the
+  // user already had — they may have loosened or tightened it deliberately.
+  const mode = existingMode ?? 0o600;
+  const tmp = `${filePath}.scholar-feed-${process.pid}.tmp`;
+  try {
+    writeFileSync(tmp, next, { mode });
+    renameSync(tmp, filePath);
+  } catch (e) {
+    try {
+      rmSync(tmp, { force: true });
+    } catch {
+      // best effort — the rename already failed, nothing more to do
+    }
+    throw e;
+  }
+  return "written";
+}
+
 function continueYamlSnippet(hasKey: boolean): string {
   const envBlock = hasKey ? `\n    env:\n      SF_API_KEY: <your-key>` : "";
   return `mcpServers:
@@ -181,7 +357,7 @@ export async function runInit(): Promise<void> {
     console.error(
       "  Error: API key must start with 'sf_'. Get one at https://www.scholarfeed.org/settings",
     );
-    rl.close();
+    prompt().close();
     process.exit(1);
   }
 
@@ -196,11 +372,12 @@ export async function runInit(): Promise<void> {
   console.error("   6) Zed");
   console.error("   7) Gemini CLI");
   console.error("   8) LM Studio");
+  console.error("   9) OpenAI Codex");
   console.error("  Print snippet to paste:");
-  console.error("   9) Continue");
-  console.error("  10) JetBrains / PyCharm");
-  console.error("  11) Cline / Roo Code");
-  const choice = await ask("  Choice (1-11): ");
+  console.error("  10) Continue");
+  console.error("  11) JetBrains / PyCharm");
+  console.error("  12) Cline / Roo Code");
+  const choice = await ask("  Choice (1-12): ");
 
   // Step 3: Configure
   printStep(3, 3, "Configuring...");
@@ -334,6 +511,48 @@ export async function runInit(): Promise<void> {
       break;
     }
     case "9": {
+      // OpenAI Codex — config.toml, shared by the Codex CLI and the IDE extension.
+      // TOML, not JSON: pasting any of the other snippets here fails. Honours
+      // CODEX_HOME, which Codex itself reads.
+      const filePath = codexConfigPath();
+      const outcome = appendCodexConfig(filePath, apiKey);
+      if (outcome === "already-present") {
+        console.error(
+          `  ${filePath} already defines mcp_servers.scholar-feed — left unchanged.`,
+        );
+        console.error(
+          "  Edit it by hand if you need to update the key (a duplicate definition",
+        );
+        console.error("  would make Codex reject the whole file).");
+      } else if (outcome === "manual") {
+        // Declined to write: we could not guarantee a safe append. Print instead —
+        // a config we cannot reason about is the user's to edit, not ours.
+        console.error(
+          `  Could not safely edit ${filePath}, so nothing was changed.`,
+        );
+        console.error("  Add this to it yourself:\n");
+        console.error(codexTomlSnippet(hasKey));
+        console.error(
+          "\n  (Either it already sets mcp_servers inline, or the key you entered has",
+        );
+        console.error(
+          "  characters that are not valid unquoted in TOML — check it and retry.)",
+        );
+      } else {
+        console.error(`  Appended to ${filePath}`);
+        console.error("  Restart Codex, then ask it to search for papers.");
+      }
+      if (platform() === "win32") {
+        console.error(
+          '  On Windows, if Codex cannot launch the server, change command to "cmd"',
+        );
+        console.error(
+          '  and args to ["/c", "npx", "-y", "scholar-feed-mcp@latest"].',
+        );
+      }
+      break;
+    }
+    case "10": {
       // Continue — YAML config; print rather than risk corrupting the file.
       console.error(
         "  Add this to ~/.continue/config.yaml (global) or .continue/config.yaml (workspace):\n",
@@ -344,7 +563,7 @@ export async function runInit(): Promise<void> {
       }
       break;
     }
-    case "10": {
+    case "11": {
       // JetBrains AI Assistant — configured through the IDE UI.
       console.error(
         "  In your JetBrains IDE: Settings -> Tools -> AI Assistant ->",
@@ -358,7 +577,7 @@ export async function runInit(): Promise<void> {
       }
       break;
     }
-    case "11": {
+    case "12": {
       // Cline / Roo Code — configured through the extension UI.
       console.error(
         "  In Cline or Roo Code: click the MCP Servers icon -> Configure / Edit,",
@@ -374,7 +593,7 @@ export async function runInit(): Promise<void> {
       console.error(
         "  Invalid choice. Run 'npx scholar-feed-mcp@latest init' again.",
       );
-      rl.close();
+      prompt().close();
       process.exit(1);
     }
   }
@@ -383,7 +602,7 @@ export async function runInit(): Promise<void> {
   console.error("\n  Verifying connection...");
   await verifyKey(apiKey);
 
-  rl.close();
+  prompt().close();
   console.error(
     '\nDone! Try asking: "Search for papers on test-time compute scaling"',
   );
