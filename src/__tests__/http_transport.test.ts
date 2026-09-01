@@ -23,6 +23,7 @@ import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { createApp, isOriginAllowed, isHostAllowed } from "../server-http.js";
+import { prefersHtml } from "../server-info.js";
 
 const PROTOCOL_VERSION = "2025-11-25";
 const MCP_ACCEPT = "application/json, text/event-stream";
@@ -219,6 +220,84 @@ describe("remote HTTP transport (Streamable HTTP, stateless)", () => {
     });
     assert.strictEqual(res.status, 405);
     assert.match(res.headers.get("content-type") ?? "", /application\/json/);
+  });
+
+  // The protocol must always win the negotiation. A substring test on Accept got
+  // both of these wrong: q=0 explicitly REFUSES html, and a client naming both
+  // types is a client, not a person.
+  it("serves JSON when a client names a protocol type alongside text/html", async () => {
+    for (const accept of [
+      "application/json, text/html;q=0",
+      "text/html, application/json",
+      "text/html;q=0.9, text/event-stream;q=0.8",
+      "text/html;q=0",
+    ]) {
+      const res = await fetch(`${baseUrl}/mcp`, {
+        method: "GET",
+        headers: { Accept: accept },
+      });
+      assert.match(
+        res.headers.get("content-type") ?? "",
+        /application\/json/,
+        `Accept: ${accept} must stay JSON-RPC`,
+      );
+    }
+  });
+
+  // Two representations on one URL. Without Vary a shared cache can store the
+  // browser's HTML and replay it to a protocol GET; Allow is required on a 405.
+  it("sets Vary: Accept and Allow: POST on both 405 representations", async () => {
+    for (const accept of [MCP_ACCEPT, "text/html"]) {
+      const res = await fetch(`${baseUrl}/mcp`, {
+        method: "GET",
+        headers: { Accept: accept },
+      });
+      assert.strictEqual(res.status, 405);
+      assert.match(
+        res.headers.get("vary") ?? "",
+        /accept/i,
+        `Vary missing for Accept: ${accept}`,
+      );
+      assert.strictEqual(
+        res.headers.get("allow"),
+        "POST",
+        `Allow missing for Accept: ${accept}`,
+      );
+    }
+  });
+});
+
+describe("prefersHtml content negotiation", () => {
+  it("is true only for a browser navigation", () => {
+    for (const accept of [
+      "text/html",
+      "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "TEXT/HTML",
+    ]) {
+      assert.strictEqual(prefersHtml(accept), true, `expected true: ${accept}`);
+    }
+  });
+
+  it("is false for anything that speaks the protocol, or for no preference", () => {
+    for (const accept of [
+      undefined,
+      null,
+      "",
+      "*/*",
+      "application/json",
+      MCP_ACCEPT,
+      "application/json, text/html;q=0",
+      "text/html, application/json",
+      "text/html;q=0",
+      "text/html;q=0.0",
+      "text/event-stream, text/html",
+    ]) {
+      assert.strictEqual(
+        prefersHtml(accept),
+        false,
+        `expected false: ${String(accept)}`,
+      );
+    }
   });
 });
 

@@ -94,7 +94,7 @@ A few clients need a different wrapper key or file format:
 <details>
 <summary><strong>OpenAI Codex, VS Code (GitHub Copilot), Zed, Continue, and project-scoped configs</strong></summary>
 
-**OpenAI Codex** (`~/.codex/config.toml`) uses TOML, not JSON — the block above will not work. One file serves both the Codex CLI and the IDE extension.
+**OpenAI Codex** (`~/.codex/config.toml`, or `$CODEX_HOME/config.toml` if you set that) uses TOML, not JSON — the block above will not work. One file serves both the Codex CLI and the IDE extension.
 
 ```toml
 [mcp_servers.scholar-feed]

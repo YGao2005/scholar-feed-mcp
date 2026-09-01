@@ -141,16 +141,43 @@ Full setup for every client, the tool reference, and free API keys:
 `;
 }
 
+/** One parsed Accept media range: the type and its q-value (default 1). */
+function acceptQ(acceptHeader: string, mediaType: string): number | undefined {
+  for (const part of acceptHeader.toLowerCase().split(",")) {
+    const [type, ...params] = part.split(";").map((s) => s.trim());
+    if (type !== mediaType) continue;
+    const q = params
+      .map((p) => /^q=([0-9.]+)$/.exec(p))
+      .find((m): m is RegExpExecArray => m !== null);
+    return q ? Number.parseFloat(q[1]) : 1;
+  }
+  return undefined;
+}
+
 /**
  * Does this request look like a person in a browser rather than an MCP client?
  *
- * Deliberately narrow: `text/html` must be explicitly present. MCP clients send
- * `application/json` and/or `text/event-stream`; curl and other CLI tools send a
- * wildcard Accept or none at all. Only a real browser navigation asks for HTML, so
- * nothing that speaks the protocol can be diverted to the HTML page by accident.
+ * THE PROTOCOL ALWAYS WINS. HTML is served only when the client asks for
+ * `text/html` with a non-zero q AND names neither protocol content type. A
+ * substring test was not enough:
+ *   - `Accept: application/json, text/html;q=0` explicitly REFUSES html, but
+ *     `includes("text/html")` said yes.
+ *   - `Accept: text/html, application/json` is a client that speaks both; handing
+ *     it HTML would break it.
+ * A real browser navigation sends html at q=1 alongside xhtml/xml and a trailing
+ * wildcard, naming no protocol type, so it still gets the page. curl and CLI tools
+ * send a bare wildcard or no Accept at all and keep JSON-RPC.
  */
 export function prefersHtml(acceptHeader: string | null | undefined): boolean {
-  return (acceptHeader ?? "").toLowerCase().includes("text/html");
+  const accept = acceptHeader ?? "";
+  const html = acceptQ(accept, "text/html");
+  if (html === undefined || html <= 0) return false;
+  // Any explicitly requested protocol type means this is a client, not a person.
+  for (const protocolType of ["application/json", "text/event-stream"]) {
+    const q = acceptQ(accept, protocolType);
+    if (q !== undefined && q > 0) return false;
+  }
+  return true;
 }
 
 /**

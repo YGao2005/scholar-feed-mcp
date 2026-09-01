@@ -332,10 +332,18 @@ export default {
       // A person pasted the endpoint into a browser. Serve the setup page rather
       // than a bare JSON error they will read as an outage (see mcpEndpointHtml).
       // Status stays 405 so no client can mistake this for a successful call.
+      //
+      // `Vary: Accept` is load-bearing: this route now has two representations,
+      // so without it a shared cache can store the browser's HTML and replay it
+      // to a later protocol GET. `Allow` is required on a 405 by RFC 9110.
       if (method === "GET" && prefersHtml(request.headers.get("accept"))) {
         return new Response(mcpEndpointHtml(), {
           status: 405,
-          headers: { "Content-Type": "text/html; charset=utf-8" },
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            Allow: "POST",
+            Vary: "Accept",
+          },
         });
       }
       // GET/DELETE /mcp in stateless mode: no session to stream or delete.
@@ -343,6 +351,7 @@ export default {
         405,
         -32000,
         "Method Not Allowed: this stateless MCP server only accepts POST",
+        { Allow: "POST", Vary: "Accept" },
       );
     }
 

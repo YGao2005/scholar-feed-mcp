@@ -20,10 +20,12 @@ import {
   readFileSync,
   writeFileSync,
   rmSync,
+  statSync,
+  readdirSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
-import { appendCodexConfig } from "../init.js";
+import { tmpdir, homedir } from "node:os";
+import { appendCodexConfig, codexConfigPath } from "../init.js";
 
 /** Count `[mcp_servers.scholar-feed]` table headers in a TOML string. */
 function countTables(toml: string): number {
@@ -137,5 +139,96 @@ args = ["some-other-mcp"]
       "already-present",
     );
     assert.strictEqual(countTables(readFileSync(configPath, "utf-8")), 1);
+  });
+
+  // Every one of these already defines mcp_servers.scholar-feed. Appending a
+  // header for it is a TOML duplicate-key error, which makes Codex refuse to parse
+  // the file at all — taking down the user's OTHER servers with it. Detecting only
+  // the plain table header was not enough.
+  for (const [label, body] of [
+    ["dotted key", 'mcp_servers.scholar-feed.command = "old"\n'],
+    [
+      "fully quoted header",
+      '["mcp_servers"."scholar-feed"]\ncommand = "old"\n',
+    ],
+    [
+      "inline table at the root",
+      'mcp_servers = { scholar-feed = { command = "old" } }\n',
+    ],
+  ] as const) {
+    it(`refuses to append when the config uses the ${label} form`, () => {
+      mkdirSync(dirname(configPath), { recursive: true });
+      writeFileSync(configPath, body);
+      const outcome = appendCodexConfig(configPath, "sf_new");
+
+      assert.ok(
+        outcome === "already-present" || outcome === "manual",
+        `must not write; got ${outcome}`,
+      );
+      // The decisive assertion: the file is untouched, so it cannot have become
+      // a duplicate definition.
+      assert.strictEqual(readFileSync(configPath, "utf-8"), body);
+    });
+  }
+
+  // A key that is not TOML-safe must never reach the file. Prefix-only validation
+  // let `sf_bad"key` through and broke the whole config.
+  for (const badKey of ['sf_bad"key', "sf_back\\slash", "sf_new\nline"]) {
+    it(`declines to write an unsafe key (${JSON.stringify(badKey)})`, () => {
+      assert.strictEqual(appendCodexConfig(configPath, badKey), "manual");
+      assert.throws(
+        () => readFileSync(configPath, "utf-8"),
+        "must not have created the file at all",
+      );
+    });
+  }
+
+  it("creates the file 0600 — it can hold an API key", () => {
+    appendCodexConfig(configPath, "sf_secret");
+    const mode = statSync(configPath).mode & 0o777;
+    assert.strictEqual(
+      mode,
+      0o600,
+      `expected 0600, got 0${mode.toString(8)} (0644 would be world-readable)`,
+    );
+  });
+
+  it("preserves the mode of a file the user already had", () => {
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(configPath, 'model = "gpt-5-codex"\n', { mode: 0o640 });
+    appendCodexConfig(configPath, "sf_secret");
+    assert.strictEqual(statSync(configPath).mode & 0o777, 0o640);
+  });
+
+  it("leaves no temp file behind", () => {
+    appendCodexConfig(configPath, "sf_abc");
+    const leftovers = readdirSync(dirname(configPath)).filter((f) =>
+      f.includes(".tmp"),
+    );
+    assert.deepStrictEqual(leftovers, []);
+  });
+});
+
+describe("init: codexConfigPath", () => {
+  const saved = process.env.CODEX_HOME;
+  afterEach(() => {
+    if (saved === undefined) delete process.env.CODEX_HOME;
+    else process.env.CODEX_HOME = saved;
+  });
+
+  it("honours CODEX_HOME, which Codex itself reads", () => {
+    process.env.CODEX_HOME = join("/tmp", "custom-codex");
+    assert.strictEqual(
+      codexConfigPath(),
+      join("/tmp", "custom-codex", "config.toml"),
+    );
+  });
+
+  it("falls back to ~/.codex/config.toml", () => {
+    delete process.env.CODEX_HOME;
+    assert.strictEqual(
+      codexConfigPath(),
+      join(homedir(), ".codex", "config.toml"),
+    );
   });
 });
