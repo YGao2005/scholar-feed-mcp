@@ -107,6 +107,24 @@ const paperObject = z
     arxiv_url: z.string().optional(),
     pdf_url: z.string().optional(),
     institution_tags: z.array(z.string()).optional(),
+    // Library state — present only on AUTHENTICATED responses (backend 2026-09-03).
+    // is_saved/is_read are real booleans there, so `false` means "known not saved";
+    // all three keys are ABSENT on anonymous responses, where nothing is known.
+    is_saved: z.boolean().optional(),
+    is_read: z.boolean().optional(),
+    note_text: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "The user's own recorded verdict on this paper, when one exists. A hit carrying this was ALREADY judged — read it instead of re-deriving a verdict from the abstract.",
+      ),
+    collections: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Collections this saved paper is filed under, e.g. 'AgentOPA/G4' (list_library only).",
+      ),
   })
   .catchall(z.unknown())
   .describe(
