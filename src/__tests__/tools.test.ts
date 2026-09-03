@@ -33,6 +33,7 @@ const EXPECTED_TOOLS = [
   "unsave_paper",
   "like_paper",
   "list_library",
+  "annotate_paper",
   "list_collections",
   "create_collection",
   "add_to_collection",
@@ -103,7 +104,7 @@ describe("package.json", () => {
 });
 
 describe("tool registry", () => {
-  it("registers exactly the 26 tools", () => {
+  it("registers exactly the 27 tools", () => {
     const { server, tools } = makeFakeServer();
     registerAllTools(server);
     assert.deepStrictEqual(

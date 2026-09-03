@@ -165,7 +165,7 @@ mcpServers:
 
 Scholar Feed is a standard stdio MCP server, so any other MCP-compatible client works with the standard block too.
 
-## Available Tools (26)
+## Available Tools (27)
 
 ### Core Search & Discovery
 
@@ -206,7 +206,8 @@ These MUTATE or read the authenticated user's account. The core read/search tool
 | `save_paper` | Bookmark a paper to your library (idempotent; feeds personalization). | `arxiv_id` |
 | `unsave_paper` | Remove a paper from your library (idempotent). | `arxiv_id` |
 | `like_paper` | "More like this" calibration signal for the For You feed (insert-only). | `arxiv_id` |
-| `list_library` | List your saved papers, newest first. | `limit`, `page` |
+| `list_library` | List your saved papers, newest first (includes your notes). | `limit`, `page` |
+| `annotate_paper` | Record your verdict on a paper — why it matters, when to use it, why you ruled it out. Upserted; returned by `list_library`, so it is what a later session reads instead of re-deriving. | `arxiv_id`, `note_text`, `action` |
 | `list_collections` | List collections with paper counts. | (none) |
 | `create_collection` | Create a named collection (get-or-create; no error on duplicate). | `name` |
 | `add_to_collection` | Add a paper to a collection by name or id (also auto-saves). | `arxiv_id`, `collection_name`, `collection_id` |

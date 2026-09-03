@@ -592,3 +592,79 @@ describe("get_foundational_lineage handler", () => {
     assert.strictEqual(result.isError, true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// notes.ts — annotate_paper (upsert / get / delete)
+//
+// The tool exists because PUT /notes/{id} was unreachable: JWT-only auth 401'd
+// every API-key call, and the route addressed papers by internal UUID which the
+// public API never exposes. Both were fixed backend-side 2026-09-03, so these
+// assert the arXiv-ID path and the PUT verb the client only just learned.
+// ---------------------------------------------------------------------------
+
+describe("annotate_paper handler", () => {
+  const NOTE = {
+    id: "n1",
+    paper_id: "967a85d7-ca96-4414-85f1-1539a4cc3597",
+    note_text: "our baseline — beat this on the 7B setting",
+    created_at: "2026-09-03T12:00:00Z",
+    updated_at: "2026-09-03T12:00:00Z",
+  };
+
+  it("PUTs the note to /notes/<arxiv_id> and reports Saved on first write", async () => {
+    const { calls, url, result } = await invoke(
+      "annotate_paper",
+      { arxiv_id: "2503.08669", note_text: NOTE.note_text, action: "upsert" },
+      { json: NOTE },
+    );
+    assert.strictEqual(calls.length, 1);
+    assert.strictEqual(methodOf(calls[0]), "PUT");
+    assert.ok(url?.pathname.endsWith("/notes/2503.08669"));
+    assert.deepStrictEqual(bodyOf(calls[0]), { note_text: NOTE.note_text });
+    assert.match(result.content[0].text, /Saved your note/);
+  });
+
+  it("reports Updated when the row already existed (updated_at moved)", async () => {
+    const { result } = await invoke(
+      "annotate_paper",
+      { arxiv_id: "2503.08669", note_text: "revised", action: "upsert" },
+      { json: { ...NOTE, updated_at: "2026-09-03T13:00:00Z" } },
+    );
+    assert.match(result.content[0].text, /Updated your note/);
+  });
+
+  it("upsert without note_text is a client-side error, not a request", async () => {
+    const { calls, result } = await invoke(
+      "annotate_paper",
+      { arxiv_id: "2503.08669", action: "upsert" },
+      { json: NOTE },
+    );
+    assert.strictEqual(calls.length, 0);
+    assert.strictEqual(result.isError, true);
+    assert.match(result.content[0].text, /note_text is required/);
+  });
+
+  it("action=get reads without writing", async () => {
+    const { calls, url, result } = await invoke(
+      "annotate_paper",
+      { arxiv_id: "2503.08669", action: "get" },
+      { json: NOTE },
+    );
+    assert.strictEqual(calls.length, 1);
+    assert.notStrictEqual(methodOf(calls[0]), "PUT");
+    assert.ok(url?.pathname.endsWith("/notes/2503.08669"));
+    assert.strictEqual(
+      (result.structuredContent as { note_text?: string }).note_text,
+      NOTE.note_text,
+    );
+  });
+
+  it("surfaces a backend error instead of pretending the note was written", async () => {
+    const { result } = await invoke(
+      "annotate_paper",
+      { arxiv_id: "9999.99999", note_text: "x", action: "upsert" },
+      { status: 404, json: { detail: "No paper found for '9999.99999'" } },
+    );
+    assert.strictEqual(result.isError, true);
+  });
+});
