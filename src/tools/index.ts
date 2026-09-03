@@ -39,18 +39,20 @@ import { register as registerCollectionsWrite } from "./collections_write.js";
 import { register as registerWatches } from "./watches.js";
 import { register as registerGaps } from "./gaps.js";
 import { register as registerAskLibrary } from "./ask_library.js";
+import { register as registerNotes } from "./notes.js";
 import { register as registerCheckDrift } from "./check_drift.js";
 
 /**
  * Register all Scholar Feed MCP tools on the provided server instance.
  *
- * Current surface (26 tools, since v3.11.0):
+ * Current surface (27 tools, since v3.15.0):
  *   9 read/search tools (anonymous-capable, except embed_text which is Pro) +
  *   check_drift (DriftKB supersession check, anonymous-capable) + find_gaps
  *   (read-only gap analysis, Pro) + ask_library (cited synthesis over
- *   your saved set) + 14 library/collection/watch tools that operate on the
+ *   your saved set) + 15 library/collection/watch tools that operate on the
  *   authenticated user's account and require an SF_API_KEY:
- *     library (4):     save_paper, unsave_paper, like_paper, list_library
+ *     library (5):     save_paper, unsave_paper, like_paper, list_library,
+ *                      annotate_paper
  *     collections (4): list_collections, create_collection, add_to_collection,
  *                      remove_from_collection
  *     watches (6):     create_watch, list_watches, check_watches, update_watch,
@@ -71,5 +73,6 @@ export function registerAllTools(server: McpServer): void {
   registerWatches(server);
   registerGaps(server);
   registerAskLibrary(server);
+  registerNotes(server);
   registerCheckDrift(server);
 }
