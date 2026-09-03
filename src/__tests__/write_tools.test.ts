@@ -146,6 +146,36 @@ describe("list_library handler", () => {
     assert.strictEqual(url?.searchParams.get("limit"), "10");
     assert.strictEqual(url?.searchParams.get("page"), "2");
   });
+
+  it("omits verbose and fields by default so the lean shape is what agents get", async () => {
+    // The token win only lands if the DEFAULT call is lean. Sending verbose=false (or
+    // an empty fields=) would be enough to make the backend serve the full 26k-token
+    // shape, so assert the params are absent rather than falsy.
+    const { url } = await invoke("list_library", { limit: 10, page: 1 });
+    assert.strictEqual(url?.searchParams.has("verbose"), false);
+    assert.strictEqual(url?.searchParams.has("fields"), false);
+  });
+
+  it("forwards verbose=true when the caller explicitly wants the abstract", async () => {
+    const { url } = await invoke("list_library", {
+      limit: 10,
+      page: 1,
+      verbose: true,
+    });
+    assert.strictEqual(url?.searchParams.get("verbose"), "true");
+  });
+
+  it("forwards an explicit fields list", async () => {
+    const { url } = await invoke("list_library", {
+      limit: 10,
+      page: 1,
+      fields: "arxiv_id,title,abstract",
+    });
+    assert.strictEqual(
+      url?.searchParams.get("fields"),
+      "arxiv_id,title,abstract",
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
