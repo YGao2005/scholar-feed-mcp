@@ -40,7 +40,7 @@ import { client } from "../client.js";
 import { fencePaperContent } from "./_untrusted.js";
 import {
   asStructuredObject,
-  papersOutput,
+  hitsOutput,
   previewWatchOutput,
   statusContent,
   statusOutput,
@@ -371,7 +371,8 @@ export function register(server: McpServer): void {
     {
       title: "Check Watches",
       annotations: { readOnlyHint: true, destructiveHint: false },
-      outputSchema: papersOutput,
+      // `hits`, not `papers` — /watches/hits returns {hits, since}.
+      outputSchema: hitsOutput,
       description:
         "Pull new matching papers since the last digest delivery, in the same shape as search_papers results. Optionally scope to one watch by watch_name OR watch_id; omit both for all watches. Read-only and idempotent — does NOT advance any watermark (only digest delivery does), so it is safe to call repeatedly (no mark-on-read). This is the in-session 'anything new on my watches?' pull. Requires SF_API_KEY.",
       inputSchema: {

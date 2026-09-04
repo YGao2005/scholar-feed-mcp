@@ -91,6 +91,32 @@ npm run format                    # prettier — fixes the format:check CI gate
   and add tests in `src/__tests__/` (`tools.test.ts` registration + `handlers.test.ts` /
   `write_tools.test.ts` behavior).
 
+## 🔴 The tool surface is budgeted
+
+`tools/list` is a **fixed cost every session pays before any work** (~24k tokens for 27
+tools). Three gates hold it, all in `src/__tests__/`:
+
+- **`surface_budget.test.ts`** — whole-surface, per-tool and per-description ceilings that
+  **MAY ONLY FALL**, plus a guard that no envelope declares two paper arrays. `npm test`
+  prints the current cost every run.
+  **Never restate a param's own `description` in the tool description** — both ship to the
+  client, so it is paid for twice and drifts. That one mistake made `search_papers`
+  4,407 chars (18 of 27 params documented twice); it is 1,542 now with nothing lost. A tool
+  description carries only what no single param can say.
+- **`tool_grammar.test.ts`** — a new tool must use an approved prefix (`get_` `search_`
+  `list_` `analyze_` `ask_` `create_` `update_` `delete_` `annotate_`). `find_` and `check_`
+  are banned as ambiguous. The 27 published names are grandfathered in a **frozen** set —
+  **do not add to it to make CI pass**, that is the same rubber stamp as bumping
+  `ALL_TOOLS.length`.
+- **`schema_drift.test.ts`** — every field the backend returns must be declared. Refresh the
+  fixture with `npm run schema:sync` after any response-shape change.
+
+**Prefer a new PARAMETER over a new tool.** `search_papers` absorbed three former tools that
+way. This consolidation already happened once (see the v3 note in `src/tools/index.ts` — 11
+tools deregistered) and the surface grew straight back, which is why the gates exist.
+`backend/scripts/tool_usage_report.py` names subtraction candidates; read its `mcp` column,
+never the total (`get_paper`'s 91k/14d is crawler traffic).
+
 ## Pointers
 
 - `CONTRIBUTING.md` — full dev loop, project structure, adding tools, releasing.

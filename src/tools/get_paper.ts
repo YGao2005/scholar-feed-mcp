@@ -26,20 +26,20 @@ export function register(server: McpServer): void {
       annotations: { readOnlyHint: true, destructiveHint: false },
       outputSchema: getPaperOutput,
       description:
-        "Get full details for one or more papers by arXiv ID. Pass a single-element array for one paper; pass multiple IDs to batch-fetch up to 50 papers in one call (replaces the removed batch_lookup tool). Pass format='bibtex' to get a .bib citation entry (replaces the removed export_bibtex tool — bibtex is single-paper only; for multi-paper bibtex, call repeatedly). Default returns a lean 13-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score, impact_pct — where impact_pct is the ML-forecast impact percentile 0-100 computed WITHIN the paper's own arXiv-category cohort, so it is a cohort-relative rank rather than an absolute score, and is NULL on older papers outside the recent ~90-day scoring window. A companion A+/A/B/C/D impact_tier was previously returned; it was removed because one global cutoff ladder could not be calibrated honestly across both fresh and mature papers). Pass verbose=true for the full shape with structured extraction (method_name, contribution_type, task_category, datasets, baselines) and institution_tags. Use fields='arxiv_id,title,abstract' to select an exact subset, or fetch_fulltext with sections='all' for the full paper.",
+        "Get full details for one or more papers by arXiv ID. Pass a single-element array for one paper; pass multiple IDs to batch-fetch up to 50 papers in one call. Pass format='bibtex' to get a .bib citation entry (bibtex is single-paper only; for multi-paper bibtex, call repeatedly). Default returns a lean 13-field shape (arxiv_id, title, authors, year, categories, has_code, github_url, citation_count, venue_name, llm_summary, llm_significance, llm_novelty_score, impact_pct — where impact_pct is the ML-forecast impact percentile 0-100 computed WITHIN the paper's own arXiv-category cohort, so it is a cohort-relative rank rather than an absolute score, and is NULL on older papers outside the recent ~90-day scoring window). Pass verbose=true for the full shape with structured extraction (method_name, contribution_type, task_category, datasets, baselines) and institution_tags. Use fields='arxiv_id,title,abstract' to select an exact subset, or fetch_fulltext with sections='all' for the full paper.",
       inputSchema: {
         arxiv_ids: z
           .array(z.string().min(1))
           .min(1)
           .max(50)
           .describe(
-            "One or more arXiv IDs. Single-paper lookup uses [id]; batch lookup passes multiple IDs (max 50). Replaces the removed batch_lookup tool. Example: ['2407.15831'] or ['2407.15831', '2402.09906'].",
+            "One or more arXiv IDs. Single-paper lookup uses [id]; batch lookup passes multiple IDs (max 50). Example: ['2407.15831'] or ['2407.15831', '2402.09906'].",
           ),
         format: z
           .enum(["json", "bibtex"])
           .optional()
           .describe(
-            "Response format. 'json' (default) returns structured paper data. 'bibtex' returns a .bib citation entry — replaces the removed export_bibtex tool. Bibtex mode uses the first ID in arxiv_ids.",
+            "Response format. 'json' (default) returns structured paper data. 'bibtex' returns a .bib citation entry. Bibtex mode uses the first ID in arxiv_ids.",
           ),
         fields: z
           .string()
