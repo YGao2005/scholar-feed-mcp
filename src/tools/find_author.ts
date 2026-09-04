@@ -22,7 +22,7 @@ export function register(server: McpServer): void {
       annotations: { readOnlyHint: true, destructiveHint: false },
       outputSchema: authorOutput,
       description:
-        "Two-mode author tool — replaces discover_authors and get_author. Provide exactly one of q or id. Q-MODE (q=...): search for researchers by topic or name — uses embedding similarity for topics ('efficient LLM inference'), fuzzy matching for names ('Yann LeCun'). Returns a list of matching authors with author_id, name, h_index, total_papers, primary_field, research_topics. ID-MODE (id=...): look up a single author profile by author_id (obtained from a previous q-mode call or from co_author_graph results). Returns h-index, total citations, global rank, primary field, novelty score distribution, research topics, code/venue scores, years active, and their top 10 papers by rank score.",
+        "Two-mode author tool. Provide exactly one of q or id. Q-MODE (q=...): search for researchers by topic or name — uses embedding similarity for topics ('efficient LLM inference'), fuzzy matching for names ('Yann LeCun'). Returns a list of matching authors with author_id, name, h_index, total_papers, primary_field, research_topics. ID-MODE (id=...): look up a single author profile by author_id (obtained from a previous q-mode call or from co_author_graph results). Returns h-index, total citations, global rank, primary field, novelty score distribution, research topics, code/venue scores, years active, and their top 10 papers by rank score.",
       inputSchema: {
         q: z
           .string()

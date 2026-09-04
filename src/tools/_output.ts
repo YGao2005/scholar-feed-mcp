@@ -132,19 +132,12 @@ const paperObject = z
   );
 
 /**
- * Shared envelope for every tool that returns a `papers` array:
- * search_papers, get_citations, get_field_orientation, list_library,
- * check_watches. Unknown top-level keys (e.g. an endpoint's own wrapper) ride
- * along rather than failing the call, so this fits all of them.
+ * Scalar envelope keys shared by every papers-returning tool.
  *
- * Kept as a raw shape so `getPaperOutput` can spread it; the wrapped export is
- * `papersOutput` below.
+ * These are CHEAP (~740 chars all together). The cost in this file was never the
+ * scalars — it was the paper ARRAYS, so those are declared per-tool below.
  */
-const papersShape = {
-  papers: z
-    .array(paperObject)
-    .optional()
-    .describe("Matched / returned papers."),
+const envelopeShape = {
   // NULLABLE, not just optional: the backend returns an explicit `total: null`
   // whenever the count is skipped rather than omitting the key — the query-less
   // browse path (sort=trending/recent/impactful) and any search whose count query
@@ -177,14 +170,48 @@ const papersShape = {
     .nullable()
     .optional()
     .describe("Keyset cursor for the next page, or null when exhausted."),
+};
+
+/**
+ * Envelope for the tools that return a `papers` array: search_papers,
+ * get_citations, get_field_orientation, list_library, get_paper. Unknown
+ * top-level keys ride along via `looseObject` rather than failing the call.
+ *
+ * ONE ARRAY PER SCHEMA — this is load-bearing, not tidiness. Until 2026-09-03 a
+ * single shape declared `papers` AND `hits` AND `results` so that it could be reused
+ * by every tool regardless of which key that tool returned. Measured cost: 6,253
+ * chars, of which the three arrays were 5,240 (84%), shared across 5 tools — i.e.
+ * `paperObject` serialized FIFTEEN times into every `tools/list`, which every session
+ * pays for. `results` was the worst of it: grepping the backend showed NOTHING returns
+ * a `results` paper array (the only `"results"` keys are fetch_fulltext's sections
+ * dict), so ~8,570 chars of the surface described a key that never existed.
+ *
+ * If you add a tool that returns papers under a new key, give it its own envelope
+ * rather than adding a third array here.
+ */
+const papersShape = {
+  ...envelopeShape,
+  papers: z
+    .array(paperObject)
+    .optional()
+    .describe("Matched / returned papers."),
+};
+
+export const papersOutput = looseObject(papersShape);
+
+/** check_watches: returns its matches under `hits`, plus the watermark. */
+export const hitsOutput = looseObject({
+  ...envelopeShape,
   hits: z
     .array(paperObject)
     .optional()
     .describe("New watch matches (check_watches)."),
-  results: z.array(paperObject).optional(),
-};
-
-export const papersOutput = looseObject(papersShape);
+  since: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Watermark the hits were computed from, or null on first run."),
+});
 
 /** get_paper: the papers envelope, plus the bibtex / status keys for format='bibtex'. */
 export const getPaperOutput = looseObject({
