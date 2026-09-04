@@ -47,12 +47,15 @@ const PROTOCOL_VERSION = "2025-11-25";
  * against a description-only or schema-only figure; that mistake set this ceiling wrong on
  * the first attempt.
  *
- * Baseline history (27 tools throughout):
- *   123,031  2026-09-03  pre-gate
- *    96,950  2026-09-03  one paper array per envelope (was papers+hits+results shared 5x)
- *    96,087  2026-09-03  removed descriptions of removed features
- *    96,417  2026-09-03  declared n_authors (schema-sync found it returned but undeclared)
- *    93,214  2026-09-03  stopped re-documenting params in tool descriptions
+ * Baseline history (27 tools throughout). ALL FIGURES ARE `JSON.stringify` CHARS, as this
+ * test counts them. Do not paste in a number measured with Python's `json.dumps`: its default
+ * separators (`', '` / `': '`) plus `ensure_ascii` inflate the same payload by ~5%, which is
+ * exactly how a "-24%" was reported for what is really -20%.
+ *   ~117,100  2026-09-03  pre-gate (measured as 123,031 in inflated python units)
+ *     96,950  2026-09-03  one paper array per envelope (was papers+hits+results shared 5x)
+ *     96,087  2026-09-03  removed descriptions of removed features
+ *     96,417  2026-09-03  declared n_authors (schema-sync found it returned but undeclared)
+ *     93,214  2026-09-03  stopped re-documenting params in tool descriptions  (-20% overall)
  */
 const SURFACE_CEILING_CHARS = 95_000;
 
