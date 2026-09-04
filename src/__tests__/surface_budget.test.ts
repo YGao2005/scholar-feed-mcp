@@ -52,15 +52,38 @@ const PROTOCOL_VERSION = "2025-11-25";
  *    96,950  2026-09-03  one paper array per envelope (was papers+hits+results shared 5x)
  *    96,087  2026-09-03  removed descriptions of removed features
  *    96,417  2026-09-03  declared n_authors (schema-sync found it returned but undeclared)
+ *    93,214  2026-09-03  stopped re-documenting params in tool descriptions
  */
-const SURFACE_CEILING_CHARS = 98_000;
+const SURFACE_CEILING_CHARS = 95_000;
 
 /**
- * No single tool may dominate. search_papers is 14,484 chars today — the largest in the
- * surface, with 27 parameters. It is the workhorse (746 of ~1,500 MCP calls over 3 days)
- * so it has earned room, but not unbounded room.
+ * No single tool may dominate. search_papers is 11,649 chars — still the largest, and it has
+ * earned room (2,132 of ~4,600 MCP calls over 14 days), but not unbounded room.
+ *
+ * A tool description must NOT restate what a parameter's own `description` already says. Both
+ * are shipped to the client, so duplicated guidance is paid for twice and drifts
+ * independently. search_papers had 18 of its 27 params documented in both places — 4,825
+ * chars of param text mirrored in prose — which is how its description reached 4,407 chars.
+ * Deduplicating it took that to 1,542 with nothing lost: every cross-param trap removed from
+ * the description was verified to already exist in the param that owns it. A tool description
+ * should carry only what NO single parameter can say.
  */
-const PER_TOOL_CEILING_CHARS = 15_000;
+const PER_TOOL_CEILING_CHARS = 12_000;
+
+/**
+ * Per-tool DESCRIPTION ceiling, gated separately from total size because descriptions grow by
+ * a different mechanism: someone adds a paragraph rather than a parameter, and the prose is
+ * where the duplication accumulates.
+ *
+ * The largest legitimate description is check_drift's (~2,155 chars). Most of its length is
+ * earned — it explains that the grounding gate verifies quote text but NOT attribution, and
+ * that no end-to-end precision has been measured, which is what stops an agent repeating a
+ * supersession verdict as fact. That guidance belongs to no parameter, so it stays.
+ *
+ * If a description breaches this, the first question is not "how do I compress prose" but
+ * "which parameter already owns this?" — see the note on PER_TOOL_CEILING_CHARS above.
+ */
+const PER_DESCRIPTION_CEILING_CHARS = 2_300;
 
 interface ToolDef {
   name: string;
@@ -162,6 +185,22 @@ describe("tool surface budget", () => {
       [],
       `tool(s) over the ${PER_TOOL_CEILING_CHARS.toLocaleString()}-char per-tool ceiling: ` +
         over.map((t) => `${t.name} (${t.size.toLocaleString()})`).join(", "),
+    );
+  });
+
+  it("keeps every tool description within budget", () => {
+    const over = tools
+      .map((t) => ({ name: t.name, size: (t.description ?? "").length }))
+      .filter((t) => t.size > PER_DESCRIPTION_CEILING_CHARS)
+      .sort((a, b) => b.size - a.size);
+    assert.deepStrictEqual(
+      over,
+      [],
+      `description(s) over the ${PER_DESCRIPTION_CEILING_CHARS.toLocaleString()}-char ceiling: ` +
+        over.map((t) => `${t.name} (${t.size.toLocaleString()})`).join(", ") +
+        `.\n  Before compressing prose, check which PARAMETER already documents this — both the` +
+        `\n  description and every param description are shipped, so duplicated guidance is paid` +
+        `\n  for twice. search_papers went 4,407 -> 1,542 chars that way with nothing lost.`,
     );
   });
 

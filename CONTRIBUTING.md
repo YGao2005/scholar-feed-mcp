@@ -75,12 +75,40 @@ Existing names are grandfathered in a **frozen** `LEGACY_NAMES` set because tool
 published API (npm, MCP registry, claude.ai connectors). Do not add to that set to make CI
 pass — rename your tool, or widen the approved prefixes deliberately and say why in the PR.
 
+#### Writing a tool description
+
+**A tool description must not restate what a parameter's own `description` already says.**
+Both are shipped to the client, so duplicated guidance is paid for twice, in every session,
+and the two copies drift apart.
+
+This is the single biggest source of description bloat here. `search_papers` had **18 of its
+27 parameters documented in both places** — 4,825 chars of parameter text mirrored in prose —
+which is how its description reached 4,407 chars. Deduplicating took it to 1,542 with nothing
+lost, because every cross-parameter trap removed from the description was verified to already
+exist in the parameter that owns it.
+
+So a tool description carries only what **no single parameter can say**:
+
+- what the tool is for, and when to pick it over a neighbouring tool
+- limits of the underlying engine (semantic ranking misses old canonical papers)
+- how to read the response when no parameter controls it (library state is marked inline)
+- honesty about what the data does *not* establish (`check_drift`'s grounding gate verifies
+  quote text but not attribution)
+
+Everything parameter-specific — modes, filters, sorts, coverage caveats, response shape —
+belongs in that parameter's `.describe()`. Pointing at a parameter is fine; re-explaining it
+is not.
+
+A caveat is often a bug you decided to document. Before writing "treat a 0 as unknown", check
+whether the field could just return `null`.
+
 #### Surface budget
 
-`src/__tests__/surface_budget.test.ts` holds a whole-surface and a per-tool byte ceiling
-that **may only fall**. If your change breaches it, in preference order: fit within the
-budget, subtract something that is not earning its bytes (run
-`backend/scripts/tool_usage_report.py` for candidates), or argue for the raise in the PR.
+`src/__tests__/surface_budget.test.ts` holds three ceilings that **may only fall** —
+whole-surface, per-tool, and per-description. If your change breaches one, in preference
+order: move the text to the parameter that owns it, fit within the budget, subtract something
+that is not earning its bytes (run `backend/scripts/tool_usage_report.py` for candidates), or
+argue for the raise in the PR.
 
 Ordinary `npm test` output prints the current surface cost, so you can see the effect of a
 description edit without hunting for it.

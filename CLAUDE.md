@@ -96,9 +96,13 @@ npm run format                    # prettier — fixes the format:check CI gate
 `tools/list` is a **fixed cost every session pays before any work** (~24k tokens for 27
 tools). Three gates hold it, all in `src/__tests__/`:
 
-- **`surface_budget.test.ts`** — whole-surface + per-tool byte ceilings that **MAY ONLY
-  FALL**, plus a guard that no envelope declares two paper arrays. `npm test` prints the
-  current cost every run.
+- **`surface_budget.test.ts`** — whole-surface, per-tool and per-description ceilings that
+  **MAY ONLY FALL**, plus a guard that no envelope declares two paper arrays. `npm test`
+  prints the current cost every run.
+  **Never restate a param's own `description` in the tool description** — both ship to the
+  client, so it is paid for twice and drifts. That one mistake made `search_papers`
+  4,407 chars (18 of 27 params documented twice); it is 1,542 now with nothing lost. A tool
+  description carries only what no single param can say.
 - **`tool_grammar.test.ts`** — a new tool must use an approved prefix (`get_` `search_`
   `list_` `analyze_` `ask_` `create_` `update_` `delete_` `annotate_`). `find_` and `check_`
   are banned as ambiguous. The 27 published names are grandfathered in a **frozen** set —
