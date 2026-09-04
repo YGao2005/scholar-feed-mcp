@@ -89,7 +89,26 @@ interface ToolDef {
   name: string;
   description?: string;
   inputSchema?: unknown;
-  outputSchema?: unknown;
+  outputSchema?: {
+    properties?: Record<string, { type?: string } | undefined>;
+  };
+}
+
+/**
+ * Which of the paper-array keys a tool's outputSchema declares.
+ *
+ * Reads the PARSED schema. An earlier version regex-matched the serialized JSON for
+ * `"papers":{"type":"array"` and silently matched nothing: once a field carries a
+ * `.describe()`, `description` is serialized FIRST, so the pattern never saw the tools it
+ * was written to check and the assertion below passed vacuously. Caught only by probing the
+ * built bundle by hand. Do not reintroduce a string match here.
+ */
+function paperArrayKeys(tool: ToolDef): string[] {
+  const props = tool.outputSchema?.properties ?? {};
+  // Only these three; `not_found` is also type:array (of strings) and must not count.
+  return ["papers", "hits", "results"].filter(
+    (k) => props[k]?.type === "array",
+  );
 }
 
 function parseMcpResponse(
@@ -210,15 +229,33 @@ describe("tool surface budget", () => {
     // `results` described a key NOTHING returns. If a tool needs a new array key, give it
     // its own envelope instead of widening a shared one.
     for (const t of tools) {
-      const schema = JSON.stringify(t.outputSchema ?? {});
-      const arrays = ["papers", "hits", "results"].filter((k) =>
-        new RegExp(`"${k}":\\s*\\{"type":"array"`).test(schema),
-      );
+      const arrays = paperArrayKeys(t);
       assert.ok(
         arrays.length <= 1,
         `${t.name} declares ${arrays.length} paper arrays (${arrays.join(", ")}). ` +
           `Each duplicated paperObject costs ~1,750 chars in EVERY session.`,
       );
     }
+  });
+
+  it("actually sees the paper arrays it is checking", () => {
+    // Guards the guard. The assertion above is satisfied by BOTH "one array per tool" and
+    // "the detector is broken and sees none" — and the first implementation was the latter.
+    // Pinning the expected detections means a future refactor of the schema shape breaks
+    // loudly instead of turning the check into a no-op.
+    const found = tools
+      .map((t) => [t.name, paperArrayKeys(t)] as const)
+      .filter(([, keys]) => keys.length > 0)
+      .map(([name, keys]) => `${name}:${keys.join("+")}`)
+      .sort();
+    assert.deepStrictEqual(found, [
+      "ask_library:papers",
+      "check_watches:hits",
+      "get_citations:papers",
+      "get_field_orientation:papers",
+      "get_paper:papers",
+      "list_library:papers",
+      "search_papers:papers",
+    ]);
   });
 });
