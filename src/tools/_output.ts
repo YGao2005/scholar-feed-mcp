@@ -89,6 +89,10 @@ const paperObject = z
     arxiv_id: z.string().optional(),
     title: z.string().optional(),
     authors: z.array(z.string()).optional(),
+    // Present only when `authors` was TRUNCATED (list_library caps it at 3); its absence
+    // means the list is complete. Found by scripts/schema-sync.mjs on its first run — it
+    // was being returned and declared nowhere, so no agent could know it existed.
+    n_authors: z.number().optional(),
     year: z.number().optional(),
     published_date: z.string().optional(),
     categories: z.array(z.string()).optional(),

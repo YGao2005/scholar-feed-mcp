@@ -36,12 +36,63 @@ src/
 
 ### Adding a New Tool
 
+**First ask whether it should be a tool at all.** Every tool is loaded into *every*
+session's context by `tools/list` — currently ~24k tokens for 27 tools — whether that
+session uses it or not. A new capability is usually better as a new **parameter on an
+existing tool**: `search_papers` already absorbed three former tools this way
+(`anchor_paper_id`, `scope_to_citations_of`, `sort='trending'`). Eleven of the 27 tools
+logged zero calls over 14 days, so the default assumption should be that a 28th will too.
+
+If it really is a new tool:
+
 1. Create `src/tools/your_tool.ts` following the pattern of existing tools
 2. Import and register it in `src/tools/index.ts`
 3. Add it to the tool table in `README.md` (and bump the count in the heading)
 4. Add tests in `src/__tests__/`: registration in `tools.test.ts`, handler behavior in `handlers.test.ts` (or `write_tools.test.ts` for account-mutating tools)
 
 Each tool file exports a `register(server: McpServer)` function that calls `server.registerTool()` with a name, Zod input schema, and handler.
+
+#### Tool naming
+
+Enforced by `src/__tests__/tool_grammar.test.ts`. A new tool's name **must** start with one
+of:
+
+| prefix | meaning |
+|---|---|
+| `get_` | fetch one identified thing |
+| `search_` | query the corpus |
+| `list_` | enumerate what belongs to the caller |
+| `analyze_` | derived / expensive / interpretive output |
+| `ask_` | LLM synthesis over a scoped set |
+| `create_` `update_` `delete_` | lifecycle mutations |
+| `annotate_` | attach the caller's own judgement to a thing |
+
+`find_` and `check_` are **not** available. They are why this grammar exists: `find_author`
+is a search while `find_gaps` is an analysis, and `check_watches` lists while `check_drift`
+analyses — so neither prefix tells a caller anything.
+
+Existing names are grandfathered in a **frozen** `LEGACY_NAMES` set because tool names are a
+published API (npm, MCP registry, claude.ai connectors). Do not add to that set to make CI
+pass — rename your tool, or widen the approved prefixes deliberately and say why in the PR.
+
+#### Surface budget
+
+`src/__tests__/surface_budget.test.ts` holds a whole-surface and a per-tool byte ceiling
+that **may only fall**. If your change breaches it, in preference order: fit within the
+budget, subtract something that is not earning its bytes (run
+`backend/scripts/tool_usage_report.py` for candidates), or argue for the raise in the PR.
+
+Ordinary `npm test` output prints the current surface cost, so you can see the effect of a
+description edit without hunting for it.
+
+#### Response shapes
+
+`paperObject` in `src/tools/_output.ts` is hand-maintained against a backend in a different
+repo, so it drifts. After changing a response shape run `npm run schema:sync` (needs network
++ a live API) to refresh `src/__tests__/fixtures/observed-fields.json`;
+`schema_drift.test.ts` then asserts every field the backend actually returns is declared.
+Declare each paper array on exactly one envelope — a shared envelope that listed `papers`
+*and* `hits` *and* `results` cost ~27k chars of duplicated schema before it was split.
 
 ### Code Style
 

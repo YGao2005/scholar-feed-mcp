@@ -54,7 +54,8 @@
     "mcpb:pack": "node scripts/pack-mcpb.mjs",
     "test": "node --import tsx --test src/__tests__/*.test.ts",
     "coverage": "c8 node --import tsx --test src/__tests__/*.test.ts",
-    "prepublishOnly": "npm run lint && npm run build && npm run coverage"
+    "prepublishOnly": "npm run lint && npm run build && npm run coverage",
+    "schema:sync": "node scripts/schema-sync.mjs"
   },
   "comment:dependencies": "Runtime deps are intentionally empty: the published bin (build/index.js) is a self-contained esbuild bundle (see tsup.config.ts), so `npx`/Docker consumers install ZERO transitive deps. The five former runtime deps (sdk/zod for the stdio bundle; express/cors/jose for the HTTP+Worker deploy targets) live in devDependencies — they are bundled in at build time by every deploy target and CI, never installed by consumers.",
   "dependencies": {},

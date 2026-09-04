@@ -51,6 +51,7 @@ const PROTOCOL_VERSION = "2025-11-25";
  *   123,031  2026-09-03  pre-gate
  *    96,950  2026-09-03  one paper array per envelope (was papers+hits+results shared 5x)
  *    96,087  2026-09-03  removed descriptions of removed features
+ *    96,417  2026-09-03  declared n_authors (schema-sync found it returned but undeclared)
  */
 const SURFACE_CEILING_CHARS = 98_000;
 
