@@ -225,6 +225,28 @@ describe("client error mapping", () => {
     );
   });
 
+  it("tags the no-key signup URL with ref=mcp403 and a session hint", async () => {
+    // Reaching an account-gated tool anonymously is the highest-intent signal the
+    // product produces, and it used to convert to nothing measurable because an
+    // anonymous caller shares no identifier with any account. `s` is the first 8 hex
+    // chars of the X-SF-Session id; the backend stores the full value on the same
+    // call in usage_events.session_id, so signup_attribution.mcp_session joins the
+    // resulting account back to this exact session. If this assertion ever fails,
+    // funnel attribution for the MCP surface is silently dead.
+    await withStub({ status: 403, body: "" }, {}, async () => {
+      await assert.rejects(client.get("/x"), (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.match(
+          msg,
+          /https:\/\/www\.scholarfeed\.org\/settings\?ref=mcp403&s=[0-9a-f]{8}\b/,
+        );
+        // Must stay on the canonical origin — the URL is handed to an agent.
+        assert.doesNotMatch(msg, /scholarfeed\.org\.[a-z]/);
+        return true;
+      });
+    });
+  });
+
   it("surfaces the RFC-9457 { code, detail } envelope (HTTPException gates)", async () => {
     // The backend re-renders every HTTPException as problem+json, so a gate's
     // `message` arrives as `detail` under a deliberate `code` — e.g. embed_text's
