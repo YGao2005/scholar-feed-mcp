@@ -1,7 +1,7 @@
 {
   "name": "scholar-feed-mcp",
   "mcpName": "io.github.YGao2005/scholar-feed-mcp",
-  "version": "3.16.0",
+  "version": "3.17.0",
   "description": "Search 600k+ CS/AI/ML papers with ranking and citation tracking: sort by relevance, citations, or rising impact, trace citation lineage, pull full text and BibTeX",
   "type": "module",
   "license": "MIT",
