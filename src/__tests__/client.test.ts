@@ -236,12 +236,19 @@ describe("client error mapping", () => {
     await withStub({ status: 403, body: "" }, {}, async () => {
       await assert.rejects(client.get("/x"), (err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        assert.match(
-          msg,
-          /https:\/\/www\.scholarfeed\.org\/settings\?ref=mcp403&s=[0-9a-f]{8}\b/,
-        );
-        // Must stay on the canonical origin — the URL is handed to an agent.
-        assert.doesNotMatch(msg, /scholarfeed\.org\.[a-z]/);
+        // PARSE the URL rather than regex-matching the message. An unanchored
+        // pattern would also pass on https://evil.com/?u=https://www.scholarfeed.org/
+        // settings?ref=mcp403&s=..., which is the exact confusion that matters when
+        // the string is handed to an agent to open. Checking origin as a parsed value
+        // is both stronger than a lookalike-domain denylist and anchor-free by
+        // construction. (CodeQL js/regex/missing-regexp-anchor.)
+        const found = msg.match(/https:\/\/\S+/);
+        assert.ok(found, "the remedy must hand the agent a URL");
+        const url = new URL(found[0]);
+        assert.strictEqual(url.origin, "https://www.scholarfeed.org");
+        assert.strictEqual(url.pathname, "/settings");
+        assert.strictEqual(url.searchParams.get("ref"), "mcp403");
+        assert.match(url.searchParams.get("s") ?? "", /^[0-9a-f]{8}$/);
         return true;
       });
     });
