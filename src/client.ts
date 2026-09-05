@@ -280,18 +280,39 @@ function isProGate(body: string): boolean {
  * where each request carries its own key in the Authorization header and
  * SF_API_KEY must never be set server-side (it would leak across tenants).
  */
+/**
+ * The signup URL handed to the agent when a call fails for want of a key, tagged so
+ * the resulting account can be attributed back to THIS moment.
+ *
+ * Why it is worth tagging: reaching an account-gated tool anonymously is the
+ * highest-intent signal the product produces — measured 2026-09-04, 310 such calls
+ * from 72 source IPs over 90 days, still firing — and until now it converted to
+ * nothing measurable, because an anonymous MCP caller shares no identifier with any
+ * account. `s` is the first 8 chars of the X-SF-Session id, and the backend already
+ * stores the full value on every one of those calls in usage_events.session_id, so
+ * `signup_attribution.mcp_session` joins the account back to the exact session.
+ *
+ * The session id is an opaque per-request (remote) or per-process (stdio) random
+ * value carrying no user or environment identity, so exposing 8 chars of it in a URL
+ * the user may paste anywhere leaks nothing. 8 hex chars is 4.3e9 of space against
+ * ~11k anonymous sessions per quarter, so a collision is not a practical concern.
+ */
+function signupUrl(): string {
+  return `${SITE_ORIGIN}/settings?ref=mcp403&s=${getSessionId().replace(/-/g, "").slice(0, 8)}`;
+}
+
 function missingKeyRemedy(): string {
   if (getCurrentCreds()) {
     return (
       "This request was sent without a Scholar Feed API key. Get one at " +
-      "https://www.scholarfeed.org/settings and send it as an `Authorization: Bearer sf_...` " +
+      `${signupUrl()} and send it as an \`Authorization: Bearer sf_...\` ` +
       "header to this MCP endpoint. Do NOT retry this call until the key is attached — " +
       "it will keep failing."
     );
   }
   return (
     "No API key was sent, so this endpoint refused the request. Set SF_API_KEY " +
-    "to a key from https://www.scholarfeed.org/settings in your MCP server config " +
+    `to a key from ${signupUrl()} in your MCP server config ` +
     "(the `env` block), then restart the MCP server. Do NOT retry this call until " +
     "the key is set — it will keep failing."
   );
