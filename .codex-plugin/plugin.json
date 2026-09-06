@@ -27,10 +27,7 @@
     "longDescription": "A research copilot over 600,000+ CS/AI/ML papers: semantic search, citation-graph traversal, co-author graphs, full-text extraction, foundational-lineage lookup, text embeddings, and saved libraries, collections, and standing watches. Runs anonymously at 200 calls/month with no signup; a free key raises that to 500/month and unlocks your library.",
     "developerName": "Scholar Feed",
     "category": "Developer Tools",
-    "capabilities": [
-      "MCP",
-      "Read"
-    ],
+    "capabilities": ["MCP", "Read"],
     "websiteURL": "https://www.scholarfeed.org"
   },
   "mcpServers": "./.codex-plugin/mcp.json"

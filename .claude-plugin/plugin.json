@@ -28,10 +28,7 @@
   "mcpServers": {
     "scholar-feed": {
       "command": "npx",
-      "args": [
-        "-y",
-        "scholar-feed-mcp@latest"
-      ]
+      "args": ["-y", "scholar-feed-mcp@latest"]
     }
   }
 }

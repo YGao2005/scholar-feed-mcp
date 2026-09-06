@@ -31,7 +31,8 @@ const ENV = {
   SF_MCP_AUDIENCE: `https://${HOST}/mcp`,
   SF_MCP_RESOURCE_URI: `https://${HOST}/mcp`,
   SF_OAUTH_ISSUER: "https://example.supabase.co/auth/v1",
-  SF_OAUTH_JWKS_URL: "https://example.supabase.co/auth/v1/.well-known/jwks.json",
+  SF_OAUTH_JWKS_URL:
+    "https://example.supabase.co/auth/v1/.well-known/jwks.json",
   SF_OAUTH_ENFORCE_ISSUER: "false",
 } as const;
 
@@ -53,7 +54,10 @@ describe("worker entry — credential resolver selection", () => {
     await assert.rejects(
       () => Promise.resolve(resolver.resolve({ subject: "u-1" } as never)),
       (err: Error) => {
-        assert.match(err.message, new RegExp(UNCONFIGURED_RESOLVER_MESSAGE.slice(0, 20)));
+        assert.match(
+          err.message,
+          new RegExp(UNCONFIGURED_RESOLVER_MESSAGE.slice(0, 20)),
+        );
         return true;
       },
     );
@@ -119,7 +123,10 @@ describe("worker entry — CORS for browser MCP hosts", () => {
     assert.equal(res.status, 204);
     assert.equal(res.headers.get("access-control-allow-origin"), ORIGIN);
     // Without this the browser hides the 401's challenge and OAuth cannot start.
-    assert.equal(res.headers.get("access-control-expose-headers"), "WWW-Authenticate");
+    assert.equal(
+      res.headers.get("access-control-expose-headers"),
+      "WWW-Authenticate",
+    );
     assert.match(res.headers.get("access-control-allow-methods") ?? "", /POST/);
     assert.match(res.headers.get("vary") ?? "", /Origin/);
   });

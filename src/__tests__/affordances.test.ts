@@ -43,7 +43,11 @@ describe("account affordance — when it fires", () => {
     for (let i = 1; i < THRESHOLD; i++) accountAffordance();
 
     const first = accountAffordance();
-    assert.notStrictEqual(first, "", "the Nth call must produce the affordance");
+    assert.notStrictEqual(
+      first,
+      "",
+      "the Nth call must produce the affordance",
+    );
     assert.match(first, /calling Scholar Feed anonymously/);
 
     for (let i = 0; i < 10; i++) {
@@ -65,7 +69,10 @@ describe("account affordance — who must never see it", () => {
   });
 
   it("never fires on the remote transport, which has no per-user counter", () => {
-    const creds = { apiKey: null, sessionId: "11111111-2222-3333-4444-555555555555" };
+    const creds = {
+      apiKey: null,
+      sessionId: "11111111-2222-3333-4444-555555555555",
+    };
     for (let i = 0; i < THRESHOLD * 3; i++) {
       assert.strictEqual(
         runWithCreds(creds, () => accountAffordance()),
@@ -76,12 +83,19 @@ describe("account affordance — who must never see it", () => {
   });
 
   it("remote calls do not advance the stdio counter", () => {
-    const creds = { apiKey: null, sessionId: "11111111-2222-3333-4444-555555555555" };
+    const creds = {
+      apiKey: null,
+      sessionId: "11111111-2222-3333-4444-555555555555",
+    };
     for (let i = 0; i < THRESHOLD * 3; i++) {
       runWithCreds(creds, () => accountAffordance());
     }
     // If remote traffic had ticked the counter, the very first stdio call would fire.
-    assert.strictEqual(accountAffordance(), "", "ineligible callers must not tick");
+    assert.strictEqual(
+      accountAffordance(),
+      "",
+      "ineligible callers must not tick",
+    );
   });
 });
 
@@ -115,7 +129,10 @@ describe("account affordance — placement in the payload", () => {
     const fenceEnd = out.indexOf(UNTRUSTED_END);
     const nudge = out.indexOf("calling Scholar Feed anonymously");
     assert.ok(fenceEnd >= 0, "the fence must still close");
-    assert.ok(nudge > fenceEnd, "trusted server text must never sit inside the fence");
+    assert.ok(
+      nudge > fenceEnd,
+      "trusted server text must never sit inside the fence",
+    );
   });
 
   it("still closes on the fence, with a header, when there is no next-steps footer", () => {
@@ -128,7 +145,10 @@ describe("account affordance — placement in the payload", () => {
     const header = out.indexOf("Scholar Feed next steps");
     const nudge = out.indexOf("calling Scholar Feed anonymously");
     assert.ok(fenceEnd >= 0);
-    assert.ok(header > fenceEnd, "the affordance must be introduced by the header");
+    assert.ok(
+      header > fenceEnd,
+      "the affordance must be introduced by the header",
+    );
     assert.ok(nudge > header);
   });
 

@@ -96,7 +96,8 @@ test("no surface advertises the RETIRED daily caps (mig 173 replaced them)", () 
 test("the monthly quota is stated correctly wherever quota copy appears", () => {
   // Only files that actually make a quota claim are checked; a manifest may
   // legitimately not mention quotas at all.
-  const MENTIONS_QUOTA = /calls?\s*\/\s*month|calls? a month|requests?\/month|per month/i;
+  const MENTIONS_QUOTA =
+    /calls?\s*\/\s*month|calls? a month|requests?\/month|per month/i;
   const CORRECT_ANON = /\b200\b/;
   const CORRECT_FREE = /\b500\b/;
 
@@ -106,10 +107,21 @@ test("the monthly quota is stated correctly wherever quota copy appears", () => 
     const text = read(file);
     if (!MENTIONS_QUOTA.test(text)) continue;
     checked++;
-    assert.match(text, CORRECT_ANON, `${file} states a monthly quota but never mentions 200 (anon)`);
-    assert.match(text, CORRECT_FREE, `${file} states a monthly quota but never mentions 500 (free)`);
+    assert.match(
+      text,
+      CORRECT_ANON,
+      `${file} states a monthly quota but never mentions 200 (anon)`,
+    );
+    assert.match(
+      text,
+      CORRECT_FREE,
+      `${file} states a monthly quota but never mentions 500 (free)`,
+    );
   }
-  assert.ok(checked >= 4, `expected quota copy on at least 4 surfaces, found ${checked}`);
+  assert.ok(
+    checked >= 4,
+    `expected quota copy on at least 4 surfaces, found ${checked}`,
+  );
 });
 
 test("README's ask_library allowance matches the backend (20/month free)", () => {
@@ -128,7 +140,11 @@ test("the Smithery listing tags its calls with SF_SRC", () => {
   // path where a server-level SF_SRC is honoured. Without it, our single
   // largest listing (7,974 uses) is indistinguishable from anonymous traffic.
   const y = read("smithery.yaml");
-  assert.match(y, /SF_SRC:\s*'smithery'/, "smithery.yaml must set SF_SRC so the channel is attributable");
+  assert.match(
+    y,
+    /SF_SRC:\s*'smithery'/,
+    "smithery.yaml must set SF_SRC so the channel is attributable",
+  );
 });
 
 test("the codex plugin manifest resolves the install URL third parties publish", () => {
@@ -136,12 +152,24 @@ test("the codex plugin manifest resolves the install URL third parties publish",
   //   install_url: .../HEAD/.codex-plugin/plugin.json
   // which 404'd until this file existed, breaking one-click install for every
   // Codex user who found us through that list.
-  assert.ok(existsSync(".codex-plugin/plugin.json"), ".codex-plugin/plugin.json must exist");
+  assert.ok(
+    existsSync(".codex-plugin/plugin.json"),
+    ".codex-plugin/plugin.json must exist",
+  );
   const plugin = json(".codex-plugin/plugin.json") as { mcpServers?: string };
-  assert.equal(typeof plugin.mcpServers, "string", "codex plugins point mcpServers at a file path");
-  assert.ok(existsSync(plugin.mcpServers!.replace(/^\.\//, "")), "the referenced mcp.json must exist");
+  assert.equal(
+    typeof plugin.mcpServers,
+    "string",
+    "codex plugins point mcpServers at a file path",
+  );
+  assert.ok(
+    existsSync(plugin.mcpServers!.replace(/^\.\//, "")),
+    "the referenced mcp.json must exist",
+  );
 
-  const mcp = json(".codex-plugin/mcp.json") as { mcpServers: Record<string, { command: string; args: string[] }> };
+  const mcp = json(".codex-plugin/mcp.json") as {
+    mcpServers: Record<string, { command: string; args: string[] }>;
+  };
   const entry = mcp.mcpServers["scholar-feed"];
   assert.ok(entry, "mcp.json must declare the scholar-feed server");
   assert.equal(entry.command, "npx");

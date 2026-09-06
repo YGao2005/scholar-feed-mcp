@@ -17,9 +17,7 @@
     "type": "git",
     "url": "https://github.com/YGao2005/scholar-feed-mcp"
   },
-  "privacy_policies": [
-    "https://www.scholarfeed.org/privacy-policy"
-  ],
+  "privacy_policies": ["https://www.scholarfeed.org/privacy-policy"],
   "license": "MIT",
   "keywords": [
     "research",
@@ -35,9 +33,7 @@
     "entry_point": "build/index.js",
     "mcp_config": {
       "command": "node",
-      "args": [
-        "${__dirname}/build/index.js"
-      ],
+      "args": ["${__dirname}/build/index.js"],
       "env": {
         "SF_API_KEY": "${user_config.sf_api_key}"
       }
