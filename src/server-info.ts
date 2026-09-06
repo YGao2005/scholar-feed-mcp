@@ -130,7 +130,7 @@ env = { SF_API_KEY = "sf_your_key_here" }</code></pre>
 <h2>Using this URL directly</h2>
 <p>If your client supports remote streamable HTTP, use <code>POST</code> to this
 endpoint with <code>Authorization: Bearer sf_your_key_here</code>. Without a key you
-get 100 calls/day; a free key raises it to 1,000/day.</p>
+get 200 calls/month; a free key raises it to 500/month and unlocks your library.</p>
 
 <footer>
 Full setup for every client, the tool reference, and free API keys:

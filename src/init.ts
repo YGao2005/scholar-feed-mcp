@@ -75,7 +75,7 @@ async function verifyKey(apiKey: string): Promise<boolean> {
         );
       } else {
         console.error(
-          `  Connected! Running in anonymous mode (100 calls/day).`,
+          `  Connected! Running in anonymous mode (200 calls/month).`,
         );
       }
       return true;
@@ -349,7 +349,7 @@ export async function runInit(): Promise<void> {
   printStep(1, 3, "Enter your API key (optional — press Enter to skip)");
   console.error("  Get a free key at: https://www.scholarfeed.org/settings");
   console.error(
-    "  Without a key, you get 100 calls/day. With a key, 1,000/day per account.",
+    "  Without a key, you get 200 calls/month. With a key, 500/month per account.",
   );
   const apiKey = await ask("  API key (sf_...): ");
 

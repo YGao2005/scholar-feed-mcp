@@ -1,8 +1,12 @@
 /**
  * ScholarFeedClient — wraps fetch calls to the Scholar Feed API.
  *
- * SF_API_KEY is optional. Without it, requests are anonymous with lower
- * rate limits (100 calls/day). With a key, limits are 1,000 calls/day per account.
+ * SF_API_KEY is optional. Without it, requests are anonymous with a lower quota
+ * (200 calls/month per IP). With a key, the quota is 500 calls/month per account
+ * (10,000 on Pro). The quota is MONTHLY; a smaller daily cap sits under it purely as a
+ * burst guardrail. Keep these numbers in step with backend/api/quotas.py — a client
+ * that quotes a different number than the wall enforces is worse than one that quotes
+ * none.
  *
  * Config (SF_API_KEY, SF_API_BASE_URL, SF_API_TIMEOUT_MS) is read at call time,
  * so importing this module has no side effects — that keeps the unit tests honest
@@ -297,25 +301,53 @@ function isProGate(body: string): boolean {
  * the user may paste anywhere leaks nothing. 8 hex chars is 4.3e9 of space against
  * ~11k anonymous sessions per quarter, so a collision is not a practical concern.
  */
-function signupUrl(): string {
-  return `${SITE_ORIGIN}/settings?ref=mcp403&s=${getSessionId().replace(/-/g, "").slice(0, 8)}`;
+function signupUrl(ref: string): string {
+  return `${SITE_ORIGIN}/settings?ref=${ref}&s=${getSessionId().replace(/-/g, "").slice(0, 8)}`;
 }
 
 function missingKeyRemedy(): string {
   if (getCurrentCreds()) {
     return (
       "This request was sent without a Scholar Feed API key. Get one at " +
-      `${signupUrl()} and send it as an \`Authorization: Bearer sf_...\` ` +
+      `${signupUrl("mcp403")} and send it as an \`Authorization: Bearer sf_...\` ` +
       "header to this MCP endpoint. Do NOT retry this call until the key is attached — " +
       "it will keep failing."
     );
   }
   return (
     "No API key was sent, so this endpoint refused the request. Set SF_API_KEY " +
-    `to a key from ${signupUrl()} in your MCP server config ` +
+    `to a key from ${signupUrl("mcp403")} in your MCP server config ` +
     "(the `env` block), then restart the MCP server. Do NOT retry this call until " +
     "the key is set — it will keep failing."
   );
+}
+
+/**
+ * The signup URL for the FREE-surface affordance (`_affordances.ts`), or null when
+ * this caller must not be shown one. Tagged `ref=mcpfree` so `signup_attribution`
+ * separates "converted after being nudged while using the free tools" from
+ * `mcp403` ("converted after hitting a gate") — two different funnel stages that
+ * would otherwise be one indistinguishable bucket.
+ *
+ * Returns null in two cases, and BOTH are load-bearing:
+ *
+ *  1. **The caller already has a key.** Nudging an authenticated user to sign up is
+ *     noise in a payload an agent has to read.
+ *  2. **The remote transport** (`getCurrentCreds()` is defined only under the HTTP
+ *     path's AsyncLocalStorage). Remote is stateless — a fresh session id per
+ *     request — so there is no per-user counter to hang a "you have used this a
+ *     while" nudge on, and a Workers isolate is SHARED between callers, so any
+ *     module-level counter there would mix strangers together and fire on the
+ *     wrong request. stdio is one process per user, which is what makes the
+ *     counter in `_affordances.ts` sound. Measured 2026-09-05: stdio carries 75%
+ *     of the calls from anonymous repeat users, so this covers most of the volume
+ *     while staying correct; the 68 remote-only repeat IPs need a backend-side
+ *     mechanism and are deliberately out of scope here.
+ */
+export function freeSurfaceSignupUrl(): string | null {
+  if (getCurrentCreds()) return null;
+  if (getApiKey()) return null;
+  return signupUrl("mcpfree");
 }
 
 class ScholarFeedClient {
