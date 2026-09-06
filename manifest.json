@@ -2,10 +2,10 @@
   "manifest_version": "0.3",
   "name": "scholar-feed-mcp",
   "display_name": "Scholar Feed",
-  "version": "3.8.0",
+  "version": "3.19.1",
   "description": "Semantic search, citation graph, full text, embeddings, and BibTeX export over 600,000+ CS/AI/ML papers.",
   "icon": "assets/icon-marketplace.png",
-  "long_description": "Scholar Feed gives your AI assistant a research copilot over 600,000+ CS/AI/ML papers: semantic search, citation-graph traversal, co-author graphs, full-text extraction, foundational-lineage lookup, text embeddings, and saved libraries, collections, and standing watches. Works anonymously at 100 calls/day, or 1,000/day with a free API key.",
+  "long_description": "Scholar Feed gives your AI assistant a research copilot over 600,000+ CS/AI/ML papers: semantic search, citation-graph traversal, co-author graphs, full-text extraction, foundational-lineage lookup, text embeddings, and saved libraries, collections, and standing watches. Works anonymously at 200 calls/month, or 500/month with a free API key.",
   "author": {
     "name": "Yang Gao",
     "url": "https://www.scholarfeed.org",
@@ -43,7 +43,7 @@
     "sf_api_key": {
       "type": "string",
       "title": "Scholar Feed API key (optional)",
-      "description": "Paste a free key from scholarfeed.org/settings to raise limits to 1,000 calls/day. Leave blank for anonymous mode (100 calls/day).",
+      "description": "Paste a free key from scholarfeed.org/settings to raise your quota to 500 calls/month and unlock your library. Leave blank for anonymous mode (200 calls/month).",
       "sensitive": true,
       "required": false
     }

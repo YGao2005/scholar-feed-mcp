@@ -458,7 +458,11 @@ export default {
       }
       if (method === "POST") {
         return withCors(
-          await handleMcpPost(request, getVerifier(), getCredentialResolver(env)),
+          await handleMcpPost(
+            request,
+            getVerifier(),
+            getCredentialResolver(env),
+          ),
           request.headers.get("origin"),
         );
       }

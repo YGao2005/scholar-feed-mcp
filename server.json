@@ -3,7 +3,7 @@
   "name": "io.github.YGao2005/scholar-feed-mcp",
   "title": "Scholar Feed",
   "description": "Rank CS/AI/ML papers by citations, forecast impact, or code adoption; trace 23.2M citation edges.",
-  "version": "3.9.1",
+  "version": "3.19.1",
   "websiteUrl": "https://www.scholarfeed.org",
   "repository": {
     "url": "https://github.com/YGao2005/scholar-feed-mcp",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "scholar-feed-mcp",
-      "version": "3.9.1",
+      "version": "3.19.1",
       "transport": {
         "type": "stdio"
       },

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "scholar-feed": {
+      "command": "npx",
+      "args": ["-y", "scholar-feed-mcp@latest"],
+      "env_vars": ["SF_API_KEY", "SF_SRC"]
+    }
+  }
+}

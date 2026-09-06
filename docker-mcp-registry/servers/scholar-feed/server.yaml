@@ -32,8 +32,8 @@ about:
     A research copilot over 600,000+ CS/AI/ML papers: semantic search,
     citation-graph traversal, co-author graphs, full-text extraction,
     foundational-lineage lookup, text embeddings, and saved libraries,
-    collections, and standing watches. Works anonymously at 100 calls/day,
-    or 1,000/day with a free API key.
+    collections, and standing watches. Works anonymously at 200 calls/month,
+    or 500/month with a free API key.
   icon: https://avatars.githubusercontent.com/u/9919?s=200&v=4
 source:
   project: https://github.com/YGao2005/scholar-feed-mcp
@@ -42,9 +42,10 @@ source:
   commit: 882809ed55e87b016222700afd1ff919a35741a4
 config:
   description: >-
-    Optional. Scholar Feed runs anonymously (100 calls/day) with no
-    configuration. To raise limits to 1,000 calls/day, supply a free API key
-    from https://www.scholarfeed.org/settings as the SF_API_KEY secret.
+    Optional. Scholar Feed runs anonymously (200 calls/month) with no
+    configuration. To raise your quota to 500 calls/month and unlock your
+    library, supply a free API key from https://www.scholarfeed.org/settings
+    as the SF_API_KEY secret.
   secrets:
     - name: scholar-feed.api_key
       env: SF_API_KEY

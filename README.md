@@ -219,7 +219,7 @@ These MUTATE or read the authenticated user's account. The core read/search tool
 | `preview_watch` | Dry-run a structured `criteria` filter over recent papers without creating a watch; returns `match_count` and a `sample` to tune before saving. Read-only. | `criteria`, `recency_days` |
 | `delete_watch` | Delete a watch by name or id (idempotent). | `name`, `watch_id` |
 | `find_gaps` | "What am I missing?" for a collection or topic: foundational + frontier work you haven't saved (read-only, **Pro**). | `collection_name`, `collection_id`, `topic`, `scope`, `limit` |
-| `ask_library` | "Answer from my saved set": a cited synthesis over your library or one collection, grounded only in papers you've saved (read-only). The inverse of `find_gaps`. **Free 1/month, then Pro 200/day.** | `question`, `collection_name`, `collection_id`, `limit` |
+| `ask_library` | "Answer from my saved set": a cited synthesis over your library or one collection, grounded only in papers you've saved (read-only). The inverse of `find_gaps`. **Free 20/month, then Pro 200/day.** | `question`, `collection_name`, `collection_id`, `limit` |
 
 ## Novelty Score
 

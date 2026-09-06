@@ -138,7 +138,7 @@ export function __resetStdioClientName(): void {
  */
 function attributionHeaders(): Record<string, string> {
   const creds = getCurrentCreds();
-  const src = creds ? creds.src : process.env.SF_SRC ?? null;
+  const src = creds ? creds.src : (process.env.SF_SRC ?? null);
   const client = creds ? creds.client : stdioClientName;
   const out: Record<string, string> = {};
   if (src) out["X-SF-Src"] = src;

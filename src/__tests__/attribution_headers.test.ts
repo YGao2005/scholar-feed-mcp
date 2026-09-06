@@ -25,7 +25,11 @@ import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import http, { type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { client, setStdioClientName, __resetStdioClientName } from "../client.js";
+import {
+  client,
+  setStdioClientName,
+  __resetStdioClientName,
+} from "../client.js";
 import { runWithCreds } from "../http/credentials.js";
 
 interface Captured {
@@ -77,7 +81,12 @@ describe("attribution headers (X-SF-Src / X-SF-Client)", () => {
 
   it("forwards ?src= and the User-Agent supplied per request", async () => {
     await runWithCreds(
-      { apiKey: null, sessionId: "s-1", src: "smithery", client: "claude-ai/1.0" },
+      {
+        apiKey: null,
+        sessionId: "s-1",
+        src: "smithery",
+        client: "claude-ai/1.0",
+      },
       () => client.get("/library"),
     );
     assert.equal(captured.length, 1);

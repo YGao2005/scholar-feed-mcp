@@ -1,0 +1,17 @@
+# Keep local build output, caches and any local env files out of plugin scans
+# and out of anything that packages this repo as a plugin.
+#
+# The HOL plugin-scanner walks the working tree, not git's index, so an
+# untracked .vercel/.env.production.local or a freshly built bundle shows up as
+# a "hardcoded secret" finding even though neither is committed. Measured
+# 2026-09-06: those artifacts contributed 8 of 20 high findings locally.
+node_modules/
+build/
+dist/
+dist-worker/
+coverage/
+.vercel/
+*.mcpb
+*.tsbuildinfo
+.env
+.env.*
