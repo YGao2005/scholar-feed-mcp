@@ -31,7 +31,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://mcp.scholarfeed.org/mcp"
+      "url": "https://mcp.scholarfeed.org/mcp?src=mcp-registry"
     }
   ]
 }
