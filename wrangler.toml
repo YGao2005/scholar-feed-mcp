@@ -81,3 +81,13 @@ custom_domain = true
 # No Durable Objects, KV, R2, or D1: the server is fully stateless (a fresh
 # McpServer + transport per request; per-request creds live in AsyncLocalStorage
 # for the duration of one request only).
+
+# Retain the Worker's own request logs. Until now this was unset, so NOTHING outside
+# the app database recorded remote traffic — no observability, no logpush, no Analytics
+# Engine binding — which is why the three months in which this endpoint grew from ~10 to
+# ~61 distinct source-IPs/week cannot be attributed after the fact. usage_events.src is
+# the primary instrument; this is the independent cross-check for when the app-side
+# capture has a bug, and it is what makes the console.error calls in worker.ts and
+# resolve-creds.ts readable without an attached `wrangler tail`.
+[observability]
+enabled = true

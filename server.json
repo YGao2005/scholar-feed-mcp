@@ -15,15 +15,23 @@
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "scholar-feed-mcp",
       "version": "3.9.1",
-      "transport": { "type": "stdio" },
+      "transport": {
+        "type": "stdio"
+      },
       "environmentVariables": [
         {
           "name": "SF_API_KEY",
-          "description": "Optional free API key from scholarfeed.org/settings. Anonymous mode allows 100 calls/day; with a key, 1,000/day.",
+          "description": "Optional free API key from scholarfeed.org/settings. Anonymous callers get 200 requests/month; a free account raises that to 500/month and unlocks your library, and Pro is 10,000/month.",
           "isRequired": false,
           "isSecret": true
         }
       ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.scholarfeed.org/mcp"
     }
   ]
 }

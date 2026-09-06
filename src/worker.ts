@@ -51,6 +51,7 @@ import {
   PROTECTED_RESOURCE_PATH,
   PROTECTED_RESOURCE_PATH_MCP,
 } from "./http/oauth/metadata.js";
+import { MintedKeyCredentialResolver } from "./http/oauth/minted-key-resolver.js";
 import {
   UnconfiguredCredentialResolver,
   type CredentialResolver,
@@ -129,8 +130,68 @@ function bridgeConfigToProcessEnv(env: WorkerEnv): void {
 // the verifier reads env, so it is created lazily on first request (AFTER the
 // config bridge has run) rather than at module top level.
 let defaultVerifier: OAuthTokenVerifier | undefined;
-const defaultCredentialResolver: CredentialResolver =
-  new UnconfiguredCredentialResolver();
+let cachedCredentialResolver: CredentialResolver | undefined;
+
+/**
+ * The backend credential model, resolved per isolate from the Workers `env` bag.
+ *
+ * Open decision #8 was CHOSEN and built (model (a), per-user minted sf_ keys, in
+ * http/oauth/minted-key-resolver.ts) — it was simply never wired here, because at
+ * the time production was Express/Vercel. It has since moved to this Worker, which
+ * meant a caller could complete an OAuth sign-in and then get a 501 on every
+ * account tool: discovery, the AS, DCR and the 401 challenge all worked, and the
+ * credential bridge behind them did not.
+ *
+ * 🔴 env-INJECTED, NOT BRIDGED. SF_MCP_PROVISION_SECRET is deliberately absent from
+ * CONFIG_ENV_KEYS: that list is curated as static config plus one vetted secret, and
+ * says in as many words not to use that exception to justify adding another key. The
+ * resolver's options bag already overrides every process.env read it does, so it is
+ * constructed with explicit values and nothing lands on process.env.
+ *
+ * 🔴 LAZY, NOT MODULE-SCOPE. Module top-level runs at isolate init, where `env` does
+ * not exist yet — the same hazard getVerifier() below is lazy for. Constructed on
+ * first request and memoised per isolate; the resolver's key cache is therefore
+ * per-isolate too, which lowers hit rate versus a long-lived Node process but is
+ * correct.
+ *
+ * Falls back to the fail-loud Unconfigured resolver when the secret is unset, so an
+ * undeployed or locally-run Worker keeps the honest 501 instead of silently doing
+ * nothing. Same contract as createDefaultCredentialResolver() on the Express path.
+ */
+export function getCredentialResolver(env: WorkerEnv): CredentialResolver {
+  if (cachedCredentialResolver) return cachedCredentialResolver;
+
+  const secret =
+    typeof env.SF_MCP_PROVISION_SECRET === "string"
+      ? env.SF_MCP_PROVISION_SECRET
+      : "";
+  if (!secret) {
+    cachedCredentialResolver = new UnconfiguredCredentialResolver();
+    return cachedCredentialResolver;
+  }
+
+  // Build the provisioning URL from `env` when it carries a base, so this does not
+  // depend on bridgeConfigToProcessEnv having run first. When it does not, omit the
+  // option entirely and let the resolver apply its own default rather than
+  // duplicating that URL literal here — one source of truth for the fallback.
+  const base =
+    typeof env.SF_API_BASE_URL === "string" && env.SF_API_BASE_URL
+      ? env.SF_API_BASE_URL.replace(/\/+$/, "")
+      : null;
+  const ttl = Number(env.SF_MCP_KEY_CACHE_TTL_MS);
+
+  cachedCredentialResolver = new MintedKeyCredentialResolver({
+    ...(base ? { provisionUrl: `${base}/mcp/resolve-key` } : {}),
+    provisionSecret: secret,
+    ...(Number.isFinite(ttl) && ttl > 0 ? { cacheTtlMs: ttl } : {}),
+  });
+  return cachedCredentialResolver;
+}
+
+/** Test seam: drop the memoised resolver so a test can vary the env bag. */
+export function __resetCredentialResolver(): void {
+  cachedCredentialResolver = undefined;
+}
 
 function getVerifier(): OAuthTokenVerifier {
   return (defaultVerifier ??= new ScholarFeedTokenVerifier());
@@ -180,6 +241,60 @@ function unauthorizedResponse(): Response {
 }
 
 /** Handle one stateless POST /mcp via the Web Standard transport. */
+/**
+ * CORS for browser-based MCP hosts.
+ *
+ * WHY THIS IS NOT OPTIONAL. The whole OAuth flow keys on the WWW-Authenticate header
+ * the 401 carries: a client reads `resource_metadata` off it to discover the
+ * authorization server. Cross-origin, a browser hides EVERY response header that is
+ * not explicitly exposed — so without Access-Control-Expose-Headers a browser host
+ * sees the 401 and cannot see the challenge that tells it what to do next. The Express
+ * server has always exposed it (EXPOSED_HEADERS -> cors({exposedHeaders})); this Worker
+ * never did, while wrangler.toml allowlists https://claude.ai as an origin. Preflight
+ * likewise returned 405, which fails a browser POST carrying an Authorization header
+ * before it is ever sent.
+ *
+ * The specific origin is echoed rather than "*": these requests carry Authorization,
+ * and a wildcard is invalid for credentialed CORS. Vary: Origin keeps a cache from
+ * serving one origin's allowance to another. Only origins that already passed
+ * isOriginAllowed reach here — the DNS-rebinding guard runs first and 403s anything
+ * else, so this widens nothing.
+ */
+function withCors(response: Response, origin: string | null): Response {
+  if (!origin) return response;
+  const headers = new Headers(response.headers);
+  headers.set("Access-Control-Allow-Origin", origin);
+  headers.set("Access-Control-Expose-Headers", "WWW-Authenticate");
+  headers.append("Vary", "Origin");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+/** Preflight for POST /mcp from a browser host. */
+function corsPreflightResponse(request: Request): Response {
+  const origin = request.headers.get("origin");
+  if (!origin) {
+    // Not a browser preflight; fall through to the normal 405 surface.
+    return jsonRpcError(405, -32000, "Method not allowed");
+  }
+  // Echo the requested headers rather than guessing the MCP header set, which has
+  // grown before (mcp-session-id, mcp-protocol-version) and would silently break a
+  // host the day it grows again.
+  const requested = request.headers.get("access-control-request-headers");
+  const headers = new Headers({
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": requested ?? "authorization, content-type",
+    "Access-Control-Expose-Headers": "WWW-Authenticate",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  });
+  return new Response(null, { status: 204, headers });
+}
+
 async function handleMcpPost(
   request: Request,
   verifier: OAuthTokenVerifier,
@@ -336,8 +451,16 @@ export default {
     }
 
     if (pathname === "/mcp") {
+      // Preflight comes BEFORE the POST branch and AFTER the rebinding guards, so a
+      // disallowed origin still 403s rather than being handed an allowance.
+      if (method === "OPTIONS") {
+        return corsPreflightResponse(request);
+      }
       if (method === "POST") {
-        return handleMcpPost(request, getVerifier(), defaultCredentialResolver);
+        return withCors(
+          await handleMcpPost(request, getVerifier(), getCredentialResolver(env)),
+          request.headers.get("origin"),
+        );
       }
       // A person pasted the endpoint into a browser. Serve the setup page rather
       // than a bare JSON error they will read as an outage (see mcpEndpointHtml).
