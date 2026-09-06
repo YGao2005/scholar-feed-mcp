@@ -45,8 +45,8 @@ registerAllTools(server);
 async function main(): Promise<void> {
   if (!process.env.SF_API_KEY) {
     console.error(
-      "Scholar Feed MCP: running without API key (anonymous mode, 100 calls/day).\n" +
-        "For higher limits (1,000/day per account), set SF_API_KEY in your MCP config.\n" +
+      "Scholar Feed MCP: running without API key (anonymous mode, 200 calls/month).\n" +
+        "For a higher quota (500/month per account) and your library, set SF_API_KEY in your MCP config.\n" +
         "Get a free key at https://www.scholarfeed.org/settings",
     );
   }

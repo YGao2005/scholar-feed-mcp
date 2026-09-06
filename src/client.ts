@@ -1,8 +1,12 @@
 /**
  * ScholarFeedClient — wraps fetch calls to the Scholar Feed API.
  *
- * SF_API_KEY is optional. Without it, requests are anonymous with lower
- * rate limits (100 calls/day). With a key, limits are 1,000 calls/day per account.
+ * SF_API_KEY is optional. Without it, requests are anonymous with a lower quota
+ * (200 calls/month per IP). With a key, the quota is 500 calls/month per account
+ * (10,000 on Pro). The quota is MONTHLY; a smaller daily cap sits under it purely as a
+ * burst guardrail. Keep these numbers in step with backend/api/quotas.py — a client
+ * that quotes a different number than the wall enforces is worse than one that quotes
+ * none.
  *
  * Config (SF_API_KEY, SF_API_BASE_URL, SF_API_TIMEOUT_MS) is read at call time,
  * so importing this module has no side effects — that keeps the unit tests honest

@@ -30,7 +30,7 @@ This interactive wizard will:
 2. Detect your MCP client (Claude Code, Cursor, or Claude Desktop)
 3. Write the config and verify the connection
 
-**No API key required.** Anonymous access gives you 100 calls/day, enough for a typical research session. For higher limits (1,000/day per account), get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
+**No API key required.** Anonymous access gives you 200 calls/month, enough for a typical research session. For a higher quota (500/month per account) plus your library — collections, saved papers and watches — get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
 
 Try asking: *"Search for recent papers on test-time compute scaling"*
 
@@ -50,15 +50,15 @@ Try asking: *"Search for recent papers on test-time compute scaling"*
 
 The fastest path is `npx scholar-feed-mcp@latest init`, which auto-detects your client and writes the config. To set it up by hand, every client launches the same stdio server (`npx -y scholar-feed-mcp@latest`); only the config-file location and the wrapper key differ.
 
-**Claude Desktop (one-click)** installs without editing any config: download the `.mcpb` bundle from the [latest release](https://github.com/YGao2005/scholar-feed-mcp/releases/latest) and open it (or drag it into **Settings > Extensions**). The installer shows one optional field for a Scholar Feed API key (`sf_...`): leave it blank for anonymous mode (100 calls/day), or paste a free key from [scholarfeed.org/settings](https://www.scholarfeed.org/settings) for 1,000/day.
+**Claude Desktop (one-click)** installs without editing any config: download the `.mcpb` bundle from the [latest release](https://github.com/YGao2005/scholar-feed-mcp/releases/latest) and open it (or drag it into **Settings > Extensions**). The installer shows one optional field for a Scholar Feed API key (`sf_...`): leave it blank for anonymous mode (200 calls/month), or paste a free key from [scholarfeed.org/settings](https://www.scholarfeed.org/settings) for 500/month.
 
 **Claude Code** takes a one-line command:
 
 ```bash
-# Anonymous (100 calls/day)
+# Anonymous (200 calls/month)
 claude mcp add scholar-feed -- npx -y scholar-feed-mcp@latest
 
-# With an API key (1,000 calls/day per account)
+# With an API key (500 calls/month per account)
 claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-feed-mcp@latest
 ```
 
@@ -75,7 +75,7 @@ claude mcp add scholar-feed -e SF_API_KEY=sf_your_key_here -- npx -y scholar-fee
 }
 ```
 
-To raise limits to 1,000 calls/day, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the server entry. Get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
+To raise the quota to 500 calls/month, add `"env": { "SF_API_KEY": "sf_your_key_here" }` to the server entry. Get a free key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings).
 
 Drop that block into the right config file:
 
@@ -103,7 +103,7 @@ args = ["-y", "scholar-feed-mcp@latest"]
 env = { SF_API_KEY = "sf_your_key_here" }
 ```
 
-Drop the `env` line to run keyless at 100 calls/day. On Windows, if Codex cannot launch the server, use `command = "cmd"` with `args = ["/c", "npx", "-y", "scholar-feed-mcp@latest"]`.
+Drop the `env` line to run keyless at 200 calls/month. On Windows, if Codex cannot launch the server, use `command = "cmd"` with `args = ["/c", "npx", "-y", "scholar-feed-mcp@latest"]`.
 
 **VS Code: GitHub Copilot** (`.vscode/mcp.json`) uses a `servers` key and an explicit `type`, and needs Copilot agent mode. You can also run `MCP: Add Server` from the Command Palette.
 
@@ -252,7 +252,9 @@ Use `novelty_min: 0.5` in `search_papers` to filter for genuinely novel work.
 
 Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
 
-**Daily volume quota** (separate from the per-minute limits above, counted per account across all your keys): **100 calls/day** anonymous, **1,000/day** with a free key, **10,000/day** on Pro. The AI synthesis tools have their own limits: `ask_library` is **1/month free, then 200/day on Pro**; `find_gaps` and `embed_text` are **Pro-only** (a 403 `pro_required` otherwise).
+**Monthly volume quota** (separate from the per-minute limits above, counted per account across all your keys): **200 calls/month** anonymous (per IP), **500/month** with a free key, **10,000/month** on Pro. A smaller daily cap (100 / 200 / 2,000) sits underneath it as a burst guardrail so a runaway loop cannot spend a month in an hour; hitting it returns a 429 with `scope: "burst"` and leaves your monthly quota untouched. Read your remaining month from `GET /v1/health` (`monthly_limit` / `usage_this_month`) before a batch.
+
+The AI synthesis tools have their own limits: `ask_library` is **20/month free, then 200/day on Pro**; `find_gaps` is **Pro-only** (a 403 `pro_required` otherwise). `embed_text` needs an account of any tier — anonymous callers get a 403 `account_required`.
 
 ## Example Response
 
@@ -290,7 +292,7 @@ Pass `next_cursor` back to get the next page (keyset pagination, which is more s
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `SF_API_KEY` | No | (none) | Your Scholar Feed API key (starts with `sf_`). Without it, runs in anonymous mode (100 calls/day). |
+| `SF_API_KEY` | No | (none) | Your Scholar Feed API key (starts with `sf_`). Without it, runs in anonymous mode (200 calls/month). |
 | `SF_API_BASE_URL` | No | Production URL | Override API base URL |
 
 ## Development
@@ -313,7 +315,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 The key may have been revoked. Generate a new one at [scholarfeed.org/settings](https://www.scholarfeed.org/settings). Or remove the key to use anonymous mode.
 
 **"Rate limit exceeded" or "Anonymous daily limit exceeded"**
-Anonymous mode allows 100 calls/day. Get a free API key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings) for 1,000 calls/day per account.
+Anonymous mode allows 200 calls/month. Get a free API key at [scholarfeed.org/settings](https://www.scholarfeed.org/settings) for 500 calls/month per account, plus your library.
 
 **Server shows as "failed" with no error — especially right after an update**
 The first launch (and the first launch after each new release) makes `npx` download the package. The published bin is a single self-contained file with no dependency tree to resolve, so this is fast — but on a slow link it can still outrun your client's start-up timeout, and the server then shows as "failed" with no detail. Fixes: (1) warm the cache by running it once in a terminal — `npx -y scholar-feed-mcp@latest --version` — then restart your client; (2) raise the MCP start-up timeout if your client supports it (Claude Code: `MCP_TIMEOUT=60000`). For the fastest, offline-capable launches, install once globally and point the config at it instead of `npx`:
