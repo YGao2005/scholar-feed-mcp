@@ -18,7 +18,7 @@
  * server.json is included here even though publish.yml also syncs it — belt
  * and braces, and it keeps the committed file honest between releases.
  */
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 const version = pkg.version;
@@ -33,24 +33,34 @@ const JSON_TARGETS = [
 
 let changed = 0;
 for (const file of JSON_TARGETS) {
-  if (!existsSync(file)) {
-    console.warn(`  skip   ${file} (absent)`);
-    continue;
+  // Read first and handle ENOENT, rather than existsSync-then-read: the check
+  // and the use are separate syscalls, so the file can change in between
+  // (CodeQL js/file-system-race). Attempting the read is both race-free and
+  // one syscall cheaper.
+  let raw;
+  try {
+    raw = readFileSync(file, "utf8");
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      console.warn(`  skip   ${file} (absent)`);
+      continue;
+    }
+    throw err;
   }
-  const raw = readFileSync(file, "utf8");
-  const doc = JSON.parse(raw);
-  const before = doc.version;
-  doc.version = version;
+  const before = JSON.parse(raw).version;
 
-  // server.json additionally pins each package reference to the same version;
-  // the registry validates that against npm, so it must match exactly.
-  if (Array.isArray(doc.packages)) {
-    for (const p of doc.packages) p.version = version;
-  }
-
-  // Preserve the 2-space + trailing-newline shape the repo already uses, so a
-  // sync never shows up as unrelated formatting churn in a release diff.
-  const next = `${JSON.stringify(doc, null, 2)}\n`;
+  // Rewrite the version STRINGS in place rather than re-serialising the parsed
+  // document. `JSON.stringify(doc, null, 2)` does not reproduce Prettier's JSON
+  // output, so re-serialising made every sync fail `npm run format:check` — and
+  // because the sync runs from the `npm version` lifecycle hook, that would put
+  // a lint failure inside the release commit the tag points at.
+  //
+  // The pattern matches the literal key `"version"`, which is why it updates
+  // server.json's top-level version AND its packages[].version (the registry
+  // validates that against npm, so both must match) while never touching
+  // manifest.json's `"manifest_version"` — that key has no `"version"`
+  // substring, since the opening quote belongs to `"manifest_version"`.
+  const next = raw.replace(/("version"\s*:\s*")[^"]*(")/g, `$1${version}$2`);
   if (next !== raw) {
     writeFileSync(file, next);
     changed++;
