@@ -43,6 +43,18 @@ export interface RequestCreds {
   apiKey: string | null;
   sessionId: string;
   clientIp?: string | null;
+  /**
+   * Install provenance (`?src=<slug>` on the connect URL) and the caller's own
+   * client name, both stamped as headers for `usage_events` (backend mig 174).
+   *
+   * Per-request rather than per-process because the remote entry points are
+   * stateless and multi-tenant: a Workers isolate is SHARED between callers, so
+   * anything process-scoped here would attribute one tenant's install to another.
+   * Absent on the stdio path, which reads its own process env instead — the same
+   * split `apiKey` already makes, and for the same reason.
+   */
+  src?: string | null;
+  client?: string | null;
 }
 
 /**

@@ -107,11 +107,51 @@ function proxyHeaders(): Record<string, string> {
  * Centralizing them keeps the per-verb methods from each re-implementing the
  * common set. `extra` is spread LAST so a caller can still override.
  */
+/**
+ * The client name reported by the host in `initialize`, on the STDIO path only.
+ * Set once from index.ts; null until the host has initialized, and null forever
+ * on the remote paths — there a fresh McpServer is built per POST, so the SDK's
+ * getClientVersion() reads undefined during every tools/call. Remote callers
+ * carry their identity per-request in the ALS bag instead.
+ */
+let stdioClientName: string | null = null;
+export function setStdioClientName(name: string | null | undefined): void {
+  const trimmed = typeof name === "string" ? name.trim() : "";
+  stdioClientName = trimmed.length > 0 ? trimmed : null;
+}
+
+/** Test seam: reset the module-level stdio client name. */
+export function __resetStdioClientName(): void {
+  stdioClientName = null;
+}
+
+/**
+ * Attribution headers for usage_events (backend mig 174): which install this call
+ * came from, and what software is calling.
+ *
+ * Honors the ALS context the same way getApiKey() does: when a request context is
+ * present (remote) we use ONLY its values and never fall back to process env — a
+ * server-level SF_SRC would otherwise stamp every anonymous tenant's call with the
+ * deployment's own tag, which is worse than no attribution because it looks real.
+ * The backend constrains both values (_valid_src / _valid_client); an unset or
+ * malformed value is simply omitted here.
+ */
+function attributionHeaders(): Record<string, string> {
+  const creds = getCurrentCreds();
+  const src = creds ? creds.src : process.env.SF_SRC ?? null;
+  const client = creds ? creds.client : stdioClientName;
+  const out: Record<string, string> = {};
+  if (src) out["X-SF-Src"] = src;
+  if (client) out["X-SF-Client"] = client;
+  return out;
+}
+
 function requestHeaders(extra: Record<string, string>): Record<string, string> {
   return {
     ...authHeaders(),
     "X-SF-Session": getSessionId(),
     ...proxyHeaders(),
+    ...attributionHeaders(),
     ...extra,
   };
 }

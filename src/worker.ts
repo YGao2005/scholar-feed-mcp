@@ -247,10 +247,20 @@ async function handleMcpPost(
     // cannot be spoofed by the client, so it is safe to trust here; the backend
     // additionally requires a matching X-Proxy-Secret before honoring it, and
     // client.ts sends neither header unless BOTH are present.
+    // Attribution (backend mig 174). `?src=` rides on the connect URL, which the
+    // MCP Streamable-HTTP client stores verbatim and re-POSTs on EVERY message —
+    // so unlike clientInfo (which this stateless server cannot see past the
+    // initialize POST) it is present on every call for the life of the install.
+    // Untrusted: it does NOT pass the Origin/Host rebinding guards, so the backend
+    // allowlists it. User-Agent stands in for the client name here for the same
+    // stateless reason.
+    const url = new URL(request.url);
     response = await runWithCreds(
       {
         ...resolution.creds,
         clientIp: request.headers.get("CF-Connecting-IP"),
+        src: url.searchParams.get("src"),
+        client: request.headers.get("user-agent"),
       },
       () => transport.handleRequest(request),
     );

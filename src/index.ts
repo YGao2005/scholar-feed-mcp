@@ -15,6 +15,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerAllTools } from "./tools/index.js";
 import { buildServerInfo, SERVER_INSTRUCTIONS } from "./server-info.js";
+import { setStdioClientName } from "./client.js";
 
 // Handle subcommands before starting the MCP server
 if (process.argv[2] === "init") {
@@ -50,6 +51,14 @@ async function main(): Promise<void> {
         "Get a free key at https://www.scholarfeed.org/settings",
     );
   }
+  // Record which host is driving us, for usage_events.client (backend mig 174).
+  // Set BEFORE connect: oninitialized fires during the host's initialize handshake,
+  // which happens inside connect(). One stdio process is one client for its whole
+  // life, so a module-level value is sound here — and is exactly what the stateless
+  // remote paths cannot do, which is why they carry the name per-request instead.
+  server.server.oninitialized = () => {
+    setStdioClientName(server.server.getClientVersion()?.name);
+  };
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Scholar Feed MCP server running on stdio");
