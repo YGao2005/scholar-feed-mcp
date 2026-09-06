@@ -24,9 +24,19 @@ name: Publish
 #               to a stale version while npm moved ahead.
 #
 # Manual re-sync: trigger this workflow with "Run workflow" (workflow_dispatch)
-# to (re)publish the CURRENT server.json to the MCP Registry WITHOUT cutting an
-# npm release. npm publish is skipped on dispatch (it cannot republish an
-# existing version); only the registry job runs.
+# to publish the CURRENT server.json to the MCP Registry without cutting an npm
+# release. npm publish is skipped on dispatch (it cannot republish an existing
+# version); only the registry job runs.
+#
+# 🔴 THIS ONLY WORKS FOR A VERSION THE REGISTRY HAS NOT SEEN. server.json's
+# version is synced from package.json at publish time, so a dispatch on an
+# already-published version fails with
+#   400 {"message":"invalid version: cannot publish duplicate version"}
+# and burns four retries getting there. Measured 2026-09-06 trying to re-sync a
+# changed `remotes` URL at 3.19.0. The registry has no update-in-place: ANY
+# change to server.json -- a description, a remote URL, an env-var doc -- needs a
+# version bump. Cut a patch release instead; dispatch is only useful when a tag
+# push published npm but the registry job failed.
 on:
   push:
     tags:
