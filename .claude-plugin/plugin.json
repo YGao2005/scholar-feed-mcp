@@ -1,7 +1,7 @@
 {
   "name": "scholar-feed",
   "displayName": "Scholar Feed",
-  "version": "3.7.1",
+  "version": "3.19.1",
   "description": "Search 600,000+ CS/AI/ML papers with LLM novelty analysis, citation graph, full-text extraction, and BibTeX, without leaving Claude Code. Built for literature reviews.",
   "author": {
     "name": "Scholar Feed",
@@ -28,7 +28,10 @@
   "mcpServers": {
     "scholar-feed": {
       "command": "npx",
-      "args": ["-y", "scholar-feed-mcp@latest"]
+      "args": [
+        "-y",
+        "scholar-feed-mcp@latest"
+      ]
     }
   }
 }

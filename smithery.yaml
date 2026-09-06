@@ -1,9 +1,14 @@
 # Smithery configuration file: https://smithery.ai/docs/build/project-config
 #
 # Scholar Feed MCP — a STDIO server published to npm as `scholar-feed-mcp`.
-# Smithery launches the published bin via npx. SF_API_KEY is OPTIONAL: the
-# server works anonymously (100 calls/day); a free key raises limits to
-# 1,000/day. Get one at https://www.scholarfeed.org/settings
+# Smithery containerizes this and launches the published bin via npx, so this
+# runs the stdio path: SF_SRC IS honoured here (the client only ignores a
+# server-level SF_SRC when a per-request credential context is present, which
+# never happens on stdio). That is what makes this listing attributable.
+#
+# SF_API_KEY is OPTIONAL: the server works anonymously at 200 calls/month; a
+# free key raises that to 500/month and unlocks your library (saved papers,
+# collections, watches). Get one at https://www.scholarfeed.org/settings
 
 startCommand:
   type: stdio
@@ -17,17 +22,24 @@ startCommand:
         title: Scholar Feed API key (optional)
         description: >-
           Optional. Paste a free key from https://www.scholarfeed.org/settings
-          to raise limits to 1,000 calls/day. Leave blank for anonymous mode
-          (100 calls/day). Keys start with "sf_".
+          to raise your quota to 500 calls/month and unlock your library. Leave
+          blank for anonymous mode (200 calls/month). Keys start with "sf_".
   commandFunction:
     # A JS function that produces the CLI command + env to start the MCP on stdio.
     # Maps the optional SF_API_KEY config value into the launched server's env;
     # when omitted, the server runs in anonymous mode.
+    #
+    # SF_SRC tags every call from this listing as coming from Smithery, so the
+    # channel shows up in usage_events.src (backend mig 174) instead of being
+    # indistinguishable from any other anonymous caller. Do not remove it.
     |-
     (config) => ({
       command: 'npx',
       args: ['-y', 'scholar-feed-mcp@latest'],
-      env: config && config.SF_API_KEY ? { SF_API_KEY: config.SF_API_KEY } : {}
+      env: Object.assign(
+        { SF_SRC: 'smithery' },
+        config && config.SF_API_KEY ? { SF_API_KEY: config.SF_API_KEY } : {}
+      )
     })
   exampleConfig:
     SF_API_KEY: sf_your_free_key_here

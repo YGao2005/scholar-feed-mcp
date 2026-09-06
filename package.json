@@ -55,7 +55,9 @@
     "test": "node --import tsx --test src/__tests__/*.test.ts",
     "coverage": "c8 node --import tsx --test src/__tests__/*.test.ts",
     "prepublishOnly": "npm run lint && npm run build && npm run coverage",
-    "schema:sync": "node scripts/schema-sync.mjs"
+    "schema:sync": "node scripts/schema-sync.mjs",
+    "sync:manifests": "node scripts/sync-manifests.mjs",
+    "version": "node scripts/sync-manifests.mjs && git add server.json manifest.json .claude-plugin/plugin.json .codex-plugin/plugin.json"
   },
   "comment:dependencies": "Runtime deps are intentionally empty: the published bin (build/index.js) is a self-contained esbuild bundle (see tsup.config.ts), so `npx`/Docker consumers install ZERO transitive deps. The five former runtime deps (sdk/zod for the stdio bundle; express/cors/jose for the HTTP+Worker deploy targets) live in devDependencies — they are bundled in at build time by every deploy target and CI, never installed by consumers.",
   "dependencies": {},

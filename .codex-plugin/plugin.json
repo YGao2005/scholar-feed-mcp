@@ -1,0 +1,37 @@
+{
+  "name": "scholar-feed",
+  "version": "3.19.1",
+  "description": "Search 600,000+ CS/AI/ML papers with semantic search, a 23.2M-edge citation graph, full-text extraction, and BibTeX, without leaving your editor. Built for literature reviews.",
+  "author": {
+    "name": "Scholar Feed",
+    "url": "https://www.scholarfeed.org"
+  },
+  "homepage": "https://www.scholarfeed.org",
+  "repository": "https://github.com/YGao2005/scholar-feed-mcp",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "research",
+    "research-papers",
+    "arxiv",
+    "citations",
+    "citation-graph",
+    "semantic-search",
+    "literature-review",
+    "embeddings",
+    "bibtex"
+  ],
+  "interface": {
+    "displayName": "Scholar Feed",
+    "shortDescription": "Semantic search and citation-graph traversal over 600k+ CS/AI/ML papers.",
+    "longDescription": "A research copilot over 600,000+ CS/AI/ML papers: semantic search, citation-graph traversal, co-author graphs, full-text extraction, foundational-lineage lookup, text embeddings, and saved libraries, collections, and standing watches. Runs anonymously at 200 calls/month with no signup; a free key raises that to 500/month and unlocks your library.",
+    "developerName": "Scholar Feed",
+    "category": "Developer Tools",
+    "capabilities": [
+      "MCP",
+      "Read"
+    ],
+    "websiteURL": "https://www.scholarfeed.org"
+  },
+  "mcpServers": "./.codex-plugin/mcp.json"
+}

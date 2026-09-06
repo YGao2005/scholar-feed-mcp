@@ -1,0 +1,41 @@
+name: Plugin Security Scan
+
+# HOL Guard's plugin-scanner, the scoring engine behind the HOL Plugin Registry
+# (hol.org/registry/plugins), which auto-ingests every entry in the 188-star
+# hashgraph-online/awesome-ai-plugins catalogue — one of the directories we
+# appear in without ever having submitted.
+#
+# WHY: their published model applies a flat 10% trust-score reduction to
+# projects without scanner CI. Measured 2026-09-06 our scores were trust 72 /
+# security 64 with the badge reading "Unprotected". Every other input to that
+# score is already satisfied in this repo (SECURITY.md, LICENSE, dependabot,
+# CODE_OF_CONDUCT, CONTRIBUTING, CodeQL, and every action SHA-pinned), so this
+# workflow is the only remaining lever: 72 / 0.9 ~= 80.
+#
+# 🔴 THIRD-PARTY ACTION, DELIBERATE. This runs code we do not own in our CI.
+# It is constrained the way the vendor documents and we verified before adding:
+#   - pinned to a commit SHA, never a moving tag;
+#   - `contents: read` is the only permission granted;
+#   - no repository secrets are exposed to it;
+#   - checkout credentials are not persisted.
+# It runs on pull_request and push only — never on the tag path that publishes
+# to npm, so a compromised scanner cannot reach a release. Drop this file if
+# that trade stops being worth ~8 points on one directory's score.
+
+on: [pull_request, push]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: hashgraph-online/ai-plugin-scanner-action@55616c962cf86368423f7673b2ecdfdbe613d1af # v1.2.515
+        with:
+          plugin_dir: "."
+          min_score: 80
+          fail_on_severity: high
