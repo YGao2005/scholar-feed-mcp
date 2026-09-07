@@ -234,11 +234,6 @@ export const fulltextOutput = looseObject({
     .optional()
     .describe("Where the text came from (e.g. arxiv)."),
   arxiv_id: z.string().optional(),
-  results_text: z
-    .string()
-    .nullable()
-    .optional()
-    .describe("Legacy lean results excerpt (pre-section-selection responses)."),
   sections: z
     .object({
       abstract: z.string().nullable().optional(),
@@ -257,13 +252,18 @@ export const fulltextOutput = looseObject({
     .array(z.string())
     .optional()
     .describe(
-      "Which sections this paper actually has. Lets a caller tell 'no related-work section' apart from 'extraction failed'.",
+      "Which sections this paper actually has; tells 'no such section' apart from 'extraction failed'.",
     ),
   requested_section: z.string().optional(),
   requested_section_available: z
     .boolean()
     .optional()
     .describe("False when the requested section does not exist in this paper."),
+  requested_sections: z.array(z.string()).optional(),
+  missing_sections: z
+    .array(z.string())
+    .optional()
+    .describe("Requested sections this paper does not have."),
   note: z.string().optional(),
   full_text: z
     .string()

@@ -259,14 +259,21 @@ const CASES: Array<{
     opts: { json: { papers: [PAPER], total: 1, direction: "cited_by" } },
   },
   {
-    label: "fetch_fulltext results",
+    // A paper that HAS no results section — verified live 2026-09-07 on 2407.15831.
+    // The old fixture asserted a `results_text` shape the backend stopped returning
+    // when the section-tagged HTML path landed, so it was testing a dead wire.
+    label: "fetch_fulltext one missing section",
     name: "fetch_fulltext",
-    args: { arxiv_id: "A" },
+    args: { arxiv_id: "A", sections: "results" },
     opts: {
       json: {
-        source: "arxiv",
+        source: "latexml_html",
         arxiv_id: "A",
-        results_text: "r",
+        requested_section: "results",
+        requested_section_available: false,
+        note: "This paper has no 'results' section.",
+        sections: { results: null },
+        available_sections: ["abstract", "method"],
         table_captions: [],
       },
     },
