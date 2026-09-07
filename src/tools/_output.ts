@@ -253,29 +253,23 @@ export const fulltextOutput = looseObject({
     .record(z.string(), z.string())
     .optional()
     .describe(
-      "How each section was labelled: abstract_block, heading, heading_loose, subsection, latex_heading, pdf_heading, or positional. Omitted when unknown; absence is not verification.",
+      "How each section was labelled: abstract_block, heading, heading_loose, subsection, latex_heading, pdf_heading, or positional. Absent, with low_confidence_sections, when labelling is unknown; that is not verification.",
     ),
   low_confidence_sections: z
     .array(z.string())
     .optional()
     .describe(
-      "Sections labelled positionally: a guess (~50% accurate, hand-audited) at what sits between the introduction and the results, and on surveys or theory papers often not a method at all. Verify against the text before citing it as the paper's method. Omitted when unknown, never empty.",
+      "Sections labelled positionally: a guess (~50% accurate, hand-audited) at what sits between the introduction and the results, and on surveys or theory papers often not a method at all. Verify against the text before citing it as the paper's method. Present whenever section_provenance is; [] means nothing looks uncertain.",
     ),
   requested_section: z.string().optional(),
-  requested_section_available: z
-    .boolean()
-    .optional()
-    .describe("False when the requested section is absent."),
+  requested_section_available: z.boolean().optional(),
   requested_sections: z.array(z.string()).optional(),
   missing_sections: z
     .array(z.string())
     .optional()
     .describe("Requested sections the paper lacks."),
   note: z.string().optional(),
-  full_text: z
-    .string()
-    .optional()
-    .describe("Unstructured backup text, PDF fallback path only."),
+  full_text: z.string().optional().describe("Backup text, PDF fallback only."),
   table_captions: z.array(z.string()).optional(),
   results: z
     .array(

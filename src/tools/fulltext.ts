@@ -59,7 +59,7 @@ export function register(server: McpServer): void {
       annotations: { readOnlyHint: true, destructiveHint: false },
       outputSchema: fulltextOutput,
       description:
-        "Read arXiv papers' actual text, by section. Section selection controls context cost: ask for the one or two you need rather than whole papers — 'all' is ~13.5KB a paper, so a batch of 8 is ~108KB. Section labels are inferred: check `low_confidence_sections` before calling one the paper's own. Sourced from arXiv's section-tagged HTML, then LaTeX source, then PDF text; a 404 means all three failed.",
+        "Read arXiv papers' actual text, by section. Section selection controls context cost: ask for the one or two you need, not whole papers — 'all' is ~13.5KB a paper, 8 of them ~108KB. Section labels are inferred: check `low_confidence_sections` before calling one the paper's own. Sourced from arXiv's section-tagged HTML, then LaTeX, then PDF; a 404 means all three failed.",
       inputSchema: {
         arxiv_id: z
           .string()
@@ -72,13 +72,13 @@ export function register(server: McpServer): void {
           .max(MAX_BATCH)
           .optional()
           .describe(
-            "Up to 8 arXiv IDs, one entry per paper. `sections` is required with more than one ID.",
+            "Up to 8 arXiv IDs, one entry per paper. `sections` is required past one ID.",
           ),
         sections: z
           .union([SECTION, z.array(SECTION)])
           .optional()
           .describe(
-            "One section name, or an array of them. Defaults to 'all' for a single paper; no default for a batch.",
+            "One section name or an array. Defaults to 'all' for one paper; no default for a batch.",
           ),
       },
     },

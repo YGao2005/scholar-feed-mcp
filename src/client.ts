@@ -185,6 +185,19 @@ const ACTIONABLE_PROBLEM_CODES = new Set([
   // to the generic status copy and the agent lost the one message that says how to
   // proceed. Verified present in the backend: api/routers/watches.py.
   "watch_limit",
+  // fetch_fulltext's batch wall: "`sections` is required when requesting more than
+  // one paper ... name the sections you need, e.g. [\"method\", \"results\"]". That copy
+  // is the ENTIRE remedy, and this client deliberately has no local guard for the rule
+  // (a Zod refinement does not serialise into JSON Schema, so the model would meet an
+  // invisible wall) — which makes surfacing the backend's own text load-bearing.
+  //
+  // INERT AS OF 2026-09-07: prod sends this wall as code "validation_error", the
+  // GENERIC bucket, so it still falls through to "API request failed (HTTP 422)".
+  // `validation_error` is deliberately NOT added here instead: it is the catch-all for
+  // every 422 in a backend this repo does not own, so admitting it would be the
+  // fail-open pattern the note below forbids. Listed now so the copy flows the moment
+  // the backend gives this wall its own code, with no second MCP release.
+  "sections_required",
 ]);
 
 // NOTE: deliberately NOT a suffix rule (`code.endsWith("_limit")` etc.). A pattern

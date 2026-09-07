@@ -712,10 +712,31 @@ describe("fetch_fulltext section-label provenance", () => {
     );
   });
 
+  // The pair rule (backend #199): both keys absent = we do not know how this was
+  // typed; both present = we do, and [] positively means nothing looks uncertain.
+  // `low_confidence_sections` used to be omitted when empty, which gave ABSENCE two
+  // meanings on one field — the exact ambiguity the omit-when-unknown rule removes.
   it("does not let a missing provenance map read as 'all verified'", () => {
     const d = shape.section_provenance?.description ?? "";
-    assert.match(d, /[Oo]mitted when unknown/);
-    assert.match(d, /absence is not verification/i);
+    assert.match(
+      d,
+      /[Aa]bsent, with low_confidence_sections, when labelling is unknown/,
+    );
+    assert.match(d, /that is not verification/i);
+  });
+
+  it("ties the empty list to a PRESENT provenance map, not to absence", () => {
+    const d = shape.low_confidence_sections?.description ?? "";
+    assert.match(
+      d,
+      /[Pp]resent whenever section_provenance is/,
+      "the two keys travel together; an empty list is only meaningful beside a present map",
+    );
+    assert.doesNotMatch(
+      d,
+      /never empty|omitted when empty/i,
+      "the omit-when-empty rule was retired in backend #199",
+    );
   });
 
   it("accepts a response that omits both keys, and one that carries them", async () => {
@@ -748,5 +769,37 @@ describe("fetch_fulltext section-label provenance", () => {
         .low_confidence_sections,
       ["method"],
     );
+  });
+
+  // The shape a cleanly-extracted paper returns (verified in prod 2026-09-07): a full
+  // provenance map and an EMPTY low-confidence list. `[]` must survive to the caller
+  // intact — dropping or normalising it away would turn "nothing looks uncertain" back
+  // into "we do not know", which is the weaker claim.
+  it("preserves an empty low_confidence_sections beside a full provenance map", async () => {
+    const r = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "A" },
+      {
+        json: {
+          arxiv_id: "A",
+          source: "latexml_html",
+          sections: { method: "m" },
+          section_provenance: {
+            abstract: "abstract_block",
+            introduction: "heading",
+            method: "heading",
+            conclusion: "heading_loose",
+          },
+          low_confidence_sections: [],
+        },
+      },
+    );
+    assert.notStrictEqual(r.isError, true);
+    const sc = r.structuredContent as {
+      low_confidence_sections?: string[];
+      section_provenance?: Record<string, string>;
+    };
+    assert.deepStrictEqual(sc.low_confidence_sections, []);
+    assert.strictEqual(sc.section_provenance?.conclusion, "heading_loose");
   });
 });

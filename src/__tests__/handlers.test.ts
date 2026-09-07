@@ -587,20 +587,51 @@ describe("fetch_fulltext batch mode", () => {
     assert.ok(!("sections" in body), "no client-invented default for a batch");
   });
 
-  it("surfaces the backend 422 for a batch with no sections", async () => {
+  // THE REAL PROD ENVELOPE, captured 2026-09-07. An earlier version of this test
+  // invented an `{ error, message }` body and passed — that shape IS relayed, so the
+  // test was green for the wrong reason and hid the gap below. Never hand-write an
+  // error envelope here; paste the one the backend actually sends.
+  const PROD_422 = {
+    type: "about:blank",
+    title: "Unprocessable Entity",
+    status: 422,
+    detail:
+      '`sections` is required when requesting more than one paper. Returning every section for several papers is a very large response (~13KB per paper); name the sections you need, e.g. ["method", "results"].',
+    instance: "/api/v1/public/papers/fulltext",
+    code: "validation_error",
+    request_id: "f5ef960f",
+  };
+
+  // KNOWN GAP, asserted so it cannot be mistaken for working. The remedy copy above is
+  // the whole point of having no client-side guard for the rule, and the model does not
+  // currently see it: `validation_error` is the generic 422 bucket, not on the client's
+  // ACTIONABLE_PROBLEM_CODES allowlist, so it falls through to the status copy. The fix
+  // is a backend one (give this wall its own code); `sections_required` is already
+  // allowlisted, so that change alone flips this with no MCP release. When it lands,
+  // this test should be inverted, not deleted.
+  it("does NOT yet relay the batch 422 remedy (generic validation_error code)", async () => {
     const { result } = await invoke(
       "fetch_fulltext",
       { arxiv_ids: ["A", "B"] },
-      {
-        status: 422,
-        json: {
-          error: "sections_required",
-          message: "sections is required when more than one arxiv_id is given",
-        },
-      },
+      { status: 422, json: PROD_422 },
     );
     assert.strictEqual(result.isError, true);
-    assert.match(result.content[0].text, /sections is required/);
+    assert.doesNotMatch(
+      result.content[0].text,
+      /name the sections you need/,
+      "if this now passes the copy through, the backend gave the wall its own code — " +
+        "invert this test and drop the gap note above",
+    );
+  });
+
+  it("relays the same wall once it carries its own code", async () => {
+    const { result } = await invoke(
+      "fetch_fulltext",
+      { arxiv_ids: ["A", "B"] },
+      { status: 422, json: { ...PROD_422, code: "sections_required" } },
+    );
+    assert.strictEqual(result.isError, true);
+    assert.match(result.content[0].text, /name the sections you need/);
   });
 
   // A per-paper failure is DATA. If it ever became a thrown error the batch would be
