@@ -1,6 +1,6 @@
 {
   "name": "scholar-feed",
-  "version": "3.19.1",
+  "version": "3.20.0",
   "description": "Search 600,000+ CS/AI/ML papers with semantic search, a 23.2M-edge citation graph, full-text extraction, and BibTeX, without leaving your editor. Built for literature reviews.",
   "author": {
     "name": "Scholar Feed",
