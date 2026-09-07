@@ -259,14 +259,21 @@ const CASES: Array<{
     opts: { json: { papers: [PAPER], total: 1, direction: "cited_by" } },
   },
   {
-    label: "fetch_fulltext results",
+    // A paper that HAS no results section — verified live 2026-09-07 on 2407.15831.
+    // The old fixture asserted a `results_text` shape the backend stopped returning
+    // when the section-tagged HTML path landed, so it was testing a dead wire.
+    label: "fetch_fulltext one missing section",
     name: "fetch_fulltext",
-    args: { arxiv_id: "A" },
+    args: { arxiv_id: "A", sections: "results" },
     opts: {
       json: {
-        source: "arxiv",
+        source: "latexml_html",
         arxiv_id: "A",
-        results_text: "r",
+        requested_section: "results",
+        requested_section_available: false,
+        note: "This paper has no 'results' section.",
+        sections: { results: null },
+        available_sections: ["abstract", "method"],
         table_captions: [],
       },
     },
@@ -666,5 +673,133 @@ describe("the bundled affordance text is preserved alongside structuredContent",
       (result.structuredContent as { papers?: unknown[] }).papers?.length,
       1,
     );
+  });
+});
+
+/**
+ * Section-label provenance: the honesty properties, pinned.
+ *
+ * A parallel 50-paper hand audit put the POSITIONAL `method` guess at 50% correct,
+ * 34% adjacent-but-not-the-method, 16% flatly wrong (a survey's related-work, the
+ * introduction, an ethics statement). It fires on 19.4% of papers. A model told that
+ * a label is "usually" right will not verify it; a model given the number will. So
+ * the number and the verify instruction are load-bearing SCHEMA TEXT, not prose, and
+ * a future compression pass must not quietly soften them back into a hedge.
+ *
+ * The absence rule matters for the same reason: both keys are omitted entirely when
+ * unknown, never emitted as {} / []. An empty map would read as "everything
+ * verified", which is a stronger claim than a legacy row can support.
+ */
+describe("fetch_fulltext section-label provenance", () => {
+  const shape = (
+    TOOLS.get("fetch_fulltext")?.outputSchema as unknown as {
+      shape: Record<string, { description?: string }>;
+    }
+  ).shape;
+
+  it("states the measured accuracy rather than hedging", () => {
+    const d = shape.low_confidence_sections?.description ?? "";
+    assert.match(d, /~50% accurate/, "the audited number must be stated");
+    assert.match(
+      d,
+      /[Vv]erify/,
+      "must tell the reader to verify before citing",
+    );
+    assert.doesNotMatch(
+      d,
+      /\busually\b/i,
+      "'usually' is the hedge that stops a model verifying; name the number instead",
+    );
+  });
+
+  // The pair rule (backend #199): both keys absent = we do not know how this was
+  // typed; both present = we do, and [] positively means nothing looks uncertain.
+  // `low_confidence_sections` used to be omitted when empty, which gave ABSENCE two
+  // meanings on one field — the exact ambiguity the omit-when-unknown rule removes.
+  it("does not let a missing provenance map read as 'all verified'", () => {
+    const d = shape.section_provenance?.description ?? "";
+    assert.match(
+      d,
+      /[Aa]bsent, with low_confidence_sections, when labelling is unknown/,
+    );
+    assert.match(d, /that is not verification/i);
+  });
+
+  it("ties the empty list to a PRESENT provenance map, not to absence", () => {
+    const d = shape.low_confidence_sections?.description ?? "";
+    assert.match(
+      d,
+      /[Pp]resent whenever section_provenance is/,
+      "the two keys travel together; an empty list is only meaningful beside a present map",
+    );
+    assert.doesNotMatch(
+      d,
+      /never empty|omitted when empty/i,
+      "the omit-when-empty rule was retired in backend #199",
+    );
+  });
+
+  it("accepts a response that omits both keys, and one that carries them", async () => {
+    const omitted = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "A" },
+      { json: { arxiv_id: "A", sections: { method: "m" }, source: "pdf" } },
+    );
+    assert.notStrictEqual(omitted.isError, true);
+
+    const carried = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "A" },
+      {
+        json: {
+          arxiv_id: "A",
+          sections: { method: "m" },
+          section_provenance: {
+            abstract: "abstract_block",
+            method: "positional",
+          },
+          low_confidence_sections: ["method"],
+          source: "latexml_html",
+        },
+      },
+    );
+    assert.notStrictEqual(carried.isError, true);
+    assert.deepStrictEqual(
+      (carried.structuredContent as { low_confidence_sections?: string[] })
+        .low_confidence_sections,
+      ["method"],
+    );
+  });
+
+  // The shape a cleanly-extracted paper returns (verified in prod 2026-09-07): a full
+  // provenance map and an EMPTY low-confidence list. `[]` must survive to the caller
+  // intact — dropping or normalising it away would turn "nothing looks uncertain" back
+  // into "we do not know", which is the weaker claim.
+  it("preserves an empty low_confidence_sections beside a full provenance map", async () => {
+    const r = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "A" },
+      {
+        json: {
+          arxiv_id: "A",
+          source: "latexml_html",
+          sections: { method: "m" },
+          section_provenance: {
+            abstract: "abstract_block",
+            introduction: "heading",
+            method: "heading",
+            conclusion: "heading_loose",
+          },
+          low_confidence_sections: [],
+        },
+      },
+    );
+    assert.notStrictEqual(r.isError, true);
+    const sc = r.structuredContent as {
+      low_confidence_sections?: string[];
+      section_provenance?: Record<string, string>;
+    };
+    assert.deepStrictEqual(sc.low_confidence_sections, []);
+    assert.strictEqual(sc.section_provenance?.conclusion, "heading_loose");
   });
 });

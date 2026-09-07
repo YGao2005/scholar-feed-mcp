@@ -254,6 +254,12 @@ describe("tool surface budget", () => {
     assert.deepStrictEqual(found, [
       "ask_library:papers",
       "check_watches:hits",
+      // NOT a paper array: fetch_fulltext's batch envelope is one small per-paper
+      // extraction entry (arxiv_id / ok / error), not paperObject. It is listed here
+      // only because the detector keys on the NAME `results`, which the backend's batch
+      // response uses. The cost this guard exists to catch — paperObject serialized once
+      // per envelope, ~1,750 chars each — is not incurred by it.
+      "fetch_fulltext:results",
       "get_citations:papers",
       "get_field_orientation:papers",
       "get_paper:papers",

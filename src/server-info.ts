@@ -204,7 +204,7 @@ Deep-research loop:
 2. get_foundational_lineage(anchor_paper_id=<anchor>) to surface the canonical prior art that semantic search misses.
 3. get_citations(arxiv_id=<anchor>, direction="cited_by") to find newer work that builds on it. This is how you reach recent papers a model cannot recall from training.
 4. search_papers(q=..., sort="trending") or days=<N> for the rising frontier. Keep q on every search: sort= reranks the matches for a topic, it is not a topic-free feed.
-5. fetch_fulltext(arxiv_id=...) on your top few hits, not just one, before answering.
+5. fetch_fulltext(arxiv_ids=["id1","id2","id3"], sections=["method","results"]) to read your top few hits, not just one, before answering. Read a shortlist in ONE call (up to 8 papers) and ask only for the sections you need: sections=["all"] is about 13.5KB per paper, so eight of those is about 108KB of context. Use fetch_fulltext(arxiv_id="id") for a single paper.
 6. From what you read, look up the baselines and leaderboards those papers name. The paper everyone benchmarks against is often modestly cited and ranked below the newest work, so chase named baselines rather than only taking the freshest result.
 7. Verify any magnitude (speedup, accuracy, percentage) against the source text before you state it, and attribute it (the paper reports ...) rather than asserting it as fact.
 
