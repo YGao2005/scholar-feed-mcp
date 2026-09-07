@@ -602,14 +602,19 @@ describe("fetch_fulltext batch mode", () => {
     request_id: "f5ef960f",
   };
 
-  // KNOWN GAP, asserted so it cannot be mistaken for working. The remedy copy above is
-  // the whole point of having no client-side guard for the rule, and the model does not
-  // currently see it: `validation_error` is the generic 422 bucket, not on the client's
-  // ACTIONABLE_PROBLEM_CODES allowlist, so it falls through to the status copy. The fix
-  // is a backend one (give this wall its own code); `sections_required` is already
-  // allowlisted, so that change alone flips this with no MCP release. When it lands,
-  // this test should be inverted, not deleted.
-  it("does NOT yet relay the batch 422 remedy (generic validation_error code)", async () => {
+  // POLICY, not a bug to be fixed here: `validation_error` is the generic 422 bucket —
+  // it also covers FastAPI's own schema failures, so relaying its `detail` would ship
+  // arbitrary internal validation prose to agents. It is permanently OFF the client's
+  // ACTIONABLE_PROBLEM_CODES allowlist, and this test is what keeps it off.
+  //
+  // DO NOT "FIX" THIS BY ALLOWLISTING `validation_error`. That is the fail-open pattern
+  // the allowlist exists to prevent. The remedy copy reaches the model by the backend
+  // giving this wall its own stable code instead (backend #200: the raise site sends
+  // `{error: "sections_required", message: ...}`), which the next test covers.
+  //
+  // Captured 2026-09-07, when prod really did send the generic code here and the copy
+  // really was dropped — worth keeping as the fixture that found it.
+  it("refuses to relay a detail carrying only the generic validation_error code", async () => {
     const { result } = await invoke(
       "fetch_fulltext",
       { arxiv_ids: ["A", "B"] },
