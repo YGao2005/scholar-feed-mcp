@@ -675,3 +675,78 @@ describe("the bundled affordance text is preserved alongside structuredContent",
     );
   });
 });
+
+/**
+ * Section-label provenance: the honesty properties, pinned.
+ *
+ * A parallel 50-paper hand audit put the POSITIONAL `method` guess at 50% correct,
+ * 34% adjacent-but-not-the-method, 16% flatly wrong (a survey's related-work, the
+ * introduction, an ethics statement). It fires on 19.4% of papers. A model told that
+ * a label is "usually" right will not verify it; a model given the number will. So
+ * the number and the verify instruction are load-bearing SCHEMA TEXT, not prose, and
+ * a future compression pass must not quietly soften them back into a hedge.
+ *
+ * The absence rule matters for the same reason: both keys are omitted entirely when
+ * unknown, never emitted as {} / []. An empty map would read as "everything
+ * verified", which is a stronger claim than a legacy row can support.
+ */
+describe("fetch_fulltext section-label provenance", () => {
+  const shape = (
+    TOOLS.get("fetch_fulltext")?.outputSchema as unknown as {
+      shape: Record<string, { description?: string }>;
+    }
+  ).shape;
+
+  it("states the measured accuracy rather than hedging", () => {
+    const d = shape.low_confidence_sections?.description ?? "";
+    assert.match(d, /~50% accurate/, "the audited number must be stated");
+    assert.match(
+      d,
+      /[Vv]erify/,
+      "must tell the reader to verify before citing",
+    );
+    assert.doesNotMatch(
+      d,
+      /\busually\b/i,
+      "'usually' is the hedge that stops a model verifying; name the number instead",
+    );
+  });
+
+  it("does not let a missing provenance map read as 'all verified'", () => {
+    const d = shape.section_provenance?.description ?? "";
+    assert.match(d, /[Oo]mitted when unknown/);
+    assert.match(d, /absence is not verification/i);
+  });
+
+  it("accepts a response that omits both keys, and one that carries them", async () => {
+    const omitted = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "A" },
+      { json: { arxiv_id: "A", sections: { method: "m" }, source: "pdf" } },
+    );
+    assert.notStrictEqual(omitted.isError, true);
+
+    const carried = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "A" },
+      {
+        json: {
+          arxiv_id: "A",
+          sections: { method: "m" },
+          section_provenance: {
+            abstract: "abstract_block",
+            method: "positional",
+          },
+          low_confidence_sections: ["method"],
+          source: "latexml_html",
+        },
+      },
+    );
+    assert.notStrictEqual(carried.isError, true);
+    assert.deepStrictEqual(
+      (carried.structuredContent as { low_confidence_sections?: string[] })
+        .low_confidence_sections,
+      ["method"],
+    );
+  });
+});

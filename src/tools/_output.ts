@@ -229,10 +229,7 @@ export const getPaperOutput = looseObject({
 
 /** fetch_fulltext: single-paper section shape, plus the `results` array of a batch. */
 export const fulltextOutput = looseObject({
-  source: z
-    .string()
-    .optional()
-    .describe("Where the text came from (e.g. arxiv)."),
+  source: z.string().optional(),
   arxiv_id: z.string().optional(),
   sections: z
     .object({
@@ -245,32 +242,40 @@ export const fulltextOutput = looseObject({
     })
     .catchall(z.unknown())
     .optional()
-    .describe(
-      "Per-section text. All six canonical keys are present; a null value means the paper has no such section.",
-    ),
+    .describe("Per-section text; null means the paper has no such section."),
   available_sections: z
     .array(z.string())
     .optional()
     .describe(
-      "Which sections this paper actually has; tells 'no such section' apart from 'extraction failed'.",
+      "Which sections this paper has; 'no such section' is not 'extraction failed'.",
+    ),
+  section_provenance: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe(
+      "How each section was labelled: abstract_block, heading, heading_loose, subsection, latex_heading, pdf_heading, or positional. Omitted when unknown; absence is not verification.",
+    ),
+  low_confidence_sections: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Sections labelled positionally: a guess (~50% accurate, hand-audited) at what sits between the introduction and the results, and on surveys or theory papers often not a method at all. Verify against the text before citing it as the paper's method. Omitted when unknown, never empty.",
     ),
   requested_section: z.string().optional(),
   requested_section_available: z
     .boolean()
     .optional()
-    .describe("False when the requested section does not exist in this paper."),
+    .describe("False when the requested section is absent."),
   requested_sections: z.array(z.string()).optional(),
   missing_sections: z
     .array(z.string())
     .optional()
-    .describe("Requested sections this paper does not have."),
+    .describe("Requested sections the paper lacks."),
   note: z.string().optional(),
   full_text: z
     .string()
     .optional()
-    .describe(
-      "Unstructured backup text, present only on the PDF fallback path.",
-    ),
+    .describe("Unstructured backup text, PDF fallback path only."),
   table_captions: z.array(z.string()).optional(),
   results: z
     .array(
@@ -289,7 +294,7 @@ export const fulltextOutput = looseObject({
     )
     .optional()
     .describe(
-      "Batch mode: one entry per paper, in request order. A paper that failed is an entry with ok:false and an `error` code, never a failed call. Successful entries carry the same keys as a single-paper response.",
+      "Batch mode: one entry per paper, in request order. A failed paper is an entry with ok:false and an `error` code, never a failed call.",
     ),
 });
 

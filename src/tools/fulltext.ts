@@ -59,20 +59,20 @@ export function register(server: McpServer): void {
       annotations: { readOnlyHint: true, destructiveHint: false },
       outputSchema: fulltextOutput,
       description:
-        "Read arXiv papers' actual text, by section. Section selection is how you control context cost: ask for the one or two you need ('method' for how it works, 'results' for the numbers it reports, 'related_work' for what it positions against) rather than pulling whole papers in — 'all' is ~13.5KB a paper, so a batch of 8 is ~108KB. A batch reads a shortlist in one call and reports per paper: one unextractable paper is a failed entry, not a failed call. Every response lists `available_sections`, so a paper with no related-work or results section (common in theory papers) says so instead of returning nothing. Sourced from arXiv's section-tagged HTML, falling back to LaTeX source then PDF text; a 404 means all three failed.",
+        "Read arXiv papers' actual text, by section. Section selection controls context cost: ask for the one or two you need rather than whole papers — 'all' is ~13.5KB a paper, so a batch of 8 is ~108KB. Section labels are inferred: check `low_confidence_sections` before calling one the paper's own. Sourced from arXiv's section-tagged HTML, then LaTeX source, then PDF text; a 404 means all three failed.",
       inputSchema: {
         arxiv_id: z
           .string()
           .min(1)
           .optional()
-          .describe("arXiv ID of one paper. Use arxiv_ids to read several."),
+          .describe("arXiv ID of one paper."),
         arxiv_ids: z
           .array(z.string().min(1))
           .min(1)
           .max(MAX_BATCH)
           .optional()
           .describe(
-            "Up to 8 arXiv IDs read in one call, one entry per paper. `sections` is required with more than one ID.",
+            "Up to 8 arXiv IDs, one entry per paper. `sections` is required with more than one ID.",
           ),
         sections: z
           .union([SECTION, z.array(SECTION)])
