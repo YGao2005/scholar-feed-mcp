@@ -227,7 +227,7 @@ export const getPaperOutput = looseObject({
   message: z.string().optional(),
 });
 
-/** fetch_fulltext: lean `results_text` mode and the full `sections` object mode. */
+/** fetch_fulltext: single-paper section shape, plus the `results` array of a batch. */
 export const fulltextOutput = looseObject({
   source: z
     .string()
@@ -238,7 +238,7 @@ export const fulltextOutput = looseObject({
     .string()
     .nullable()
     .optional()
-    .describe("Results/experiments excerpt (default 'results' mode)."),
+    .describe("Legacy lean results excerpt (pre-section-selection responses)."),
   sections: z
     .object({
       abstract: z.string().nullable().optional(),
@@ -268,8 +268,29 @@ export const fulltextOutput = looseObject({
   full_text: z
     .string()
     .optional()
-    .describe("Unstructured backup text, present only on the PDF fallback path."),
+    .describe(
+      "Unstructured backup text, present only on the PDF fallback path.",
+    ),
   table_captions: z.array(z.string()).optional(),
+  results: z
+    .array(
+      z
+        .object({
+          arxiv_id: z.string().optional(),
+          ok: z.boolean().optional(),
+          error: z
+            .string()
+            .optional()
+            .describe(
+              "invalid_id | not_extractable | extraction_failed | timeout",
+            ),
+        })
+        .catchall(z.unknown()),
+    )
+    .optional()
+    .describe(
+      "Batch mode: one entry per paper, in request order. A paper that failed is an entry with ok:false and an `error` code, never a failed call. Successful entries carry the same keys as a single-paper response.",
+    ),
 });
 
 const lineagePaper = z

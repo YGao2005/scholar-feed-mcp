@@ -330,7 +330,9 @@ describe("untrusted-content fencing", () => {
         json: {
           arxiv_id: "1706.03762",
           requested_section: "method",
-          sections: { method: "The Transformer follows this overall architecture…" },
+          sections: {
+            method: "The Transformer follows this overall architecture…",
+          },
           available_sections: ["abstract", "introduction", "method", "results"],
           source: "latexml_html",
         },
@@ -511,6 +513,144 @@ describe("next-steps affordances", () => {
     );
     assert.match(text, /baselines/, "nudges following named baselines");
     assert.match(text, /verify/i, "nudges verifying magnitudes");
+  });
+});
+
+/**
+ * fetch_fulltext batch mode.
+ *
+ * The batch exists because of context cost, not round-trip cost: `sections="all"` is
+ * ~13.5KB per paper, so the eight papers this now accepts are ~108KB if a caller does
+ * not project them down. These pin the two things that make the shape safe to hand a
+ * model — that N=1 keeps its old GET wire (the single-paper response shape rides on
+ * that endpoint), and that one bad ID in a batch is an ENTRY rather than a dead call.
+ */
+describe("fetch_fulltext batch mode", () => {
+  it("routes a single id through GET, even when passed as arxiv_ids", async () => {
+    const { calls, url } = await invoke(
+      "fetch_fulltext",
+      { arxiv_ids: ["1706.03762"], sections: ["method"] },
+      { json: { arxiv_id: "1706.03762", requested_section: "method" } },
+    );
+    assert.strictEqual(calls[0].init?.method, "GET");
+    assert.ok(url?.pathname.endsWith("/public/papers/1706.03762/fulltext"));
+    assert.strictEqual(url?.searchParams.get("sections"), "method");
+  });
+
+  it("joins several sections into one comma-separated GET param", async () => {
+    const { url } = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "1706.03762", sections: ["method", "results"] },
+      { json: { arxiv_id: "1706.03762" } },
+    );
+    assert.strictEqual(url?.searchParams.get("sections"), "method,results");
+  });
+
+  it("routes two or more ids through POST /public/papers/fulltext", async () => {
+    const { calls, url } = await invoke(
+      "fetch_fulltext",
+      {
+        arxiv_ids: ["1706.03762", "2407.15831"],
+        sections: ["method", "results"],
+      },
+      {
+        json: {
+          results: [
+            { arxiv_id: "1706.03762", ok: true, sections: { method: "…" } },
+            { arxiv_id: "2407.15831", ok: true, sections: { method: "…" } },
+          ],
+        },
+      },
+    );
+    assert.strictEqual(calls[0].init?.method, "POST");
+    assert.strictEqual(url?.pathname, "/api/v1/public/papers/fulltext");
+    assert.deepStrictEqual(JSON.parse(String(calls[0].init?.body)), {
+      arxiv_ids: ["1706.03762", "2407.15831"],
+      sections: ["method", "results"],
+    });
+  });
+
+  // The "sections is required for a batch" rule lives in the BACKEND (422). A client-side
+  // Zod superRefine would not serialise into JSON Schema, so the model would meet an
+  // invisible wall with no message; instead the body must carry no `sections` key at all
+  // so the backend's own explanation is what comes back.
+  it("omits sections from the batch body when the caller omitted it", async () => {
+    const { calls } = await invoke(
+      "fetch_fulltext",
+      { arxiv_ids: ["A", "B"] },
+      { json: { results: [] } },
+    );
+    const body = JSON.parse(String(calls[0].init?.body)) as Record<
+      string,
+      unknown
+    >;
+    assert.ok(!("sections" in body), "no client-invented default for a batch");
+  });
+
+  it("surfaces the backend 422 for a batch with no sections", async () => {
+    const { result } = await invoke(
+      "fetch_fulltext",
+      { arxiv_ids: ["A", "B"] },
+      {
+        status: 422,
+        json: {
+          error: "sections_required",
+          message: "sections is required when more than one arxiv_id is given",
+        },
+      },
+    );
+    assert.strictEqual(result.isError, true);
+    assert.match(result.content[0].text, /sections is required/);
+  });
+
+  // A per-paper failure is DATA. If it ever became a thrown error the batch would be
+  // strictly worse than N single calls, which is the whole reason to have it.
+  it("passes per-paper failure entries through without erroring", async () => {
+    const { result } = await invoke(
+      "fetch_fulltext",
+      { arxiv_ids: ["1706.03762", "not-an-id"], sections: ["results"] },
+      {
+        json: {
+          results: [
+            {
+              arxiv_id: "1706.03762",
+              ok: true,
+              sections: { results: "28.4 BLEU" },
+            },
+            { arxiv_id: "not-an-id", ok: false, error: "invalid_id" },
+          ],
+        },
+      },
+    );
+    assert.notStrictEqual(result.isError, true);
+    assert.match(result.content[0].text, /invalid_id/);
+    const entries = (result.structuredContent as { results: unknown[] })
+      .results;
+    assert.strictEqual(entries.length, 2);
+  });
+
+  it("caps a batch at 8 ids", () => {
+    const arxiv_ids = schemaFor("fetch_fulltext").arxiv_ids as {
+      safeParse: (v: unknown) => { success: boolean };
+    };
+    assert.strictEqual(
+      arxiv_ids.safeParse(Array.from({ length: 8 }, (_, i) => `id${i}`))
+        .success,
+      true,
+    );
+    assert.strictEqual(
+      arxiv_ids.safeParse(Array.from({ length: 9 }, (_, i) => `id${i}`))
+        .success,
+      false,
+      "9 ids must be rejected by the schema, not silently truncated",
+    );
+    assert.strictEqual(arxiv_ids.safeParse([]).success, false);
+  });
+
+  it("errors client-side when neither arxiv_id nor arxiv_ids is given", async () => {
+    const { calls, result } = await invoke("fetch_fulltext", {});
+    assert.strictEqual(calls.length, 0, "must not spend a quota unit on this");
+    assert.strictEqual(result.isError, true);
   });
 });
 

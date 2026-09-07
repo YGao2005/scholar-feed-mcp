@@ -174,7 +174,7 @@ Scholar Feed is a standard stdio MCP server, so any other MCP-compatible client 
 | `search_papers` | Semantic + keyword search with filters. Also does similar-paper discovery, citation-scoped search, and trending. | `q`, `category`, `novelty_min`, `days`, `sort`, `anchor_paper_id`, `scope_to_citations_of`, `mode`, `method_category`, `task`, `dataset`, `contribution_type`, `task_category`, `cursor`, `limit` |
 | `get_paper` | Get full paper details by arXiv ID. Also handles batch lookup and BibTeX export. | `arxiv_ids`, `format`, `fields`, `verbose` |
 | `get_citations` | Citation graph (outgoing refs or incoming citations) | `arxiv_id`, `direction`, `limit`, `fields` |
-| `fetch_fulltext` | Extract results/experiments from LaTeX source. `sections: 'all'` returns the whole paper instead of the lean results excerpt. | `arxiv_id`, `sections` |
+| `fetch_fulltext` | Read a paper's text by section (abstract, introduction, related_work, method, results, conclusion, or `all`). Pass `arxiv_ids` to read up to 8 papers in one call; a paper that cannot be extracted comes back as a failed entry, not a failed call. | `arxiv_id`, `arxiv_ids`, `sections` |
 
 ### Authors
 
@@ -241,7 +241,8 @@ Use `novelty_min: 0.5` in `search_papers` to filter for genuinely novel work.
 | `search_papers` | 30/min |
 | `get_paper` | 30/min |
 | `get_citations` | 30/min |
-| `fetch_fulltext` | 10/min |
+| `fetch_fulltext` (single paper) | 10/min |
+| `fetch_fulltext` (batch, 2-8 papers) | 6/min |
 | `find_author` | 20/min |
 | `co_author_graph` | 20/min |
 | `embed_text` | 30/min |
