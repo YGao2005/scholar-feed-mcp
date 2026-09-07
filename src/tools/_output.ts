@@ -250,7 +250,25 @@ export const fulltextOutput = looseObject({
     })
     .catchall(z.unknown())
     .optional()
-    .describe("Per-section text (sections='all')."),
+    .describe(
+      "Per-section text. All six canonical keys are present; a null value means the paper has no such section.",
+    ),
+  available_sections: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Which sections this paper actually has. Lets a caller tell 'no related-work section' apart from 'extraction failed'.",
+    ),
+  requested_section: z.string().optional(),
+  requested_section_available: z
+    .boolean()
+    .optional()
+    .describe("False when the requested section does not exist in this paper."),
+  note: z.string().optional(),
+  full_text: z
+    .string()
+    .optional()
+    .describe("Unstructured backup text, present only on the PDF fallback path."),
   table_captions: z.array(z.string()).optional(),
 });
 

@@ -295,27 +295,48 @@ describe("untrusted-content fencing", () => {
   });
 
   // The default mode is the one step 5 of the deep-research loop uses, and it was
-  // broken on the wire: with `sections` omitted the tool sent NO sections param, so
-  // the documented default was never actually exercised as a request. Assert the
-  // outgoing query string, not just the parsed result — a green result-shape test
-  // could not catch this class of bug.
-  it("fetch_fulltext sends sections=results explicitly when the arg is omitted", async () => {
+  // broken on the wire twice over: with `sections` omitted the tool once sent NO
+  // sections param at all, and then sent "results" — ~800 chars, about 6% of the
+  // paper. Assert the outgoing query string, not just the parsed result — a green
+  // result-shape test could not catch either bug.
+  it("fetch_fulltext sends sections=all explicitly when the arg is omitted", async () => {
     const { url } = await invoke(
       "fetch_fulltext",
       { arxiv_id: "1706.03762" },
       {
         json: {
           arxiv_id: "1706.03762",
-          results_text: "28.4 BLEU",
-          source: "pdf",
+          sections: { results: "28.4 BLEU" },
+          available_sections: ["results"],
+          source: "latexml_html",
         },
       },
     );
     assert.strictEqual(
       url?.searchParams.get("sections"),
-      "results",
+      "all",
       "default mode must be explicit on the wire, not left to a backend fallback",
     );
+  });
+
+  // A named section must reach the backend verbatim — that projection is the whole
+  // point of section-aware retrieval, and silently widening it to "all" would blow
+  // up the payload an agent deliberately kept small.
+  it("fetch_fulltext forwards a single named section", async () => {
+    const { url } = await invoke(
+      "fetch_fulltext",
+      { arxiv_id: "1706.03762", sections: "method" },
+      {
+        json: {
+          arxiv_id: "1706.03762",
+          requested_section: "method",
+          sections: { method: "The Transformer follows this overall architecture…" },
+          available_sections: ["abstract", "introduction", "method", "results"],
+          source: "latexml_html",
+        },
+      },
+    );
+    assert.strictEqual(url?.searchParams.get("sections"), "method");
   });
 
   it("fetch_fulltext forwards an explicit sections=all", async () => {
