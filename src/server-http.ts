@@ -98,6 +98,32 @@ const defaultCredentialResolver: CredentialResolver =
   createDefaultCredentialResolver();
 
 /**
+ * Per-request attribution the Workers entry point also forwards (src/worker.ts):
+ *
+ * - `clientIp`: the END CALLER's IP, so the backend keys anonymous quotas and
+ *   analytics per caller. Only read from `clientIpHeader` when the operator names
+ *   one (SF_CLIENT_IP_HEADER): that header is trustworthy only behind a proxy that
+ *   overwrites it — e.g. nginx behind Cloudflare setting X-Real-IP from
+ *   CF-Connecting-IP. Exposed directly, the server leaves it unset and the backend
+ *   falls back to Heroku's X-Forwarded-For. Without it behind a proxy, every
+ *   anonymous caller shares the proxy's single quota.
+ * - `src`: the connect URL's `?src=` (re-POSTed on every message; the backend
+ *   allowlists it).
+ * - `client`: User-Agent, standing in for clientInfo on a stateless server.
+ */
+export function requestAttribution(
+  req: Pick<Request, "header" | "query">,
+  clientIpHeader: string | undefined,
+): { clientIp: string | null; src: string | null; client: string | null } {
+  const src = req.query?.src;
+  return {
+    clientIp: clientIpHeader ? (req.header(clientIpHeader) ?? null) : null,
+    src: typeof src === "string" ? src : null,
+    client: req.header("user-agent") ?? null,
+  };
+}
+
+/**
  * Handle one stateless POST /mcp. A fresh server + transport per request keeps
  * tenants isolated (no shared in-process state across callers); both are closed
  * when the response finishes.
@@ -113,6 +139,7 @@ async function handleMcpPost(
   verifier: OAuthTokenVerifier,
   resolver: CredentialResolver,
   enableJsonResponse: boolean,
+  clientIpHeader: string | undefined,
 ): Promise<void> {
   // Resolve creds BEFORE building the server so a 401/501 short-circuits without
   // standing up an McpServer + transport for a request we will not serve.
@@ -180,8 +207,9 @@ async function handleMcpPost(
     await server.connect(transport);
     // Bind the per-request creds for the whole handleRequest -> tool -> client
     // chain via AsyncLocalStorage, then let the transport drive the response.
-    await runWithCreds(resolution.creds, () =>
-      transport.handleRequest(req, res, req.body),
+    await runWithCreds(
+      { ...resolution.creds, ...requestAttribution(req, clientIpHeader) },
+      () => transport.handleRequest(req, res, req.body),
     );
   } catch (err) {
     console.error("[server-http] error handling POST /mcp:", err);
@@ -239,6 +267,11 @@ export interface CreateAppOptions {
    * lossless. Defaults to false (SSE) for the long-lived Node process + tests.
    */
   enableJsonResponse?: boolean;
+  /**
+   * Header carrying the end caller's IP, set by a trusted reverse proxy (see
+   * requestAttribution). Defaults to SF_CLIENT_IP_HEADER; unset = not forwarded.
+   */
+  clientIpHeader?: string;
 }
 
 /**
@@ -249,7 +282,11 @@ export function createApp(opts: CreateAppOptions = {}): express.Express {
   const verifier = opts.verifier ?? defaultVerifier;
   const credentialResolver =
     opts.credentialResolver ?? defaultCredentialResolver;
-  const enableJsonResponse = opts.enableJsonResponse ?? false;
+  // SF_MCP_JSON_RESPONSE=1 matches the Workers entry point (application/json replies).
+  const enableJsonResponse =
+    opts.enableJsonResponse ?? process.env.SF_MCP_JSON_RESPONSE === "1";
+  const clientIpHeader =
+    opts.clientIpHeader ?? (process.env.SF_CLIENT_IP_HEADER || undefined);
   const app = express();
 
   // Public branding endpoints, mounted BEFORE the CORS + DNS-rebinding guards
@@ -333,6 +370,7 @@ export function createApp(opts: CreateAppOptions = {}): express.Express {
       verifier,
       credentialResolver,
       enableJsonResponse,
+      clientIpHeader,
     );
   });
   app.get("/mcp", methodNotAllowed);
