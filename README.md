@@ -11,7 +11,7 @@
 [![npm version](https://img.shields.io/npm/v/scholar-feed-mcp.svg)](https://www.npmjs.com/package/scholar-feed-mcp)
 [![Node](https://img.shields.io/node/v/scholar-feed-mcp.svg)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/npm/l/scholar-feed-mcp.svg)](./LICENSE)
-[![smithery badge](https://smithery.ai/badge/yangg40/scholar-feed)](https://smithery.ai/servers/yangg40/scholar-feed)
+[![LightNow MCP capabilities](https://lightnow.ai/badge/io.github.YGao2005/scholar-feed-mcp)](https://lightnow.ai/servers/io.github.YGao2005/scholar-feed-mcp)
 
 Research paper search with ranking and citation tracking, for LLM engineering and academic research, without leaving Claude Code, Cursor, or any MCP client.
 
